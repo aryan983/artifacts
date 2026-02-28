@@ -482,6 +482,86 @@ var autoMode = true, autoTimer = 0;
 var particles = [], flashEffects = [], stepTimers = [], bubbles = [];
 var layout = {};
 
+// ── Cache line state per SM ──────────────────────────────────────────────────
+// Each SM has: l1Lines[16] and smemLines[16]
+// Each slot: 0=empty, 1=valid/clean, 2=dirty/modified
+var NUM_LINES = 16;
+var cacheState = [];  // indexed by smIdx: { l1: [], smem: [] }
+
+function initCacheState() {
+  cacheState = [];
+  var n = layout.sms ? layout.sms.length : 4;
+  for (var i = 0; i < n; i++) {
+    cacheState.push({
+      l1:   new Array(NUM_LINES).fill(0),
+      smem: new Array(NUM_LINES).fill(0),
+    });
+  }
+}
+
+// Randomise a realistic partial fill for an SM's L1 (after a read)
+function fillL1Random(smIdx, dirty) {
+  if (!cacheState[smIdx]) return;
+  var lines = cacheState[smIdx].l1;
+  // Fill 6-13 random lines
+  var count = 6 + Math.floor(Math.random() * 8);
+  for (var i = 0; i < NUM_LINES; i++) {
+    lines[i] = i < count ? (dirty ? 2 : 1) : 0;
+  }
+  // Shuffle
+  for (var j = NUM_LINES - 1; j > 0; j--) {
+    var k = Math.floor(Math.random() * (j + 1));
+    var tmp = lines[j]; lines[j] = lines[k]; lines[k] = tmp;
+  }
+}
+
+function setL1Dirty(smIdx) {
+  if (!cacheState[smIdx]) return;
+  var lines = cacheState[smIdx].l1;
+  var filled = lines.filter(function(v){ return v > 0; }).length;
+  if (filled < 4) { fillL1Random(smIdx, false); }
+  // Mark 1-3 random clean lines as dirty
+  var dirtied = 0;
+  for (var i = 0; i < NUM_LINES && dirtied < 3; i++) {
+    if (lines[i] === 1 && Math.random() > 0.5) { lines[i] = 2; dirtied++; }
+  }
+  if (dirtied === 0) { lines[Math.floor(Math.random()*NUM_LINES)] = 2; }
+}
+
+function invalidateL1(smIdx) {
+  if (!cacheState[smIdx]) return;
+  cacheState[smIdx].l1 = new Array(NUM_LINES).fill(0);
+}
+
+function writebackL1(smIdx) {
+  if (!cacheState[smIdx]) return;
+  // Dirty → clean on writeback
+  var lines = cacheState[smIdx].l1;
+  for (var i = 0; i < NUM_LINES; i++) { if (lines[i] === 2) lines[i] = 1; }
+}
+
+function fillSmem(smIdx) {
+  if (!cacheState[smIdx]) return;
+  var lines = cacheState[smIdx].smem;
+  var count = 8 + Math.floor(Math.random() * 7);
+  for (var i = 0; i < NUM_LINES; i++) lines[i] = i < count ? 1 : 0;
+  for (var j = NUM_LINES - 1; j > 0; j--) {
+    var kk = Math.floor(Math.random() * (j + 1));
+    var tt = lines[j]; lines[j] = lines[kk]; lines[kk] = tt;
+  }
+}
+
+function getCacheStats(smIdx, kind) {
+  if (!cacheState[smIdx]) return { filled:0, dirty:0, empty:NUM_LINES };
+  var arr = cacheState[smIdx][kind];
+  var filled = 0, dirty = 0;
+  for (var i = 0; i < arr.length; i++) {
+    if (arr[i] === 1) filled++;
+    else if (arr[i] === 2) { filled++; dirty++; }
+  }
+  return { filled: filled, dirty: dirty, empty: NUM_LINES - filled };
+}
+
 // ─── Hover / selection state ───
 var hoveredBlock = null;   // { type, rect:{x,y,w,h}, smIdx }
 var selectedBlock = null;  // same shape
@@ -558,6 +638,8 @@ function getBlockRect(type, smIdx) {
 
 // ─── Connection line animation ───
 var connLineAnim = 0;
+var SM_LOCAL_TYPES = { regs:1, l1:1, texCache:1, smem:1, tma:1, dsmem:1, async:1 };
+
 function buildConnLines(blockType, smIdx) {
   var info = BLOCK_INFO[blockType];
   if (!info || !info.connects) return;
@@ -566,20 +648,15 @@ function buildConnLines(blockType, smIdx) {
   if (!from) return;
   for (var i = 0; i < info.connects.length; i++) {
     var conn = info.connects[i];
-    var toCenter = getBlockCenter(conn.to, smIdx);
-    // If "to" type exists in any SM, connect to all matching ones
-    var toTargets = [];
-    if (conn.to === 'l2' || conn.to === 'bus' || conn.to === 'globalMem' || conn.to === 'hbm' || conn.to === 'l2Persist') {
-      if (toCenter) toTargets.push({ pos: toCenter, why: conn.why, arrow: conn.arrow });
+    var isGlobal = !SM_LOCAL_TYPES[conn.to];
+    if (isGlobal) {
+      // Global target (l2, bus, globalMem, hbm, l2Persist) — single line
+      var tc = getBlockCenter(conn.to, smIdx);
+      if (tc) connLines.push({ from: from, to: tc, why: conn.why, arrow: conn.arrow, color: info.color });
     } else {
-      // SM-local blocks: show all SMs
-      for (var si = 0; si < layout.sms.length; si++) {
-        var tc = getBlockCenter(conn.to, si);
-        if (tc) toTargets.push({ pos: tc, why: conn.why, arrow: conn.arrow, smIdx: si });
-      }
-    }
-    for (var j = 0; j < toTargets.length; j++) {
-      connLines.push({ from: from, to: toTargets[j].pos, why: toTargets[j].why, arrow: toTargets[j].arrow, color: info.color, t: 0 });
+      // SM-local target — only connect to the SAME SM, not all SMs
+      var tc2 = getBlockCenter(conn.to, smIdx);
+      if (tc2) connLines.push({ from: from, to: tc2, why: conn.why, arrow: conn.arrow, color: info.color });
     }
   }
   connLineAnim = 0;
@@ -676,24 +753,68 @@ function updateTooltip(hit, clientX, clientY) {
   tooltipEl.style.borderColor = info.color + '50';
   ttDesc.textContent = info.desc;
   ttMeta.innerHTML = '';
-  if (info.chips) {
-    for (var i = 0; i < info.chips.length; i++) {
-      var chip = info.chips[i];
-      var span = document.createElement('span');
-      span.className = 'tt-chip';
-      span.style.background = chip.c + '20';
-      span.style.color = chip.c;
-      span.textContent = chip.t;
-      ttMeta.appendChild(span);
+
+  // ── Cache fill chips for L1 and SMEM ────────────────────────────────────
+  if ((hit.type === 'l1' || hit.type === 'smem') && hit.smIdx !== undefined) {
+    var kind = hit.type === 'l1' ? 'l1' : 'smem';
+    var cs = getCacheStats(hit.smIdx, kind);
+    var pct = Math.round((cs.filled / NUM_LINES) * 100);
+
+    // Mini visual bar
+    var barHtml = '<div style="margin-bottom:8px">';
+    barHtml += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">';
+    barHtml += '<span style="font-family:JetBrains Mono,monospace;font-size:.6rem;color:#9095b0">CACHE LINES</span>';
+    barHtml += '<span style="font-family:JetBrains Mono,monospace;font-size:.65rem;font-weight:700;color:'+info.color+'">'+(cs.filled)+'/'+NUM_LINES+' filled</span>';
+    if (cs.dirty > 0) barHtml += '<span style="font-family:JetBrains Mono,monospace;font-size:.6rem;color:#51cf66">'+cs.dirty+' dirty</span>';
+    barHtml += '</div>';
+    // Row of 16 mini squares
+    barHtml += '<div style="display:flex;gap:2px;height:8px">';
+    var arr = cacheState[hit.smIdx] ? cacheState[hit.smIdx][kind] : [];
+    for (var li = 0; li < NUM_LINES; li++) {
+      var lv = arr[li] || 0;
+      var lc = lv === 2 ? '#51cf66' : (lv === 1 ? (hit.type==='l1'?info.color+'aa':'#51cf6688') : '#2a2d3a');
+      barHtml += '<div style="flex:1;background:'+lc+';border-radius:1px"></div>';
+    }
+    barHtml += '</div>';
+    // Status label
+    var stateLabel = '', stateColor = '#6b7094';
+    if (hit.type === 'l1') {
+      var l1b = null;
+      if (layout.sms[hit.smIdx]) {
+        for (var bi=0;bi<layout.sms[hit.smIdx].sub.length;bi++) {
+          if (layout.sms[hit.smIdx].sub[bi].type==='l1') { l1b = layout.sms[hit.smIdx].sub[bi]; break; }
+        }
+      }
+      var st = l1b ? l1b.state : 'invalid';
+      if (st==='modified') { stateLabel='Modified — has dirty data'; stateColor='#51cf66'; }
+      else if (st==='shared') { stateLabel='Shared — clean copy'; stateColor='#339af0'; }
+      else { stateLabel='Invalid — no valid data'; stateColor='#6b7090'; }
+      barHtml += '<div style="margin-top:4px;font-size:.65rem;font-family:JetBrains Mono,monospace;color:'+stateColor+'">● '+stateLabel+'</div>';
+    }
+    barHtml += '</div>';
+    ttMeta.innerHTML = barHtml;
+  } else {
+    if (info.chips) {
+      for (var i = 0; i < info.chips.length; i++) {
+        var chip = info.chips[i];
+        var span = document.createElement('span');
+        span.className = 'tt-chip';
+        span.style.background = chip.c + '20';
+        span.style.color = chip.c;
+        span.textContent = chip.t;
+        ttMeta.appendChild(span);
+      }
     }
   }
+  // ────────────────────────────────────────────────────────────────────────
+
   ttHint.style.display = (selectedBlock && selectedBlock.type === hit.type) ? 'none' : 'flex';
 
   // Position tooltip
   var vizRect = canvas.parentElement.getBoundingClientRect();
   var tx = clientX - vizRect.left + 12;
   var ty = clientY - vizRect.top - 10;
-  var tw = 240, th = 120;
+  var tw = 240, th = 140;
   if (tx + tw > vizRect.width - 10) tx = clientX - vizRect.left - tw - 12;
   if (ty + th > vizRect.height - 10) ty = clientY - vizRect.top - th - 10;
   tooltipEl.style.left = tx + 'px';
@@ -708,7 +829,7 @@ function hideTooltip() {
 // Floating bubble system
 function bubble(x, y, text, color, opts) {
   var o = opts || {};
-  bubbles.push({ x:x, y:y-8, text:text, color:color, bg:(o.bg||color.slice(0,7))+'18', age:0, life:o.life||1.8, rise:o.rise||18, wobble:Math.random()*6 });
+  bubbles.push({ x:x, y:y-8, text:text, sub:o.sub||null, color:color, bg:(o.bg||color.slice(0,7))+'18', age:0, life:o.life||1.9, rise:o.rise||18, wobble:Math.random()*6 });
 }
 
 function updateDiffBanner() {
@@ -904,52 +1025,91 @@ function buildLayout() {
   layout.hbm = { x:cx-hbmW/2, y:hbmY, w:hbmW, h:mob ? 34 : 42, label:ARCHS[currentArch].blocks.hbm.label };
 
   buildHitRects();
+  initCacheState();
+}
+
+function bezierPoint(p0, cp1, cp2, p1, t) {
+  var mt = 1 - t;
+  return {
+    x: mt*mt*mt*p0.x + 3*mt*mt*t*cp1.x + 3*mt*t*t*cp2.x + t*t*t*p1.x,
+    y: mt*mt*mt*p0.y + 3*mt*mt*t*cp1.y + 3*mt*t*t*cp2.y + t*t*t*p1.y,
+  };
 }
 
 function drawConnLines(time) {
   if (connLines.length === 0) return;
-  connLineAnim += 0.025;
+  connLineAnim += 0.022;
   for (var i = 0; i < connLines.length; i++) {
     var cl = connLines[i];
     var dx = cl.to.x - cl.from.x;
     var dy = cl.to.y - cl.from.y;
     var dist = Math.sqrt(dx*dx + dy*dy);
-    // Draw dashed animated line
+
+    // Build smooth bezier control points
+    // For vertical-dominant paths: slight horizontal bow; for horizontal: slight vertical bow
+    var isVertical = Math.abs(dy) > Math.abs(dx);
+    var bow = Math.min(dist * 0.35, 60) * (i % 2 === 0 ? 1 : -1);
+    var cp1, cp2;
+    if (isVertical) {
+      cp1 = { x: cl.from.x + bow, y: cl.from.y + dy * 0.3 };
+      cp2 = { x: cl.to.x + bow,   y: cl.to.y   - dy * 0.3 };
+    } else {
+      cp1 = { x: cl.from.x + dx * 0.3, y: cl.from.y + bow };
+      cp2 = { x: cl.to.x   - dx * 0.3, y: cl.to.y   + bow };
+    }
+
+    var alpha = 0.55 + Math.sin(connLineAnim * 2.5 + i * 1.2) * 0.2;
+    var colorHex = cl.color + Math.round(alpha * 255).toString(16).padStart(2,'0');
+
     ctx.save();
+    // Glow pass
     ctx.beginPath();
     ctx.moveTo(cl.from.x, cl.from.y);
-    ctx.lineTo(cl.to.x, cl.to.y);
-    var alpha = 0.5 + Math.sin(connLineAnim * 3 + i) * 0.2;
-    ctx.strokeStyle = cl.color + Math.round(alpha * 255).toString(16).padStart(2,'0');
-    ctx.lineWidth = 2;
-    ctx.setLineDash([8, 5]);
-    ctx.lineDashOffset = -connLineAnim * 30;
+    ctx.bezierCurveTo(cp1.x, cp1.y, cp2.x, cp2.y, cl.to.x, cl.to.y);
+    ctx.strokeStyle = cl.color + '18';
+    ctx.lineWidth = 7;
+    ctx.setLineDash([]);
+    ctx.stroke();
+
+    // Main dashed line
+    ctx.beginPath();
+    ctx.moveTo(cl.from.x, cl.from.y);
+    ctx.bezierCurveTo(cp1.x, cp1.y, cp2.x, cp2.y, cl.to.x, cl.to.y);
+    ctx.strokeStyle = colorHex;
+    ctx.lineWidth = 1.8;
+    ctx.setLineDash([7, 5]);
+    ctx.lineDashOffset = -connLineAnim * 28;
     ctx.stroke();
     ctx.setLineDash([]);
 
-    // Arrowhead at destination
-    var angle = Math.atan2(dy, dx);
+    // Source dot
+    ctx.beginPath(); ctx.arc(cl.from.x, cl.from.y, 3.5, 0, Math.PI*2);
+    ctx.fillStyle = cl.color; ctx.fill();
+    ctx.beginPath(); ctx.arc(cl.from.x, cl.from.y, 6, 0, Math.PI*2);
+    ctx.fillStyle = cl.color + '30'; ctx.fill();
+
+    // Arrowhead at destination — compute bezier tangent at t=0.97
+    var tip  = bezierPoint({x:cl.from.x,y:cl.from.y}, cp1, cp2, {x:cl.to.x,y:cl.to.y}, 0.98);
+    var tang = bezierPoint({x:cl.from.x,y:cl.from.y}, cp1, cp2, {x:cl.to.x,y:cl.to.y}, 0.93);
+    var angle = Math.atan2(cl.to.y - tang.y, cl.to.x - tang.x);
     ctx.translate(cl.to.x, cl.to.y);
     ctx.rotate(angle);
     ctx.beginPath();
     ctx.moveTo(0, 0);
-    ctx.lineTo(-10, -5);
-    ctx.lineTo(-10, 5);
+    ctx.lineTo(-9, -4.5);
+    ctx.lineTo(-9, 4.5);
     ctx.closePath();
-    ctx.fillStyle = cl.color + 'cc';
+    ctx.fillStyle = cl.color + 'dd';
     ctx.fill();
 
-    // Traveling dot
-    var travelT = (connLineAnim * 0.6 + i * 0.3) % 1.0;
+    // Traveling dot along bezier
+    var travelT = (connLineAnim * 0.55 + i * 0.28) % 1.0;
     ctx.restore();
-    var tx2 = cl.from.x + dx * travelT;
-    var ty2 = cl.from.y + dy * travelT;
-    ctx.beginPath(); ctx.arc(tx2, ty2, 4, 0, Math.PI*2);
-    ctx.fillStyle = cl.color;
-    ctx.fill();
-    ctx.beginPath(); ctx.arc(tx2, ty2, 8, 0, Math.PI*2);
-    ctx.fillStyle = cl.color + '30';
-    ctx.fill();
+    var tp = bezierPoint({x:cl.from.x,y:cl.from.y}, cp1, cp2, {x:cl.to.x,y:cl.to.y}, travelT);
+    ctx.beginPath(); ctx.arc(tp.x, tp.y, 4, 0, Math.PI*2);
+    ctx.fillStyle = cl.color; ctx.fill();
+    ctx.beginPath(); ctx.arc(tp.x, tp.y, 8, 0, Math.PI*2);
+    ctx.fillStyle = cl.color + '28'; ctx.fill();
   }
 }
 
@@ -990,7 +1150,18 @@ function drawFrame(time) {
   ctx.clearRect(0, 0, W, H);
   var arch = ARCHS[currentArch];
   var mob = W < 500;
-  var fs = mob ? 0.82 : 1;
+  // fs scales fonts but with a firm minimum so text stays legible at small widths
+  var fs = mob ? 0.88 : 1;
+  // Minimum font sizes (px) for key labels
+  var FONT_SM_LABEL  = Math.max(10, 10*fs);
+  var FONT_SM_WARP   = Math.max(7,  7*fs);
+  var FONT_BLOCK_LG  = Math.max(8,  8*fs);   // L1 label with state
+  var FONT_BLOCK_SM  = Math.max(7.5, 7.5*fs); // Other sub-block labels
+  var FONT_BLOCK_XS  = Math.max(7,  7*fs);    // cp.async etc
+  var FONT_L2        = Math.max(11, 11*fs);
+  var FONT_LABEL_MED = Math.max(10, 10*fs);
+  var FONT_LABEL_SM  = Math.max(7,  7*fs);
+  var FONT_HBM       = Math.max(11, 11*fs);
 
   if (layout.cluster) {
     var c = layout.cluster;
@@ -998,7 +1169,7 @@ function drawFrame(time) {
     rrect(c.x1, c.y1, c.x2-c.x1, c.y2-c.y1, 10);
     ctx.strokeStyle = arch.color+'40'; ctx.lineWidth=1.5; ctx.stroke();
     ctx.setLineDash([]);
-    ctx.font='bold '+(8*fs)+'px "JetBrains Mono"';
+    ctx.font='bold '+Math.max(8,8*fs)+'px "JetBrains Mono"';
     ctx.fillStyle=arch.color+'90'; ctx.textAlign='center';
     ctx.fillText('THREAD BLOCK CLUSTER', (c.x1+c.x2)/2, c.y1-2);
   }
@@ -1008,43 +1179,81 @@ function drawFrame(time) {
     rrect(sm.x, sm.y, sm.w, sm.h, 7);
     ctx.fillStyle='#0f1118'; ctx.fill();
     ctx.strokeStyle='#2a2d3a'; ctx.lineWidth=1; ctx.stroke();
-    ctx.font='700 '+(10*fs)+'px "Outfit"';
-    ctx.fillStyle='#e0e2ec'; ctx.textAlign='center';
+    ctx.font='700 '+FONT_SM_LABEL+'px "Outfit"';
+    ctx.fillStyle='#e8eaf6'; ctx.textAlign='center';
     ctx.fillText(sm.label, sm.x+sm.w/2, sm.y+14*fs);
-    ctx.font='400 '+(7*fs)+'px "JetBrains Mono"';
-    ctx.fillStyle='#6b7094';
+    ctx.font='400 '+FONT_SM_WARP+'px "JetBrains Mono"';
+    ctx.fillStyle='#8890b0';
     ctx.fillText('Warps ▸▸▸', sm.x+sm.w/2, sm.y+24*fs);
 
     for (var bi = 0; bi < sm.sub.length; bi++) {
       var b = sm.sub[bi];
       if (b.type === 'regs') {
-        var barC = Math.floor(b.w/10);
+        var barC = Math.max(4, Math.floor(b.w/10));
         for (var rj = 0; rj < barC; rj++) {
-          ctx.fillStyle='hsl(220,30%,'+(18+Math.sin(Date.now()/800+rj+si)*3)+'%)';
+          ctx.fillStyle='hsl(220,30%,'+(19+Math.sin(Date.now()/800+rj+si)*3)+'%)';
           ctx.fillRect(b.x+rj*(b.w/barC), b.y, b.w/barC-1.5, b.h);
         }
         continue;
       }
       rrect(b.x, b.y, b.w, b.h, 3);
       if (b.type === 'l1' && b.state) {
-        var stColors = { modified:'#51cf66', shared:'#339af0', invalid:'#555' };
-        var sc = stColors[b.state]||'#555';
-        ctx.fillStyle=sc+'18'; ctx.fill();
-        ctx.strokeStyle=sc; ctx.lineWidth=1.2; ctx.stroke();
-        ctx.font='600 '+(7.5*fs)+'px "JetBrains Mono"';
-        ctx.fillStyle=sc; ctx.textAlign='center';
-        ctx.fillText(b.label+' ['+b.state.charAt(0).toUpperCase()+']', b.x+b.w/2, b.y+b.h/2+3);
+        var stColors = { modified:'#51cf66', shared:'#339af0', invalid:'#6b7090' };
+        var sc = stColors[b.state]||'#6b7090';
+        // For invalid, use a slightly lighter fill so text pops
+        ctx.fillStyle = b.state === 'invalid' ? '#6b709018' : sc+'22'; ctx.fill();
+        ctx.strokeStyle = b.state === 'invalid' ? '#5a5e78' : sc; ctx.lineWidth=1.5; ctx.stroke();
+
+        // ── Cache line grid ──────────────────────────────────
+        var csm2 = cacheState[si];
+        if (csm2) {
+          var lines2 = csm2.l1;
+          var gx = b.x + 4, gw = b.w - 8;
+          var slotW = gw / NUM_LINES;
+          var gy = b.y + b.h - 6;
+          for (var li = 0; li < NUM_LINES; li++) {
+            var lv = lines2[li];
+            var lc = lv === 2 ? '#51cf66' : (lv === 1 ? (b.state==='shared'?'#339af0':'#51cf6688') : '#2a2d3a');
+            ctx.fillStyle = lc;
+            ctx.fillRect(gx + li*slotW + 0.5, gy, slotW - 1, 4);
+          }
+        }
+        // ─────────────────────────────────────────────────────
+
+        ctx.font='600 '+FONT_BLOCK_LG+'px "JetBrains Mono"';
+        ctx.fillStyle = b.state === 'invalid' ? '#9095b0' : sc;
+        ctx.textAlign='center';
+        ctx.fillText(b.label+' ['+b.state.charAt(0).toUpperCase()+']', b.x+b.w/2, b.y+b.h/2+1);
       } else {
         var cBg, cBr, cLbl;
-        if (b.type==='texCache') { cBg='#e599f710'; cBr='#e599f750'; cLbl='#e599f7'; }
-        else if (b.type==='tma'||b.type==='dsmem') { cBg='#22d3ee10'; cBr='#22d3ee60'; cLbl='#22d3ee'; }
-        else if (b.type==='async') { cBg='#22d3ee08'; cBr='#22d3ee40'; cLbl='#22d3ee'; }
-        else { cBg='#51cf6608'; cBr='#51cf6650'; cLbl='#51cf66'; }
+        if (b.type==='texCache')             { cBg='#e599f712'; cBr='#e599f760'; cLbl='#e599f7'; }
+        else if (b.type==='tma')             { cBg='#22d3ee12'; cBr='#22d3ee70'; cLbl='#22d3ee'; }
+        else if (b.type==='dsmem')           { cBg='#22d3ee10'; cBr='#22d3ee60'; cLbl='#22d3ee'; }
+        else if (b.type==='async')           { cBg='#22d3ee0a'; cBr='#22d3ee45'; cLbl='#6de8f0'; }
+        else /* smem */                      { cBg='#51cf660a'; cBr='#51cf6660'; cLbl='#6ee09a'; }
         ctx.fillStyle=cBg; ctx.fill();
         ctx.strokeStyle=cBr; ctx.lineWidth=1; ctx.stroke();
-        ctx.font='600 '+((b.type==='async'?6.5:7)*fs)+'px "JetBrains Mono"';
+
+        // ── SMEM line grid ───────────────────────────────────
+        if (b.type === 'smem') {
+          var csm3 = cacheState[si];
+          if (csm3) {
+            var slines = csm3.smem;
+            var sgx = b.x + 4, sgw = b.w - 8;
+            var sslotW = sgw / NUM_LINES;
+            var sgy = b.y + b.h - 5;
+            for (var sli2 = 0; sli2 < NUM_LINES; sli2++) {
+              ctx.fillStyle = slines[sli2] === 1 ? '#51cf6680' : '#1e2030';
+              ctx.fillRect(sgx + sli2*sslotW + 0.5, sgy, sslotW - 1, 3);
+            }
+          }
+        }
+        // ─────────────────────────────────────────────────────
+
+        var lblFs = (b.type==='async') ? FONT_BLOCK_XS : FONT_BLOCK_SM;
+        ctx.font='600 '+lblFs+'px "JetBrains Mono"';
         ctx.fillStyle=cLbl; ctx.textAlign='center';
-        ctx.fillText(b.label, b.x+b.w/2, b.y+b.h/2+3);
+        ctx.fillText(b.label, b.x+b.w/2, b.y+b.h/2+1);
       }
     }
   }
@@ -1082,12 +1291,12 @@ function drawFrame(time) {
   var busPulse = Math.sin(Date.now()/400)*0.3+0.5;
   ctx.setLineDash([5,3]);
   ctx.beginPath(); ctx.moveTo(bus.x1, bus.y); ctx.lineTo(bus.x2, bus.y);
-  ctx.strokeStyle='#f0659540'; ctx.lineWidth=2; ctx.stroke(); ctx.setLineDash([]);
+  ctx.strokeStyle='#f0659550'; ctx.lineWidth=2; ctx.stroke(); ctx.setLineDash([]);
   ctx.beginPath(); ctx.moveTo(bus.x1, bus.y); ctx.lineTo(bus.x2, bus.y);
-  ctx.strokeStyle='rgba(240,101,149,'+(busPulse*0.12)+')'; ctx.lineWidth=7; ctx.stroke();
-  ctx.font='500 '+(7.5*fs)+'px "JetBrains Mono"';
-  ctx.fillStyle='#f06595'; ctx.textAlign='center';
-  ctx.fillText(bus.label, (bus.x1+bus.x2)/2, bus.y-8);
+  ctx.strokeStyle='rgba(240,101,149,'+(busPulse*0.15)+')'; ctx.lineWidth=8; ctx.stroke();
+  ctx.font='600 '+Math.max(8,8*fs)+'px "JetBrains Mono"';
+  ctx.fillStyle='#f06595e0'; ctx.textAlign='center';
+  ctx.fillText(bus.label, (bus.x1+bus.x2)/2, bus.y-9);
 
   ctx.beginPath(); ctx.moveTo(W/2, bus.y); ctx.lineTo(W/2, layout.l2.y);
   ctx.strokeStyle='#2a2d3a'; ctx.lineWidth=1.5; ctx.stroke();
@@ -1095,9 +1304,9 @@ function drawFrame(time) {
   var l2 = layout.l2;
   rrect(l2.x, l2.y, l2.w, l2.h, 7);
   ctx.fillStyle='#1a1408'; ctx.fill();
-  ctx.strokeStyle='#ffa94d50'; ctx.lineWidth=1.5; ctx.stroke();
-  ctx.font='700 '+(11*fs)+'px "Outfit"';
-  ctx.fillStyle='#ffa94d'; ctx.textAlign='center';
+  ctx.strokeStyle='#ffa94d60'; ctx.lineWidth=1.5; ctx.stroke();
+  ctx.font='700 '+Math.max(11,11*fs)+'px "Outfit"';
+  ctx.fillStyle='#ffb55a'; ctx.textAlign='center';
   ctx.fillText(arch.blocks.l2.label, l2.x+l2.w/2, l2.y+18*fs);
   var slices = mob ? 8 : 12;
   var slW = (l2.w-20)/slices;
@@ -1110,11 +1319,11 @@ function drawFrame(time) {
     var p = layout.l2Persist;
     rrect(p.x,p.y,p.w,p.h,2);
     var grad = ctx.createLinearGradient(p.x,0,p.x+p.w,0);
-    grad.addColorStop(0,'#ffa94d30'); grad.addColorStop(0.6,'#ffa94d15'); grad.addColorStop(1,'#ffa94d05');
+    grad.addColorStop(0,'#ffa94d35'); grad.addColorStop(0.6,'#ffa94d18'); grad.addColorStop(1,'#ffa94d05');
     ctx.fillStyle=grad; ctx.fill();
-    ctx.strokeStyle='#ffa94d30'; ctx.lineWidth=.5; ctx.stroke();
-    ctx.font='500 '+(5.5*fs)+'px "JetBrains Mono"';
-    ctx.fillStyle='#ffa94d80'; ctx.textAlign='center';
+    ctx.strokeStyle='#ffa94d35'; ctx.lineWidth=.5; ctx.stroke();
+    ctx.font='600 '+Math.max(6,6*fs)+'px "JetBrains Mono"';
+    ctx.fillStyle='#ffa94da0'; ctx.textAlign='center';
     ctx.fillText('PERSIST WINDOW', p.x+p.w/2, p.y+p.h/2+2);
   }
 
@@ -1124,9 +1333,9 @@ function drawFrame(time) {
   var cb = layout.crossbar;
   ctx.setLineDash([3,3]);
   ctx.beginPath(); ctx.moveTo(cb.x1,cb.y); ctx.lineTo(cb.x2,cb.y);
-  ctx.strokeStyle='#339af030'; ctx.lineWidth=1.5; ctx.stroke(); ctx.setLineDash([]);
-  ctx.font='500 '+(7*fs)+'px "JetBrains Mono"';
-  ctx.fillStyle='#339af0'; ctx.textAlign='center';
+  ctx.strokeStyle='#339af038'; ctx.lineWidth=1.5; ctx.stroke(); ctx.setLineDash([]);
+  ctx.font='600 '+Math.max(7.5,7.5*fs)+'px "JetBrains Mono"';
+  ctx.fillStyle='#339af0c0'; ctx.textAlign='center';
   ctx.fillText('MEMORY CROSSBAR / NoC', (cb.x1+cb.x2)/2, cb.y-6);
 
   ctx.beginPath(); ctx.moveTo(W/2,cb.y); ctx.lineTo(W/2,layout.globalMem.y);
@@ -1135,20 +1344,20 @@ function drawFrame(time) {
   var gm = layout.globalMem;
   rrect(gm.x,gm.y,gm.w,gm.h,7);
   ctx.fillStyle='#0d1320'; ctx.fill();
-  ctx.strokeStyle='#339af040'; ctx.lineWidth=1.5; ctx.stroke();
-  ctx.font='700 '+(10*fs)+'px "Outfit"';
-  ctx.fillStyle='#339af0'; ctx.textAlign='center';
+  ctx.strokeStyle='#339af050'; ctx.lineWidth=1.5; ctx.stroke();
+  ctx.font='700 '+Math.max(10,10*fs)+'px "Outfit"';
+  ctx.fillStyle='#5ab0f8'; ctx.textAlign='center';
   ctx.fillText('Global Memory Interface', gm.x+gm.w/2, gm.y+16*fs);
   for (var mci=0;mci<layout.mcs.length;mci++) {
     var mc=layout.mcs[mci];
     ctx.fillStyle='hsl(210,50%,'+(14+Math.sin(Date.now()/500+mci)*3)+'%)';
     ctx.fillRect(mc.x,mc.y,mc.w,mc.h);
-    ctx.font='500 '+(6*fs)+'px "JetBrains Mono"';
-    ctx.fillStyle='#339af070'; ctx.textAlign='center';
+    ctx.font='600 '+Math.max(6.5,6.5*fs)+'px "JetBrains Mono"';
+    ctx.fillStyle='#339af090'; ctx.textAlign='center';
     ctx.fillText('MC'+mci, mc.x+mc.w/2, mc.y+mc.h/2+2);
   }
-  ctx.font='400 '+(6*fs)+'px "JetBrains Mono"';
-  ctx.fillStyle='#6b7094';
+  ctx.font='500 '+Math.max(6.5,6.5*fs)+'px "JetBrains Mono"';
+  ctx.fillStyle='#8890a8';
   ctx.fillText('MC → '+arch.blocks.hbm.label, gm.x+gm.w/2, gm.y+gm.h-5);
 
   ctx.beginPath(); ctx.moveTo(W/2,gm.y+gm.h); ctx.lineTo(W/2,layout.hbm.y);
@@ -1157,9 +1366,9 @@ function drawFrame(time) {
   var hbm = layout.hbm;
   rrect(hbm.x,hbm.y,hbm.w,hbm.h,7);
   ctx.fillStyle='#0d0a18'; ctx.fill();
-  ctx.strokeStyle='#845ef730'; ctx.lineWidth=1.5; ctx.stroke();
-  ctx.font='700 '+(11*fs)+'px "Outfit"';
-  ctx.fillStyle='#845ef7'; ctx.textAlign='center';
+  ctx.strokeStyle='#845ef740'; ctx.lineWidth=1.5; ctx.stroke();
+  ctx.font='700 '+Math.max(11,11*fs)+'px "Outfit"';
+  ctx.fillStyle='#a07af8'; ctx.textAlign='center';
   ctx.fillText(hbm.label, hbm.x+hbm.w/2, hbm.y+16*fs);
   var hbmStacks = mob ? 4 : 6;
   var hstW = (hbm.w-30)/hbmStacks;
@@ -1191,19 +1400,47 @@ function drawFrame(time) {
     var scale=0.8+fadeIn*0.2;
     ctx.save();
     ctx.globalAlpha=alpha;
-    ctx.font='bold '+Math.round(8*scale*fs)+'px "JetBrains Mono"';
-    ctx.textAlign='center';
-    var tw=ctx.measureText(b.text).width+10;
-    var bh=16*scale;
-    rrect(bx-tw/2, by-bh/2-1, tw, bh, 4);
+
+    // Measure both lines
+    var fs2 = Math.max(8, 8*scale);
+    var subFs = Math.max(6.5, 6.5*scale);
+    ctx.font='700 '+fs2+'px "JetBrains Mono"';
+    var tw = ctx.measureText(b.text).width + 14;
+    var subTw = 0;
+    if (b.sub) {
+      ctx.font='500 '+subFs+'px "JetBrains Mono"';
+      subTw = ctx.measureText(b.sub).width + 14;
+    }
+    var boxW = Math.max(tw, subTw);
+    var lineH = fs2 + 3;
+    var bh = b.sub ? (lineH + subFs + 7) : (lineH + 4);
+
+    rrect(bx-boxW/2, by-bh/2-1, boxW, bh, 5);
     ctx.fillStyle=b.bg; ctx.fill();
-    ctx.strokeStyle=b.color+'60'; ctx.lineWidth=0.8; ctx.stroke();
-    if (progress<0.3) {
-      ctx.beginPath(); ctx.moveTo(bx-3,by+bh/2-1); ctx.lineTo(bx,by+bh/2+4); ctx.lineTo(bx+3,by+bh/2-1);
+    ctx.strokeStyle=b.color+'70'; ctx.lineWidth=1; ctx.stroke();
+
+    // Pointer tail
+    if (progress<0.35) {
+      ctx.beginPath();
+      ctx.moveTo(bx-3, by+bh/2-1);
+      ctx.lineTo(bx, by+bh/2+5);
+      ctx.lineTo(bx+3, by+bh/2-1);
       ctx.closePath(); ctx.fillStyle=b.bg; ctx.fill();
     }
+
+    // Main label
+    ctx.font='700 '+fs2+'px "JetBrains Mono"';
     ctx.fillStyle=b.color;
-    ctx.fillText(b.text, bx, by+3*scale);
+    ctx.textAlign='center';
+    var textY = b.sub ? (by - bh/2 + fs2 + 3) : (by + fs2/2 - 1);
+    ctx.fillText(b.text, bx, textY);
+
+    // Subtitle
+    if (b.sub) {
+      ctx.font='500 '+subFs+'px "JetBrains Mono"';
+      ctx.fillStyle=b.color+'99';
+      ctx.fillText(b.sub, bx, textY + subFs + 2);
+    }
     ctx.restore();
     return true;
   });
@@ -1370,18 +1607,18 @@ function triggerScenario(type) {
 
   switch(type) {
     case 'read':
-      sm.l1.state='invalid'; stats.misses++;
+      sm.l1.state='invalid'; invalidateL1(si); stats.misses++;
       logEvent('SM'+si+': L1 read miss → L2','#ff6b6b');
-      bubble(l1Pos(si).x,l1Pos(si).y,'LD.E issued','#ff6b6b');
+      bubble(l1Pos(si).x,l1Pos(si).y,'cache miss','#ff6b6b',{sub:'not in L1'});
       particles.push(new Particle(l1Pos(si),busP(si),'#ff6b6b','RdReq',2,function(){
-        bubble(busP(si).x,busP(si).y,'L1 MISS!','#ff6b6b',{life:1.4});
+        bubble(busP(si).x,busP(si).y,'going to L2','#ff6b6b',{life:1.4,sub:'fetch from below'});
         particles.push(new Particle(busP(si),l2Top(),'#ff6b6b','RdReq',2.5,function(){
           stats.hits++; logEvent('L2: Hit → data returning','#ffa94d');
-          bubble(l2Top().x,l2Top().y,'L2 HIT ✓','#51cf66',{life:1.5});
+          bubble(l2Top().x,l2Top().y,'L2 found it','#51cf66',{life:1.5,sub:'data ready'});
           particles.push(new Particle(l2Top(),busP(si),'#ffa94d','DATA',2,function(){
             particles.push(new Particle(busP(si),l1Pos(si),'#ffa94d','DATA',2,function(){
-              sm.l1.state='shared'; flash(sm.l1,'#339af0');
-              bubble(l1Pos(si).x,l1Pos(si).y,'→ Shared','#339af0',{life:1.6});
+              sm.l1.state='shared'; fillL1Random(si, false); flash(sm.l1,'#339af0');
+              bubble(l1Pos(si).x,l1Pos(si).y,'line cached','#339af0',{life:1.6,sub:'now Shared'});
               logEvent('SM'+si+': L1 → Shared','#339af0');
             }));
           }));
@@ -1392,28 +1629,28 @@ function triggerScenario(type) {
       if (currentArch==='pascal') {
         logEvent('SM'+si+': Write → L2 (L1 bypassed)','#51cf66');
         stats.hits++;
-        bubble(l1Pos(si).x,l1Pos(si).y,'ST.E issued','#51cf66');
+        bubble(l1Pos(si).x,l1Pos(si).y,'write bypass','#51cf66',{sub:'L1 skipped'});
         particles.push(new Particle(l1Pos(si),busP(si),'#51cf66','WR',2,function(){
-          bubble(busP(si).x,busP(si).y,'L1 bypass','#6b7094',{life:1.2});
+          bubble(busP(si).x,busP(si).y,'skip L1','#8890a8',{life:1.2,sub:'straight to L2'});
           particles.push(new Particle(busP(si),l2Top(),'#51cf66','WR',2.5,function(){
             flash(layout.l2,'#ffa94d');
-            bubble(l2Top().x,l2Top().y,'absorbed ✓','#ffa94d',{life:1.5});
+            bubble(l2Top().x,l2Top().y,'L2 updated','#ffa94d',{life:1.5,sub:'write absorbed'});
             logEvent('L2: Write absorbed','#ffa94d');
           }));
         }));
       } else {
-        sm.l1.state='modified'; stats.hits++;
+        sm.l1.state='modified'; setL1Dirty(si); stats.hits++;
         logEvent('SM'+si+': Write → Modified + invalidate','#51cf66');
         flash(sm.l1,'#51cf66');
-        bubble(l1Pos(si).x,l1Pos(si).y,'ST.E → Modified','#51cf66');
+        bubble(l1Pos(si).x,l1Pos(si).y,'line dirty','#51cf66',{sub:'now Modified'});
         for (var wi=0;wi<layout.sms.length;wi++) {
           if (wi!==si && layout.sms[wi].l1.state!=='invalid') {
             (function(idx){
               setTimeout(function(){
                 particles.push(new Particle(busP(si),busP(idx),'#f06595','INV',3,function(){
-                  layout.sms[idx].l1.state='invalid'; stats.inv++;
+                  layout.sms[idx].l1.state='invalid'; invalidateL1(idx); stats.inv++;
                   flash(layout.sms[idx].l1,'#f06595');
-                  bubble(l1Pos(idx).x,l1Pos(idx).y,'invalidated!','#f06595',{life:1.3});
+                  bubble(l1Pos(idx).x,l1Pos(idx).y,'copy stale','#f06595',{life:1.3,sub:'lines cleared'});
                   logEvent('SM'+idx+': Invalidated','#f06595');
                   updateStats();
                 }));
@@ -1426,15 +1663,16 @@ function triggerScenario(type) {
     case 'invalidate':
       stats.inv++;
       logEvent('Broadcast INV','#f06595');
-      bubble((layout.bus.x1+layout.bus.x2)/2,layout.bus.y,'INV broadcast!','#f06595');
+      bubble((layout.bus.x1+layout.bus.x2)/2,layout.bus.y,'broadcast flush','#f06595',{sub:'all SMs notified'});
       for (var ii=0;ii<layout.sms.length;ii++) {
         (function(idx){
           setTimeout(function(){
             var from={x:(layout.bus.x1+layout.bus.x2)/2,y:layout.bus.y};
             particles.push(new Particle(from,busP(idx),'#f06595','INV',3,function(){
               particles.push(new Particle(busP(idx),l1Pos(idx),'#f06595','INV',2,function(){
-                layout.sms[idx].l1.state='invalid'; flash(layout.sms[idx].l1,'#f06595');
-                bubble(l1Pos(idx).x,l1Pos(idx).y,'stale!','#f06595',{life:1.2});
+                layout.sms[idx].l1.state='invalid'; invalidateL1(idx);
+                flash(layout.sms[idx].l1,'#f06595');
+                bubble(l1Pos(idx).x,l1Pos(idx).y,'all cleared','#f06595',{life:1.2,sub:'lines dropped'});
               }));
             }));
           }, idx*180);
@@ -1442,23 +1680,23 @@ function triggerScenario(type) {
       }
       break;
     case 'writeback':
-      sm.l1.state='modified'; stats.wb++;
+      sm.l1.state='modified'; setL1Dirty(si); stats.wb++;
       logEvent('SM'+si+': Write-back → L2','#ffa94d');
-      bubble(l1Pos(si).x,l1Pos(si).y,'dirty evict!','#ffa94d');
+      bubble(l1Pos(si).x,l1Pos(si).y,'dirty evict','#ffa94d',{sub:'must flush out'});
       particles.push(new Particle(l1Pos(si),busP(si),'#ffa94d','WB',2,function(){
         particles.push(new Particle(busP(si),l2Top(),'#ffa94d','WB',2.5,function(){
-          flash(layout.l2,'#ffa94d'); sm.l1.state='shared';
-          bubble(l2Top().x,l2Top().y,'L2 absorbed ✓','#ffa94d',{life:1.4});
+          flash(layout.l2,'#ffa94d'); sm.l1.state='shared'; writebackL1(si);
+          bubble(l2Top().x,l2Top().y,'L2 absorbed','#ffa94d',{life:1.4,sub:'dirty → L2'});
           logEvent('L2: Write-back received','#ffa94d');
           setTimeout(function(){
-            bubble(l2Bot().x,l2Bot().y,'L2 full → evict','#339af0',{life:1.3});
+            bubble(l2Bot().x,l2Bot().y,'L2 evicting','#339af0',{life:1.3,sub:'victim to DRAM'});
             particles.push(new Particle(l2Bot(),cbP(),'#339af0','EVICT',2,function(){
               particles.push(new Particle(cbP(),gmTop(),'#339af0','WR',2,function(){
                 flash(layout.globalMem,'#339af0');
-                bubble(gmTop().x,gmTop().y,'MC queued','#339af0',{life:1.2});
+                bubble(gmTop().x,gmTop().y,'queued MC','#339af0',{life:1.2,sub:'scheduling write'});
                 particles.push(new Particle(gmBot(),hbmTop(),'#845ef7','STORE',1.5,function(){
                   flash(layout.hbm,'#845ef7');
-                  bubble(hbmTop().x,hbmTop().y,'stored ✓','#845ef7',{life:1.5});
+                  bubble(hbmTop().x,hbmTop().y,'persisted','#845ef7',{life:1.5,sub:'written to DRAM'});
                   logEvent(ARCHS[currentArch].blocks.hbm.label+': Stored','#845ef7');
                 }));
               }));
@@ -1473,12 +1711,13 @@ function triggerScenario(type) {
       if(!smemBlock) break;
       logEvent('SM'+si+': SMEM access','#51cf66');
       flash(smemBlock,'#51cf66'); stats.hits++;
-      bubble(sm.x+sm.w/2,sm.y+14,'LDS issued','#51cf66');
+      fillSmem(si);
+      bubble(sm.x+sm.w/2,sm.y+14,'no coherency','#51cf66',{sub:'SM-private scratchpad'});
       var regsBlock=null;
       for(var ri=0;ri<sm.sub.length;ri++){if(sm.sub[ri].type==='regs')regsBlock=sm.sub[ri];}
       var sfrom={x:sm.x+sm.w/2,y:regsBlock?regsBlock.y+3:sm.y+40};
       particles.push(new Particle(sfrom,{x:smemBlock.x+smemBlock.w/2,y:smemBlock.y+smemBlock.h/2},'#51cf66','ST.S',1.5,function(){
-        bubble(smemBlock.x+smemBlock.w/2,smemBlock.y,'~20 cycles ✓','#51cf66',{life:1.4});
+        bubble(smemBlock.x+smemBlock.w/2,smemBlock.y,'~20 cycles','#51cf66',{life:1.4,sub:'fast SRAM hit'});
       }));
       if (currentArch==='hopper'&&layout.sms.length>1) {
         var other=(si+1)%layout.sms.length;
@@ -1488,13 +1727,13 @@ function triggerScenario(type) {
         if(otherDsmem&&myDsmem){
           setTimeout(function(){
             logEvent('SM'+si+' → SM'+other+': DSMEM read','#22d3ee');
-            bubble(myDsmem.x+myDsmem.w/2,myDsmem.y,'cross-SM!','#22d3ee');
+            bubble(myDsmem.x+myDsmem.w/2,myDsmem.y,'peer read','#22d3ee',{sub:'cross-SM memory'});
             particles.push(new Particle(
               {x:myDsmem.x+myDsmem.w/2,y:myDsmem.y+myDsmem.h/2},
               {x:otherDsmem.x+otherDsmem.w/2,y:otherDsmem.y+otherDsmem.h/2},
               '#22d3ee','DSMEM',2,function(){
                 flash(otherDsmem,'#22d3ee');
-                bubble(otherDsmem.x+otherDsmem.w/2,otherDsmem.y,'DSMEM hit ✓','#22d3ee',{life:1.4});
+                bubble(otherDsmem.x+otherDsmem.w/2,otherDsmem.y,'cluster hit','#22d3ee',{life:1.4,sub:'no bus needed'});
               }
             ));
           },800);
@@ -1514,6 +1753,7 @@ function resetAll(silent) {
   particles=[]; flashEffects=[]; bubbles=[];
   stats={hits:0,misses:0,inv:0,wb:0}; updateStats();
   for(var ri=0;ri<layout.sms.length;ri++){layout.sms[ri].l1.state='invalid';}
+  initCacheState();
   document.getElementById('event-log').innerHTML='';
   stepTimers.forEach(function(t){clearTimeout(t);}); stepTimers=[];
   document.getElementById('explainer-title').innerHTML='<span class="dot" style="background:#6b7094"></span> Click a scenario or wait for auto...';
