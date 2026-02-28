@@ -563,10 +563,11 @@ function getCacheStats(smIdx, kind) {
 }
 
 // ─── Hover / selection state ───
-var hoveredBlock = null;   // { type, rect:{x,y,w,h}, smIdx }
-var selectedBlock = null;  // same shape
-var connLines = [];        // animated connection lines when block selected
+var hoveredBlock = null;
+var selectedBlock = null;
+var connLines = [];
 var mouseX = 0, mouseY = 0;
+var lastClientX = 0, lastClientY = 0;  // for live tooltip refresh from drawFrame
 
 // ─── All "hit" rectangles (rebuilt each buildLayout) ───
 var hitRects = []; // [{type, x, y, w, h, smIdx}]
@@ -667,6 +668,8 @@ canvas.addEventListener('mousemove', function(e) {
   var r = canvas.getBoundingClientRect();
   mouseX = e.clientX - r.left;
   mouseY = e.clientY - r.top;
+  lastClientX = e.clientX;
+  lastClientY = e.clientY;
   var hit = hitTest(mouseX, mouseY);
   hoveredBlock = hit;
   canvas.style.cursor = hit ? 'pointer' : 'default';
@@ -748,52 +751,30 @@ function updateTooltip(hit, clientX, clientY) {
   if (!hit) { hideTooltip(); return; }
   var info = BLOCK_INFO[hit.type];
   if (!info) { hideTooltip(); return; }
+
+  // Static content (only set on block change, not every frame)
   ttName.textContent = info.name;
   ttDot.style.background = info.color;
   tooltipEl.style.borderColor = info.color + '50';
   ttDesc.textContent = info.desc;
-  ttMeta.innerHTML = '';
 
-  // ── Cache fill chips for L1 and SMEM ────────────────────────────────────
-  if ((hit.type === 'l1' || hit.type === 'smem') && hit.smIdx !== undefined) {
-    var kind = hit.type === 'l1' ? 'l1' : 'smem';
-    var cs = getCacheStats(hit.smIdx, kind);
-    var pct = Math.round((cs.filled / NUM_LINES) * 100);
+  var isCacheBlock = (hit.type === 'l1' || hit.type === 'smem') && hit.smIdx !== undefined;
 
-    // Mini visual bar
-    var barHtml = '<div style="margin-bottom:8px">';
-    barHtml += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">';
-    barHtml += '<span style="font-family:JetBrains Mono,monospace;font-size:.6rem;color:#9095b0">CACHE LINES</span>';
-    barHtml += '<span style="font-family:JetBrains Mono,monospace;font-size:.65rem;font-weight:700;color:'+info.color+'">'+(cs.filled)+'/'+NUM_LINES+' filled</span>';
-    if (cs.dirty > 0) barHtml += '<span style="font-family:JetBrains Mono,monospace;font-size:.6rem;color:#51cf66">'+cs.dirty+' dirty</span>';
-    barHtml += '</div>';
-    // Row of 16 mini squares
-    barHtml += '<div style="display:flex;gap:2px;height:8px">';
-    var arr = cacheState[hit.smIdx] ? cacheState[hit.smIdx][kind] : [];
-    for (var li = 0; li < NUM_LINES; li++) {
-      var lv = arr[li] || 0;
-      var lc = lv === 2 ? '#51cf66' : (lv === 1 ? (hit.type==='l1'?info.color+'aa':'#51cf6688') : '#2a2d3a');
-      barHtml += '<div style="flex:1;background:'+lc+';border-radius:1px"></div>';
-    }
-    barHtml += '</div>';
-    // Status label
-    var stateLabel = '', stateColor = '#6b7094';
-    if (hit.type === 'l1') {
-      var l1b = null;
-      if (layout.sms[hit.smIdx]) {
-        for (var bi=0;bi<layout.sms[hit.smIdx].sub.length;bi++) {
-          if (layout.sms[hit.smIdx].sub[bi].type==='l1') { l1b = layout.sms[hit.smIdx].sub[bi]; break; }
-        }
-      }
-      var st = l1b ? l1b.state : 'invalid';
-      if (st==='modified') { stateLabel='Modified — has dirty data'; stateColor='#51cf66'; }
-      else if (st==='shared') { stateLabel='Shared — clean copy'; stateColor='#339af0'; }
-      else { stateLabel='Invalid — no valid data'; stateColor='#6b7090'; }
-      barHtml += '<div style="margin-top:4px;font-size:.65rem;font-family:JetBrains Mono,monospace;color:'+stateColor+'">● '+stateLabel+'</div>';
-    }
-    barHtml += '</div>';
-    ttMeta.innerHTML = barHtml;
+  if (isCacheBlock) {
+    // Build stable DOM structure with IDs for per-frame refresh
+    ttMeta.innerHTML =
+      '<div style="margin-bottom:2px">' +
+        '<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">' +
+          '<span style="font-family:JetBrains Mono,monospace;font-size:.6rem;color:#9095b0;text-transform:uppercase;letter-spacing:1px">Cache Lines</span>' +
+          '<span id="tt-fill-label" style="font-family:JetBrains Mono,monospace;font-size:.68rem;font-weight:700;color:'+info.color+'"></span>' +
+          '<span id="tt-dirty-label" style="font-family:JetBrains Mono,monospace;font-size:.62rem;color:#51cf66"></span>' +
+        '</div>' +
+        '<div id="tt-line-grid" style="display:flex;gap:2px;height:10px;margin-bottom:5px"></div>' +
+        '<div id="tt-state-label" style="font-size:.66rem;font-family:JetBrains Mono,monospace"></div>' +
+      '</div>';
+    refreshTooltipCacheData(hit, info);
   } else {
+    ttMeta.innerHTML = '';
     if (info.chips) {
       for (var i = 0; i < info.chips.length; i++) {
         var chip = info.chips[i];
@@ -806,20 +787,86 @@ function updateTooltip(hit, clientX, clientY) {
       }
     }
   }
-  // ────────────────────────────────────────────────────────────────────────
 
   ttHint.style.display = (selectedBlock && selectedBlock.type === hit.type) ? 'none' : 'flex';
-
-  // Position tooltip
-  var vizRect = canvas.parentElement.getBoundingClientRect();
-  var tx = clientX - vizRect.left + 12;
-  var ty = clientY - vizRect.top - 10;
-  var tw = 240, th = 140;
-  if (tx + tw > vizRect.width - 10) tx = clientX - vizRect.left - tw - 12;
-  if (ty + th > vizRect.height - 10) ty = clientY - vizRect.top - th - 10;
-  tooltipEl.style.left = tx + 'px';
-  tooltipEl.style.top = ty + 'px';
+  positionTooltip(clientX, clientY);
   tooltipEl.classList.add('visible');
+}
+
+// Called every frame while hovering a cache block — updates just the live data
+function refreshTooltipCacheData(hit, info) {
+  if (!hit) return;
+  var inf = info || BLOCK_INFO[hit.type];
+  if (!inf) return;
+  var kind = hit.type === 'l1' ? 'l1' : 'smem';
+  if (hit.type !== 'l1' && hit.type !== 'smem') return;
+
+  var cs = getCacheStats(hit.smIdx, kind);
+  var arr = cacheState[hit.smIdx] ? cacheState[hit.smIdx][kind] : [];
+
+  // Update fill label
+  var fillLbl = document.getElementById('tt-fill-label');
+  if (fillLbl) fillLbl.textContent = cs.filled + '/' + NUM_LINES + ' filled';
+
+  // Update dirty label
+  var dirtyLbl = document.getElementById('tt-dirty-label');
+  if (dirtyLbl) dirtyLbl.textContent = cs.dirty > 0 ? cs.dirty + ' dirty' : '';
+
+  // Rebuild line grid squares (fast — just fill colors)
+  var grid = document.getElementById('tt-line-grid');
+  if (grid) {
+    // Only rebuild if child count changed or on first pass
+    if (grid.children.length !== NUM_LINES) {
+      grid.innerHTML = '';
+      for (var li = 0; li < NUM_LINES; li++) {
+        var sq = document.createElement('div');
+        sq.style.cssText = 'flex:1;border-radius:2px;transition:background .12s';
+        grid.appendChild(sq);
+      }
+    }
+    for (var li2 = 0; li2 < NUM_LINES; li2++) {
+      var lv = arr[li2] || 0;
+      var lc;
+      if (lv === 2)      lc = '#51cf66';
+      else if (lv === 1) lc = hit.type === 'l1' ? inf.color + 'cc' : '#51cf6688';
+      else               lc = '#1e2030';
+      grid.children[li2].style.background = lc;
+    }
+  }
+
+  // Update state label (L1 only)
+  var stateLbl = document.getElementById('tt-state-label');
+  if (stateLbl && hit.type === 'l1') {
+    var l1b = null;
+    if (layout.sms[hit.smIdx]) {
+      for (var bi = 0; bi < layout.sms[hit.smIdx].sub.length; bi++) {
+        if (layout.sms[hit.smIdx].sub[bi].type === 'l1') { l1b = layout.sms[hit.smIdx].sub[bi]; break; }
+      }
+    }
+    var st = l1b ? l1b.state : 'invalid';
+    var stateLabel, stateColor;
+    if (st === 'modified')      { stateLabel = '● Modified — has dirty data';  stateColor = '#51cf66'; }
+    else if (st === 'shared')   { stateLabel = '● Shared — clean copy';        stateColor = '#5ab0f8'; }
+    else                        { stateLabel = '● Invalid — empty';            stateColor = '#6b7090'; }
+    stateLbl.style.color = stateColor;
+    stateLbl.textContent = stateLabel;
+  } else if (stateLbl && hit.type === 'smem') {
+    var smFilled = cs.filled;
+    stateLbl.style.color = smFilled > 0 ? '#6ee09a' : '#6b7090';
+    stateLbl.textContent = smFilled > 0 ? '● Active — ' + smFilled + ' slots used' : '● Empty — no data loaded';
+  }
+}
+
+function positionTooltip(clientX, clientY) {
+  var vizRect = canvas.parentElement.getBoundingClientRect();
+  var tx = clientX - vizRect.left + 14;
+  var ty = clientY - vizRect.top - 12;
+  var tw = 250, th = 160;
+  if (tx + tw > vizRect.width - 10)  tx = clientX - vizRect.left - tw - 14;
+  if (ty + th > vizRect.height - 10) ty = clientY - vizRect.top - th - 12;
+  if (ty < 4) ty = 4;
+  tooltipEl.style.left = tx + 'px';
+  tooltipEl.style.top  = ty + 'px';
 }
 
 function hideTooltip() {
@@ -1398,12 +1445,27 @@ function drawFrame(time) {
     var bx=b.x+Math.sin(b.age*1.5+b.wobble)*3;
     var by=b.y-b.age*b.rise;
     var scale=0.8+fadeIn*0.2;
+
+    // ── Hover boost: if this bubble is over the currently hovered block, make it bigger ──
+    var isHovered = false;
+    if (hoveredBlock) {
+      var hr = hoveredBlock;
+      // Check if bubble origin is inside or close to the hovered block
+      if (b.x >= hr.x - 10 && b.x <= hr.x + hr.w + 10 &&
+          b.y >= hr.y - 20 && b.y <= hr.y + hr.h + 20) {
+        isHovered = true;
+      }
+    }
+    var boostScale = isHovered ? 1.45 : 1.0;
+    var boostAlpha = isHovered ? Math.min(alpha * 1.25, 1) : alpha;
+    // ─────────────────────────────────────────────────────────────────────
+
     ctx.save();
-    ctx.globalAlpha=alpha;
+    ctx.globalAlpha=boostAlpha;
 
     // Measure both lines
-    var fs2 = Math.max(8, 8*scale);
-    var subFs = Math.max(6.5, 6.5*scale);
+    var fs2 = Math.max(8, 8*scale*boostScale);
+    var subFs = Math.max(6.5, 6.5*scale*boostScale);
     ctx.font='700 '+fs2+'px "JetBrains Mono"';
     var tw = ctx.measureText(b.text).width + 14;
     var subTw = 0;
@@ -1416,8 +1478,17 @@ function drawFrame(time) {
     var bh = b.sub ? (lineH + subFs + 7) : (lineH + 4);
 
     rrect(bx-boxW/2, by-bh/2-1, boxW, bh, 5);
-    ctx.fillStyle=b.bg; ctx.fill();
-    ctx.strokeStyle=b.color+'70'; ctx.lineWidth=1; ctx.stroke();
+    // Boosted background and border when hovered
+    ctx.fillStyle = isHovered ? b.color + '28' : b.bg; ctx.fill();
+    ctx.strokeStyle = isHovered ? b.color + 'cc' : b.color + '70';
+    ctx.lineWidth = isHovered ? 1.8 : 1; ctx.stroke();
+
+    // Extra outer glow ring when hovered
+    if (isHovered) {
+      rrect(bx-boxW/2-3, by-bh/2-4, boxW+6, bh+6, 7);
+      ctx.strokeStyle = b.color + '30';
+      ctx.lineWidth = 4; ctx.stroke();
+    }
 
     // Pointer tail
     if (progress<0.35) {
@@ -1425,7 +1496,7 @@ function drawFrame(time) {
       ctx.moveTo(bx-3, by+bh/2-1);
       ctx.lineTo(bx, by+bh/2+5);
       ctx.lineTo(bx+3, by+bh/2-1);
-      ctx.closePath(); ctx.fillStyle=b.bg; ctx.fill();
+      ctx.closePath(); ctx.fillStyle = isHovered ? b.color + '28' : b.bg; ctx.fill();
     }
 
     // Main label
@@ -1438,7 +1509,7 @@ function drawFrame(time) {
     // Subtitle
     if (b.sub) {
       ctx.font='500 '+subFs+'px "JetBrains Mono"';
-      ctx.fillStyle=b.color+'99';
+      ctx.fillStyle = isHovered ? b.color + 'cc' : b.color + '99';
       ctx.fillText(b.sub, bx, textY + subFs + 2);
     }
     ctx.restore();
@@ -1447,6 +1518,12 @@ function drawFrame(time) {
 
   particles.forEach(function(p) { p.update(dt); p.draw(ctx); });
   particles = particles.filter(function(p) { return p.alive; });
+
+  // ── Live tooltip refresh for cache blocks ──────────────────────────────
+  if (hoveredBlock && (hoveredBlock.type === 'l1' || hoveredBlock.type === 'smem')) {
+    refreshTooltipCacheData(hoveredBlock, BLOCK_INFO[hoveredBlock.type]);
+  }
+  // ───────────────────────────────────────────────────────────────────────
 
   if (autoMode) {
     autoTimer+=dt;
