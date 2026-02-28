@@ -1,0 +1,3468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CPU Architecture Visualizer</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@300;400;500;600;700&family=Orbitron:wght@400;700;900&display=swap');
+
+  :root {
+    --bg: #050810;
+    --bg2: #080d18;
+    --bg3: #0d1525;
+    --panel: #0a1020;
+    --border: #1a2840;
+    --border2: #243650;
+    --accent: #00d4ff;
+    --accent2: #0088ff;
+    --green: #00ff88;
+    --orange: #ff8800;
+    --red: #ff3355;
+    --purple: #aa44ff;
+    --yellow: #ffdd00;
+    --text: #c8d8f0;
+    --text2: #7090b0;
+    --text3: #405070;
+    --glow: rgba(0,212,255,0.15);
+    --glow2: rgba(0,136,255,0.1);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 14px;
+    overflow: hidden;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* HEADER */
+  header {
+    background: linear-gradient(90deg, #050810, #0a1428, #050810);
+    border-bottom: 1px solid var(--border);
+    padding: 8px 20px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-shrink: 0;
+    position: relative;
+    overflow: hidden;
+  }
+  header::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  }
+  .logo {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 18px;
+    font-weight: 900;
+    color: var(--accent);
+    text-shadow: 0 0 20px var(--accent);
+    letter-spacing: 3px;
+    flex-shrink: 0;
+  }
+  .logo span { color: var(--text2); font-weight: 400; font-size: 11px; letter-spacing: 2px; display: block; }
+
+  .clock-display {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-left: auto;
+  }
+  .clock-item {
+    text-align: center;
+    padding: 4px 12px;
+    border: 1px solid var(--border);
+    background: var(--bg3);
+  }
+  .clock-item .val {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 16px;
+    color: var(--green);
+    text-shadow: 0 0 10px var(--green);
+  }
+  .clock-item .lbl { font-size: 9px; color: var(--text3); letter-spacing: 1px; text-transform: uppercase; }
+
+  .global-controls {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .btn {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    padding: 5px 14px;
+    border: 1px solid var(--border2);
+    background: var(--bg3);
+    color: var(--text);
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all 0.15s;
+    position: relative;
+    overflow: hidden;
+  }
+  .btn:hover { border-color: var(--accent); color: var(--accent); background: var(--glow); }
+  .btn.active { border-color: var(--accent); color: var(--accent); background: var(--glow2); box-shadow: 0 0 12px var(--glow); }
+  .btn.green { border-color: var(--green); color: var(--green); }
+  .btn.green:hover { background: rgba(0,255,136,0.1); box-shadow: 0 0 12px rgba(0,255,136,0.2); }
+  .btn.orange { border-color: var(--orange); color: var(--orange); }
+
+  /* TABS */
+  .tabs {
+    display: flex;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    overflow-x: auto;
+  }
+  .tab {
+    padding: 8px 18px;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text3);
+    cursor: pointer;
+    border-right: 1px solid var(--border);
+    white-space: nowrap;
+    position: relative;
+    transition: color 0.2s;
+    flex-shrink: 0;
+  }
+  .tab:hover { color: var(--text2); }
+  .tab.active {
+    color: var(--accent);
+    background: linear-gradient(180deg, var(--glow2) 0%, transparent 100%);
+  }
+  .tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent);
+  }
+  .tab-num {
+    font-size: 9px;
+    color: var(--text3);
+    margin-right: 5px;
+    font-family: 'Share Tech Mono', monospace;
+  }
+
+  /* MAIN CONTENT */
+  .content {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    position: relative;
+  }
+
+  .tab-panel {
+    display: none;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+  }
+  .tab-panel.active { display: flex; }
+
+  /* === TAB 1: OVERVIEW === */
+  #tab-overview {
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .overview-grid {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 220px 1fr 200px;
+    grid-template-rows: 1fr 1fr;
+    gap: 0;
+    overflow: hidden;
+    border-top: none;
+  }
+
+  /* === PANELS === */
+  .panel {
+    border-right: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    background: var(--panel);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .panel-header {
+    padding: 6px 12px;
+    background: var(--bg3);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  .panel-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--accent);
+    text-transform: uppercase;
+  }
+  .panel-badge {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    padding: 1px 6px;
+    border: 1px solid var(--border2);
+    color: var(--text3);
+    margin-left: auto;
+  }
+  .panel-body {
+    flex: 1;
+    overflow: auto;
+    padding: 8px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border2) transparent;
+  }
+
+  /* INSTRUCTION INPUT */
+  .instr-input-area {
+    padding: 8px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg2);
+    flex-shrink: 0;
+  }
+  .instr-input-area label {
+    font-size: 10px;
+    color: var(--text3);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    display: block;
+    margin-bottom: 4px;
+  }
+  .instr-row {
+    display: flex;
+    gap: 6px;
+  }
+  .instr-input {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--border2);
+    color: var(--accent);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 13px;
+    padding: 5px 10px;
+    outline: none;
+    letter-spacing: 1px;
+  }
+  .instr-input:focus { border-color: var(--accent); box-shadow: 0 0 8px var(--glow); }
+
+  /* PRESET INSTRUCTIONS */
+  .preset-instrs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg2);
+    flex-shrink: 0;
+  }
+  .preset-btn {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    padding: 2px 8px;
+    border: 1px solid var(--border);
+    background: var(--bg3);
+    color: var(--text2);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .preset-btn:hover { border-color: var(--green); color: var(--green); background: rgba(0,255,136,0.05); }
+
+  /* REGISTERS */
+  .reg-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3px;
+  }
+  .reg-item {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    padding: 4px 6px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.3s;
+  }
+  .reg-item.active {
+    border-color: var(--accent);
+    background: var(--glow2);
+    box-shadow: 0 0 8px var(--glow);
+  }
+  .reg-item.written {
+    border-color: var(--green);
+    background: rgba(0,255,136,0.08);
+    animation: regFlash 0.5s ease;
+  }
+  @keyframes regFlash {
+    0% { background: rgba(0,255,136,0.4); }
+    100% { background: rgba(0,255,136,0.08); }
+  }
+  .reg-name { font-family: 'Share Tech Mono', monospace; font-size: 10px; color: var(--accent2); }
+  .reg-val { font-family: 'Share Tech Mono', monospace; font-size: 10px; color: var(--green); }
+
+  /* PIPELINE STAGES */
+  .pipeline-container {
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    overflow: auto;
+    height: 100%;
+  }
+  .pipeline-stages {
+    display: flex;
+    gap: 4px;
+    align-items: stretch;
+    min-height: 70px;
+  }
+  .stage {
+    flex: 1;
+    border: 1px solid var(--border);
+    background: var(--bg2);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 4px;
+    position: relative;
+    transition: all 0.3s;
+    min-width: 70px;
+  }
+  .stage.occupied {
+    border-color: var(--accent);
+    background: var(--glow2);
+    box-shadow: 0 0 15px var(--glow);
+  }
+  .stage.stall {
+    border-color: var(--red);
+    background: rgba(255,51,85,0.08);
+    animation: stall-pulse 0.5s infinite;
+  }
+  @keyframes stall-pulse { 0%,100% { box-shadow: 0 0 5px rgba(255,51,85,0.3); } 50% { box-shadow: 0 0 20px rgba(255,51,85,0.6); } }
+  .stage.done { border-color: var(--green); background: rgba(0,255,136,0.05); }
+  .stage-name {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 8px;
+    letter-spacing: 1px;
+    color: var(--text3);
+    text-transform: uppercase;
+  }
+  .stage.occupied .stage-name { color: var(--accent); }
+  .stage-instr {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--yellow);
+    margin-top: 4px;
+    text-align: center;
+  }
+  .stage-arrow {
+    width: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--border2);
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+  .stage.occupied ~ .stage-arrow { color: var(--accent2); }
+
+  /* DATA BUS VISUALIZATION */
+  .bus-visual {
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    position: relative;
+    overflow: hidden;
+    margin: 4px 0;
+  }
+  .bus-packet {
+    position: absolute;
+    height: 100%;
+    width: 30px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    animation: busFlow 1.5s linear infinite;
+    border-radius: 2px;
+  }
+  @keyframes busFlow { from { left: -30px; } to { left: 100%; } }
+  .bus-label {
+    font-size: 9px;
+    color: var(--text3);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 2px;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  /* EXECUTION LOG */
+  .log-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .log-entry {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+    padding: 4px 6px;
+    border-left: 2px solid var(--border);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    background: var(--bg2);
+    animation: slideIn 0.3s ease;
+  }
+  @keyframes slideIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
+  .log-entry.fetch { border-color: var(--accent2); }
+  .log-entry.decode { border-color: var(--purple); }
+  .log-entry.execute { border-color: var(--yellow); }
+  .log-entry.memory { border-color: var(--orange); }
+  .log-entry.writeback { border-color: var(--green); }
+  .log-entry.hazard { border-color: var(--red); }
+  .log-tick { color: var(--text3); flex-shrink: 0; width: 30px; }
+  .log-stage { flex-shrink: 0; width: 55px; }
+  .log-stage.fetch { color: var(--accent2); }
+  .log-stage.decode { color: var(--purple); }
+  .log-stage.execute { color: var(--yellow); }
+  .log-stage.memory { color: var(--orange); }
+  .log-stage.writeback { color: var(--green); }
+  .log-stage.hazard { color: var(--red); }
+  .log-msg { color: var(--text); flex: 1; }
+
+  /* === TAB 2: FETCH/DECODE === */
+  #tab-fetch {
+    display: none;
+    overflow: hidden;
+  }
+  #tab-fetch.active { display: flex; }
+  .fetch-layout {
+    display: grid;
+    grid-template-columns: 280px 1fr 240px;
+    height: 100%;
+  }
+
+  /* MEMORY VIEW */
+  .memory-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+  }
+  .memory-table th {
+    padding: 4px 6px;
+    text-align: left;
+    font-size: 9px;
+    color: var(--text3);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg3);
+    position: sticky;
+    top: 0;
+  }
+  .memory-table td {
+    padding: 3px 6px;
+    border-bottom: 1px solid rgba(26,40,64,0.5);
+    color: var(--text2);
+  }
+  .memory-table tr.pc-row td {
+    background: rgba(0,136,255,0.12);
+    color: var(--accent);
+    border-left: 2px solid var(--accent);
+  }
+  .memory-table tr.pc-row td:first-child { color: var(--yellow); }
+  .memory-table .addr { color: var(--text3); }
+  .memory-table .hex { color: var(--purple); }
+  .memory-table .mnem { color: var(--green); }
+  .memory-table .operand { color: var(--orange); }
+  .memory-table tr:hover td { background: var(--glow2); }
+
+  /* DECODE DETAIL */
+  .decode-visual {
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    overflow: auto;
+  }
+  .instr-bits {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .bits-row {
+    display: flex;
+    gap: 1px;
+    flex-wrap: nowrap;
+  }
+  .bit-group {
+    display: flex;
+    flex-direction: column;
+    flex: 0 0 auto;
+  }
+  .bit-cells {
+    display: flex;
+  }
+  .bit-cell {
+    width: 18px;
+    height: 22px;
+    border: 1px solid var(--border);
+    background: var(--bg2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--text2);
+    border-radius: 1px;
+    flex-shrink: 0;
+  }
+  .bit-cell.one { color: var(--accent); background: rgba(0,212,255,0.1); }
+  .bit-group-label {
+    font-size: 8px;
+    color: var(--text3);
+    text-align: center;
+    padding-top: 2px;
+    font-family: 'Share Tech Mono', monospace;
+    letter-spacing: 0.5px;
+  }
+  .bit-group.opcode .bit-cell { border-color: var(--purple); }
+  .bit-group.opcode .bit-cell.one { color: var(--purple); background: rgba(170,68,255,0.15); }
+  .bit-group.opcode .bit-group-label { color: var(--purple); }
+  .bit-group.rd .bit-cell { border-color: var(--green); }
+  .bit-group.rd .bit-cell.one { color: var(--green); background: rgba(0,255,136,0.1); }
+  .bit-group.rd .bit-group-label { color: var(--green); }
+  .bit-group.funct3 .bit-cell { border-color: var(--yellow); }
+  .bit-group.funct3 .bit-group-label { color: var(--yellow); }
+  .bit-group.rs1 .bit-cell { border-color: var(--orange); }
+  .bit-group.rs1 .bit-group-label { color: var(--orange); }
+  .bit-group.rs2 .bit-cell { border-color: var(--accent2); }
+  .bit-group.rs2 .bit-group-label { color: var(--accent2); }
+  .bit-group.funct7 .bit-cell { border-color: var(--red); }
+  .bit-group.funct7 .bit-group-label { color: var(--red); }
+
+  .decode-fields {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+  .decode-field {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    padding: 8px 10px;
+    position: relative;
+  }
+  .decode-field .df-label {
+    font-size: 9px;
+    color: var(--text3);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 3px;
+  }
+  .decode-field .df-val {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 13px;
+    color: var(--accent);
+  }
+  .decode-field .df-sub {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    color: var(--text3);
+    margin-top: 2px;
+  }
+  .decode-field.highlight-purple { border-color: var(--purple); }
+  .decode-field.highlight-purple .df-val { color: var(--purple); }
+  .decode-field.highlight-green { border-color: var(--green); }
+  .decode-field.highlight-green .df-val { color: var(--green); }
+  .decode-field.highlight-orange { border-color: var(--orange); }
+  .decode-field.highlight-orange .df-val { color: var(--orange); }
+  .decode-field.highlight-yellow { border-color: var(--yellow); }
+  .decode-field.highlight-yellow .df-val { color: var(--yellow); }
+
+  /* CONTROL SIGNALS */
+  .ctrl-signals {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .ctrl-sig {
+    padding: 3px 8px;
+    border: 1px solid var(--border);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    background: var(--bg3);
+    color: var(--text3);
+    transition: all 0.3s;
+  }
+  .ctrl-sig.on {
+    border-color: var(--green);
+    color: var(--green);
+    background: rgba(0,255,136,0.08);
+    box-shadow: 0 0 6px rgba(0,255,136,0.2);
+  }
+  .ctrl-sig.off { color: var(--text3); }
+
+  /* === TAB 3: ALU / EXECUTE === */
+  #tab-alu {
+    display: none;
+    overflow: hidden;
+  }
+  #tab-alu.active { display: flex; }
+  .alu-layout {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    height: 100%;
+  }
+  
+  /* ALU DIAGRAM */
+  .alu-diagram-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    overflow: hidden;
+  }
+  .alu-svg-container {
+    width: 100%;
+    max-width: 500px;
+  }
+
+  /* FORWARDING UNIT */
+  .forward-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+  }
+  .forward-table th, .forward-table td {
+    padding: 5px 8px;
+    border: 1px solid var(--border);
+    text-align: left;
+  }
+  .forward-table th { background: var(--bg3); color: var(--text3); font-size: 9px; letter-spacing: 1px; }
+  .forward-table td { color: var(--text2); background: var(--bg2); }
+  .forward-table tr.active-forward td { background: rgba(0,212,255,0.08); color: var(--accent); border-color: var(--accent2); }
+
+  /* === TAB 4: MEMORY HIERARCHY === */
+  #tab-memory {
+    display: none;
+    overflow: hidden;
+  }
+  #tab-memory.active { display: flex; }
+  .mem-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    height: 100%;
+  }
+
+  /* CACHE */
+  .cache-visual {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    overflow: auto;
+  }
+  .cache-set {
+    display: flex;
+    gap: 2px;
+    align-items: center;
+  }
+  .cache-set-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    color: var(--text3);
+    width: 35px;
+    flex-shrink: 0;
+    text-align: right;
+    padding-right: 6px;
+  }
+  .cache-line {
+    flex: 1;
+    border: 1px solid var(--border);
+    background: var(--bg2);
+    padding: 3px 6px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    transition: all 0.3s;
+    min-width: 0;
+  }
+  .cache-line.valid { border-color: var(--border2); }
+  .cache-line.hit {
+    border-color: var(--green);
+    background: rgba(0,255,136,0.1);
+    animation: cacheHit 0.5s ease;
+  }
+  @keyframes cacheHit { 0% { background: rgba(0,255,136,0.5); } 100% { background: rgba(0,255,136,0.1); } }
+  .cache-line.miss {
+    border-color: var(--red);
+    background: rgba(255,51,85,0.08);
+    animation: cacheMiss 0.5s ease;
+  }
+  @keyframes cacheMiss { 0% { background: rgba(255,51,85,0.4); } 100% { background: rgba(255,51,85,0.08); } }
+  .cl-v { width: 8px; height: 8px; border: 1px solid; border-radius: 50%; flex-shrink: 0; }
+  .cl-v.valid { background: var(--green); border-color: var(--green); box-shadow: 0 0 4px var(--green); }
+  .cl-v.invalid { background: transparent; border-color: var(--text3); }
+  .cl-d { color: var(--text3); width: 8px; flex-shrink: 0; }
+  .cl-d.dirty { color: var(--orange); }
+  .cl-tag { color: var(--accent2); min-width: 40px; }
+  .cl-data { color: var(--text2); font-size: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+  .cl-lru { color: var(--text3); font-size: 8px; margin-left: auto; }
+
+  /* MEMORY STATS */
+  .stat-bar {
+    margin-bottom: 8px;
+  }
+  .stat-bar-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    margin-bottom: 3px;
+  }
+  .stat-bar-label .name { color: var(--text2); }
+  .stat-bar-label .val { font-family: 'Share Tech Mono', monospace; color: var(--green); }
+  .stat-bar-track {
+    height: 6px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .stat-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent2), var(--accent));
+    border-radius: 3px;
+    transition: width 0.5s ease;
+  }
+  .stat-bar-fill.warn { background: linear-gradient(90deg, var(--orange), var(--red)); }
+
+  /* === TAB 5: PIPELINE TIMING === */
+  #tab-timing {
+    display: none;
+    overflow: hidden;
+  }
+  #tab-timing.active { display: flex; flex-direction: column; }
+  .timing-diagram {
+    flex: 1;
+    overflow: auto;
+    padding: 12px;
+  }
+  .timing-header {
+    display: flex;
+    gap: 0;
+    position: sticky;
+    top: 0;
+    background: var(--bg2);
+    z-index: 10;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 4px;
+  }
+  .timing-instr-col {
+    width: 140px;
+    flex-shrink: 0;
+    padding: 4px 8px;
+    font-size: 9px;
+    color: var(--text3);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .timing-cycle-header {
+    display: flex;
+  }
+  .timing-cycle-cell {
+    width: 42px;
+    height: 24px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    color: var(--text3);
+    border-right: 1px solid var(--border);
+  }
+  .timing-cycle-cell.current { color: var(--accent); background: var(--glow2); }
+  .timing-row {
+    display: flex;
+    gap: 0;
+    margin-bottom: 2px;
+  }
+  .timing-row-label {
+    width: 140px;
+    flex-shrink: 0;
+    padding: 3px 8px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--yellow);
+    border-right: 1px solid var(--border);
+    background: var(--bg2);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .timing-cells {
+    display: flex;
+  }
+  .timing-cell {
+    width: 42px;
+    height: 22px;
+    flex-shrink: 0;
+    border-right: 1px solid rgba(26,40,64,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 8px;
+    letter-spacing: 0.5px;
+    background: var(--bg);
+    color: transparent;
+    transition: all 0.3s;
+  }
+  .timing-cell.IF { background: rgba(0,136,255,0.2); color: var(--accent2); border: 1px solid rgba(0,136,255,0.3); }
+  .timing-cell.ID { background: rgba(170,68,255,0.2); color: var(--purple); border: 1px solid rgba(170,68,255,0.3); }
+  .timing-cell.EX { background: rgba(255,221,0,0.15); color: var(--yellow); border: 1px solid rgba(255,221,0,0.3); }
+  .timing-cell.MEM { background: rgba(255,136,0,0.15); color: var(--orange); border: 1px solid rgba(255,136,0,0.3); }
+  .timing-cell.WB { background: rgba(0,255,136,0.15); color: var(--green); border: 1px solid rgba(0,255,136,0.3); }
+  .timing-cell.STALL { background: rgba(255,51,85,0.15); color: var(--red); border: 1px solid rgba(255,51,85,0.3); }
+
+  /* === TAB 6: BRANCH PREDICTION === */
+  #tab-branch {
+    display: none;
+    overflow: hidden;
+  }
+  #tab-branch.active { display: flex; }
+  .branch-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    height: 100%;
+  }
+
+  /* BTB */
+  .btb-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+  }
+  .btb-table th { padding: 4px 6px; border: 1px solid var(--border); background: var(--bg3); color: var(--text3); font-size: 8px; letter-spacing: 1px; text-transform: uppercase; }
+  .btb-table td { padding: 3px 6px; border: 1px solid rgba(26,40,64,0.5); color: var(--text2); background: var(--bg2); }
+  .btb-table tr.predict-taken td { background: rgba(0,255,136,0.06); }
+  .btb-table tr.predict-taken td:last-child { color: var(--green); }
+  .btb-table tr.predict-not td:last-child { color: var(--red); }
+  .btb-table tr.mispred td { background: rgba(255,51,85,0.08); }
+  .btb-table tr.current-branch td { background: rgba(255,221,0,0.06); }
+
+  /* 2-BIT SATURATING COUNTER */
+  .fsm-visual {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    padding: 20px;
+  }
+  .fsm-states {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+    position: relative;
+  }
+  .fsm-state {
+    width: 90px;
+    height: 55px;
+    border: 2px solid var(--border2);
+    background: var(--bg2);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    cursor: pointer;
+    transition: all 0.3s;
+    position: relative;
+  }
+  .fsm-state.current {
+    border-color: var(--accent);
+    background: var(--glow2);
+    box-shadow: 0 0 20px var(--glow);
+  }
+  .fsm-state.sn { border-color: var(--red); }
+  .fsm-state.sn.current { background: rgba(255,51,85,0.12); box-shadow: 0 0 20px rgba(255,51,85,0.3); }
+  .fsm-state.wn { border-color: var(--orange); }
+  .fsm-state.wn.current { background: rgba(255,136,0,0.12); box-shadow: 0 0 20px rgba(255,136,0,0.3); }
+  .fsm-state.wt { border-color: var(--yellow); }
+  .fsm-state.wt.current { background: rgba(255,221,0,0.1); box-shadow: 0 0 20px rgba(255,221,0,0.25); }
+  .fsm-state.st { border-color: var(--green); }
+  .fsm-state.st.current { background: rgba(0,255,136,0.08); box-shadow: 0 0 20px rgba(0,255,136,0.3); }
+  .fsm-state-label { font-size: 9px; color: var(--text3); letter-spacing: 0.5px; margin-top: 2px; }
+  .fsm-predict { font-size: 8px; font-weight: bold; }
+  .fsm-predict.taken { color: var(--green); }
+  .fsm-predict.not-taken { color: var(--red); }
+
+  /* === TAB 7: OUT-OF-ORDER === */
+  #tab-ooo {
+    display: none;
+    overflow: hidden;
+  }
+  #tab-ooo.active { display: flex; }
+  .ooo-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    height: 100%;
+  }
+
+  /* ROB */
+  .rob-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+  }
+  .rob-table th { padding: 4px 6px; border: 1px solid var(--border); background: var(--bg3); color: var(--text3); font-size: 8px; letter-spacing: 1px; text-transform: uppercase; }
+  .rob-table td { padding: 4px 6px; border: 1px solid rgba(26,40,64,0.5); background: var(--bg2); }
+  .rob-table tr.head-row { background: rgba(0,136,255,0.08); }
+  .rob-table tr.tail-row { background: rgba(255,136,0,0.08); }
+  .rob-table tr.ready-row td { background: rgba(0,255,136,0.06); }
+  .rob-state-ready { color: var(--green); }
+  .rob-state-exec { color: var(--yellow); }
+  .rob-state-issue { color: var(--accent2); }
+
+  /* RS */
+  .rs-entry {
+    border: 1px solid var(--border);
+    background: var(--bg2);
+    padding: 6px 8px;
+    margin-bottom: 3px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    transition: all 0.3s;
+  }
+  .rs-entry.ready-to-issue {
+    border-color: var(--green);
+    background: rgba(0,255,136,0.05);
+    animation: rsReady 1s ease infinite alternate;
+  }
+  @keyframes rsReady { from { box-shadow: none; } to { box-shadow: 0 0 8px rgba(0,255,136,0.3); } }
+  .rs-entry.issued { border-color: var(--yellow); opacity: 0.5; }
+  .rs-row { display: flex; gap: 8px; align-items: center; }
+  .rs-field { display: flex; gap: 4px; align-items: center; }
+  .rs-label { color: var(--text3); font-size: 8px; }
+  .rs-val { color: var(--accent); }
+  .rs-val.ready { color: var(--green); }
+  .rs-val.waiting { color: var(--red); }
+
+  /* === FLOATING STATUS BAR === */
+  .status-bar {
+    display: flex;
+    gap: 0;
+    background: var(--bg2);
+    border-top: 1px solid var(--border);
+    padding: 0;
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+  .status-item {
+    padding: 4px 12px;
+    border-right: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px;
+  }
+  .status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 6px var(--green);
+    animation: blink 1.5s infinite;
+  }
+  .status-dot.red { background: var(--red); box-shadow: 0 0 6px var(--red); }
+  .status-dot.yellow { background: var(--yellow); box-shadow: 0 0 6px var(--yellow); }
+  @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+  .status-label { color: var(--text3); text-transform: uppercase; letter-spacing: 1px; font-size: 9px; }
+  .status-val { font-family: 'Share Tech Mono', monospace; color: var(--text); font-size: 10px; }
+  .status-val.green { color: var(--green); }
+  .status-val.red { color: var(--red); }
+  .status-val.yellow { color: var(--yellow); }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+  /* Misc */
+  .section-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 9px;
+    color: var(--accent);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 6px 0 4px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 8px;
+  }
+  .mono { font-family: 'Share Tech Mono', monospace; }
+  .c-accent { color: var(--accent); }
+  .c-green { color: var(--green); }
+  .c-orange { color: var(--orange); }
+  .c-yellow { color: var(--yellow); }
+  .c-red { color: var(--red); }
+  .c-purple { color: var(--purple); }
+  .c-text2 { color: var(--text2); }
+  .c-text3 { color: var(--text3); }
+
+  .speed-control {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--text2);
+  }
+  .speed-control input { accent-color: var(--accent); width: 80px; cursor: pointer; }
+
+  .hazard-indicator {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+  .hazard-badge {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    padding: 2px 6px;
+    border: 1px solid;
+    opacity: 0.4;
+    transition: all 0.3s;
+  }
+  .hazard-badge.active { opacity: 1; animation: hazardPulse 0.5s ease 3; }
+  @keyframes hazardPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+  .hazard-badge.raw { border-color: var(--red); color: var(--red); }
+  .hazard-badge.war { border-color: var(--orange); color: var(--orange); }
+  .hazard-badge.waw { border-color: var(--yellow); color: var(--yellow); }
+  .hazard-badge.structural { border-color: var(--purple); color: var(--purple); }
+  .hazard-badge.control { border-color: var(--accent2); color: var(--accent2); }
+
+  /* Number input for PC address */
+  .pc-control {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg2);
+    flex-shrink: 0;
+  }
+  .pc-label { font-size: 10px; color: var(--text3); letter-spacing: 1px; text-transform: uppercase; }
+  .pc-addr {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 14px;
+    color: var(--yellow);
+    text-shadow: 0 0 8px rgba(255,221,0,0.5);
+  }
+  .pc-plus { font-size: 10px; color: var(--text3); }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+
+  /* Running light effect */
+  .run-light {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 8px var(--green);
+    flex-shrink: 0;
+  }
+  .run-light.paused { background: var(--orange); box-shadow: 0 0 8px var(--orange); animation: none; }
+  .run-light.running { animation: runPulse 0.5s infinite; }
+  @keyframes runPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+  /* FORWARDING PATHS */
+  .fwd-path {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    border: 1px solid var(--border);
+    background: var(--bg2);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    margin-bottom: 3px;
+    transition: all 0.3s;
+  }
+  .fwd-path.active {
+    border-color: var(--accent);
+    background: var(--glow2);
+    animation: fwdFlash 0.3s ease;
+  }
+  @keyframes fwdFlash { 0% { background: rgba(0,212,255,0.4); } 100% { background: var(--glow2); } }
+  .fwd-arrow { color: var(--accent2); }
+
+  /* POWER/THERMAL */
+  .thermal-bar {
+    height: 12px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: 2px;
+  }
+  .thermal-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 1s ease, background 1s ease;
+  }
+
+  .no-border-right { border-right: none; }
+  .no-border-bottom { border-bottom: none; }
+
+  /* === RESPONSIVE SPANS === */
+  .span-2-rows { grid-row: span 2; }
+  .span-2-cols { grid-column: span 2; }
+
+  /* Scrollable log with max height */
+  .log-container {
+    max-height: 100%;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .help-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(5,8,16,0.92);
+    z-index: 100;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+  }
+  .help-overlay.show { display: flex; }
+  .help-box {
+    background: var(--bg3);
+    border: 1px solid var(--accent);
+    box-shadow: 0 0 40px var(--glow);
+    padding: 24px;
+    max-width: 500px;
+    width: 90%;
+  }
+  .help-box h2 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 14px;
+    letter-spacing: 3px;
+    color: var(--accent);
+    margin-bottom: 16px;
+    text-transform: uppercase;
+  }
+  .help-row {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 8px;
+    font-size: 12px;
+  }
+  .help-key {
+    font-family: 'Share Tech Mono', monospace;
+    color: var(--yellow);
+    min-width: 80px;
+    flex-shrink: 0;
+  }
+  .help-desc { color: var(--text2); }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">
+    CPUVIS <span>RISC-V RV32I · 5-STAGE PIPELINE · OoO SIMULATION</span>
+  </div>
+  <div class="global-controls">
+    <div id="runLight" class="run-light paused"></div>
+    <button class="btn green" id="btnStep" onclick="step()">STEP ▶</button>
+    <button class="btn" id="btnRun" onclick="toggleRun()">AUTO RUN</button>
+    <button class="btn orange" id="btnReset" onclick="resetSim()">RESET</button>
+    <div class="speed-control">
+      <span>SPD</span>
+      <input type="range" id="speedSlider" min="100" max="2000" value="800" oninput="updateSpeed(this.value)">
+    </div>
+    <button class="btn" onclick="showHelp()">?</button>
+  </div>
+  <div class="clock-display">
+    <div class="clock-item"><div class="val" id="cycleCount">0</div><div class="lbl">Cycles</div></div>
+    <div class="clock-item"><div class="val" id="instrCount">0</div><div class="lbl">Instrs</div></div>
+    <div class="clock-item"><div class="val" id="cpiDisplay">—</div><div class="lbl">CPI</div></div>
+    <div class="clock-item"><div class="val" id="ipcDisplay">—</div><div class="lbl">IPC</div></div>
+    <div class="clock-item"><div class="val" id="stallCount">0</div><div class="lbl">Stalls</div></div>
+    <div class="clock-item"><div class="val" id="missCount">0</div><div class="lbl">Misses</div></div>
+  </div>
+</header>
+
+<!-- TABS -->
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('overview')"><span class="tab-num">01</span>PIPELINE OVERVIEW</div>
+  <div class="tab" onclick="switchTab('fetch')"><span class="tab-num">02</span>FETCH / DECODE</div>
+  <div class="tab" onclick="switchTab('alu')"><span class="tab-num">03</span>ALU / EXECUTE</div>
+  <div class="tab" onclick="switchTab('memory')"><span class="tab-num">04</span>MEMORY HIERARCHY</div>
+  <div class="tab" onclick="switchTab('timing')"><span class="tab-num">05</span>TIMING DIAGRAM</div>
+  <div class="tab" onclick="switchTab('branch')"><span class="tab-num">06</span>BRANCH PREDICTOR</div>
+  <div class="tab" onclick="switchTab('ooo')"><span class="tab-num">07</span>OUT-OF-ORDER / ROB</div>
+</div>
+
+<!-- CONTENT -->
+<div class="content">
+
+  <!-- TAB 1: PIPELINE OVERVIEW -->
+  <div class="tab-panel active" id="tab-overview">
+    <div style="display:flex; flex-direction:column; height:100%; overflow:hidden;">
+      <!-- Instruction input -->
+      <div style="display:flex; gap:0; border-bottom:1px solid var(--border); flex-shrink:0;">
+        <div style="flex:1; padding:8px; background:var(--bg2); border-right:1px solid var(--border);">
+          <div style="font-size:10px; color:var(--text3); letter-spacing:1px; text-transform:uppercase; margin-bottom:4px;">ADD INSTRUCTION</div>
+          <div class="instr-row">
+            <input class="instr-input" id="instrInputMain" placeholder="ADD R1, R2, R3" onkeydown="if(event.key==='Enter')addInstruction()">
+            <button class="btn green" onclick="addInstruction()">QUEUE</button>
+          </div>
+        </div>
+        <div style="padding:8px; background:var(--bg2); display:flex; flex-wrap:wrap; gap:3px; align-items:flex-start; max-width:600px;">
+          <div style="font-size:10px; color:var(--text3); letter-spacing:1px; width:100%; margin-bottom:2px;">QUICK INSTRS:</div>
+          <button class="preset-btn" onclick="queuePreset('ADD R1,R2,R3')">ADD</button>
+          <button class="preset-btn" onclick="queuePreset('SUB R4,R1,R2')">SUB</button>
+          <button class="preset-btn" onclick="queuePreset('MUL R5,R3,R4')">MUL</button>
+          <button class="preset-btn" onclick="queuePreset('LW R6,0(R1)')">LW</button>
+          <button class="preset-btn" onclick="queuePreset('SW R6,4(R2)')">SW</button>
+          <button class="preset-btn" onclick="queuePreset('AND R7,R1,R2')">AND</button>
+          <button class="preset-btn" onclick="queuePreset('OR R8,R3,R5')">OR</button>
+          <button class="preset-btn" onclick="queuePreset('XOR R9,R1,R7')">XOR</button>
+          <button class="preset-btn" onclick="queuePreset('BEQ R1,R2,8')">BEQ</button>
+          <button class="preset-btn" onclick="queuePreset('BNE R3,R4,12')">BNE</button>
+          <button class="preset-btn" onclick="queuePreset('JAL R1,0')">JAL</button>
+          <button class="preset-btn" onclick="queuePreset('ADDI R1,R2,5')">ADDI</button>
+          <button class="preset-btn" onclick="queuePreset('SLL R2,R1,3')">SLL</button>
+          <button class="preset-btn" onclick="queuePreset('SRL R3,R2,2')">SRL</button>
+          <button class="preset-btn" onclick="loadProgram('bubble')">LOAD: BUBBLE SORT</button>
+          <button class="preset-btn" onclick="loadProgram('fib')">LOAD: FIBONACCI</button>
+          <button class="preset-btn" onclick="loadProgram('hazards')">LOAD: HAZARD DEMO</button>
+        </div>
+      </div>
+
+      <!-- Main grid -->
+      <div style="flex:1; display:grid; grid-template-columns:200px 1fr 220px; grid-template-rows:1fr 1fr; overflow:hidden;">
+        
+        <!-- Registers - spans 2 rows -->
+        <div class="panel span-2-rows" style="grid-row:span 2;">
+          <div class="panel-header">
+            <div class="panel-title">REGISTER FILE</div>
+            <div class="panel-badge">32×32-bit</div>
+          </div>
+          <div class="panel-body">
+            <div class="reg-grid" id="registerGrid"></div>
+          </div>
+        </div>
+
+        <!-- Pipeline stages -->
+        <div class="panel" style="border-right:none;">
+          <div class="panel-header">
+            <div class="panel-title">PIPELINE STAGES</div>
+            <div class="panel-badge">5-STAGE IN-ORDER</div>
+            <div class="hazard-indicator" id="hazardIndicator" style="margin-left:8px;">
+              <div class="hazard-badge raw">RAW</div>
+              <div class="hazard-badge war">WAR</div>
+              <div class="hazard-badge waw">WAW</div>
+              <div class="hazard-badge structural">STRUCT</div>
+              <div class="hazard-badge control">CTRL</div>
+            </div>
+          </div>
+          <div class="pipeline-container" style="flex-direction:row; align-items:center; justify-content:center; padding:12px; gap:0;">
+            <div class="stage" id="stageIF">
+              <div class="stage-name">IF</div>
+              <div style="font-size:8px; color:var(--text3); margin-top:2px;">FETCH</div>
+              <div class="stage-instr" id="stageIF-instr">—</div>
+            </div>
+            <div class="stage-arrow">›</div>
+            <div class="stage" id="stageID">
+              <div class="stage-name">ID</div>
+              <div style="font-size:8px; color:var(--text3); margin-top:2px;">DECODE</div>
+              <div class="stage-instr" id="stageID-instr">—</div>
+            </div>
+            <div class="stage-arrow">›</div>
+            <div class="stage" id="stageEX">
+              <div class="stage-name">EX</div>
+              <div style="font-size:8px; color:var(--text3); margin-top:2px;">EXECUTE</div>
+              <div class="stage-instr" id="stageEX-instr">—</div>
+            </div>
+            <div class="stage-arrow">›</div>
+            <div class="stage" id="stageMEM">
+              <div class="stage-name">MEM</div>
+              <div style="font-size:8px; color:var(--text3); margin-top:2px;">MEMORY</div>
+              <div class="stage-instr" id="stageMEM-instr">—</div>
+            </div>
+            <div class="stage-arrow">›</div>
+            <div class="stage" id="stageWB">
+              <div class="stage-name">WB</div>
+              <div style="font-size:8px; color:var(--text3); margin-top:2px;">WRITEBACK</div>
+              <div class="stage-instr" id="stageWB-instr">—</div>
+            </div>
+          </div>
+          <!-- Data buses -->
+          <div style="padding:0 12px 8px;">
+            <div class="bus-label"><span>INSTRUCTION BUS (32-bit)</span><span id="instrBusVal" class="mono c-accent">—</span></div>
+            <div class="bus-visual" id="instrBus"><div class="bus-packet" style="background:linear-gradient(90deg,transparent,var(--accent),transparent);"></div></div>
+            <div class="bus-label" style="margin-top:4px;"><span>DATA BUS (32-bit)</span><span id="dataBusVal" class="mono c-green">—</span></div>
+            <div class="bus-visual" id="dataBus"><div class="bus-packet" style="background:linear-gradient(90deg,transparent,var(--green),transparent);"></div></div>
+            <div class="bus-label" style="margin-top:4px;"><span>CONTROL BUS</span><span id="ctrlBusVal" class="mono c-purple">—</span></div>
+            <div class="bus-visual"><div class="bus-packet" style="background:linear-gradient(90deg,transparent,var(--purple),transparent); animation-delay:0.7s;"></div></div>
+          </div>
+        </div>
+
+        <!-- Instruction queue -->
+        <div class="panel" style="border-right:none;">
+          <div class="panel-header">
+            <div class="panel-title">INSTR QUEUE</div>
+            <div class="panel-badge" id="queueBadge">0/16</div>
+          </div>
+          <div class="panel-body" id="instrQueueDisplay" style="overflow:auto; display:flex; flex-direction:column; gap:2px;"></div>
+        </div>
+
+        <!-- PC and control -->
+        <div class="panel">
+          <div class="panel-header"><div class="panel-title">PC / CONTROL</div></div>
+          <div class="panel-body">
+            <div style="text-align:center; margin-bottom:12px;">
+              <div style="font-size:9px; color:var(--text3); letter-spacing:1px; text-transform:uppercase; margin-bottom:4px;">PROGRAM COUNTER</div>
+              <div id="pcDisplay" style="font-family:'Share Tech Mono',monospace; font-size:22px; color:var(--yellow); text-shadow:0 0 15px rgba(255,221,0,0.6);">0x00000000</div>
+              <div style="font-size:9px; color:var(--text3); margin-top:2px;" id="pcPlusDisplay">PC+4: 0x00000004</div>
+            </div>
+            <div class="section-title">PIPELINE REGISTERS</div>
+            <div style="display:flex; flex-direction:column; gap:3px;" id="pipelineRegs">
+              <div class="decode-field" id="prIF_ID">
+                <div class="df-label">IF/ID</div>
+                <div class="df-val mono" id="prIF_ID_val">EMPTY</div>
+              </div>
+              <div class="decode-field" id="prID_EX">
+                <div class="df-label">ID/EX</div>
+                <div class="df-val mono" id="prID_EX_val">EMPTY</div>
+              </div>
+              <div class="decode-field" id="prEX_MEM">
+                <div class="df-label">EX/MEM</div>
+                <div class="df-val mono" id="prEX_MEM_val">EMPTY</div>
+              </div>
+              <div class="decode-field" id="prMEM_WB">
+                <div class="df-label">MEM/WB</div>
+                <div class="df-val mono" id="prMEM_WB_val">EMPTY</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Execution log -->
+        <div class="panel" style="border-right:none; border-bottom:none;">
+          <div class="panel-header"><div class="panel-title">EXECUTION LOG</div><button class="btn" style="font-size:9px; padding:2px 8px;" onclick="clearLog()">CLR</button></div>
+          <div class="panel-body" id="execLog" style="overflow-y:auto; display:flex; flex-direction:column; gap:2px;"></div>
+        </div>
+
+        <!-- Stats -->
+        <div class="panel" style="border-bottom:none;">
+          <div class="panel-header"><div class="panel-title">PERFORMANCE</div></div>
+          <div class="panel-body">
+            <div class="section-title">HAZARD STATS</div>
+            <div class="stat-bar">
+              <div class="stat-bar-label"><span class="name c-red">RAW Hazards</span><span class="val" id="rawStat">0</span></div>
+              <div class="stat-bar-track"><div class="stat-bar-fill" id="rawBar" style="width:0%;background:linear-gradient(90deg,var(--red),#ff6677);"></div></div>
+            </div>
+            <div class="stat-bar">
+              <div class="stat-bar-label"><span class="name c-orange">Stall Cycles</span><span class="val" id="stallStat">0</span></div>
+              <div class="stat-bar-track"><div class="stat-bar-fill" id="stallBar" style="width:0%;background:linear-gradient(90deg,var(--orange),#ffaa44);"></div></div>
+            </div>
+            <div class="stat-bar">
+              <div class="stat-bar-label"><span class="name c-yellow">Branch Mispredict</span><span class="val" id="branchMispredStat">0</span></div>
+              <div class="stat-bar-track"><div class="stat-bar-fill" id="branchBar" style="width:0%;background:linear-gradient(90deg,var(--yellow),#ffee66);"></div></div>
+            </div>
+            <div class="stat-bar">
+              <div class="stat-bar-label"><span class="name c-accent">Fwd Paths Used</span><span class="val" id="fwdStat">0</span></div>
+              <div class="stat-bar-track"><div class="stat-bar-fill" id="fwdBar" style="width:0%;"></div></div>
+            </div>
+            <div class="section-title" style="margin-top:8px;">THROUGHPUT</div>
+            <div class="stat-bar">
+              <div class="stat-bar-label"><span class="name">Pipeline Efficiency</span><span class="val c-green" id="effStat">0%</span></div>
+              <div class="stat-bar-track"><div class="stat-bar-fill" id="effBar" style="width:0%;"></div></div>
+            </div>
+            <div class="stat-bar">
+              <div class="stat-bar-label"><span class="name">Forwarding Rate</span><span class="val c-accent" id="fwdRateStat">0%</span></div>
+              <div class="stat-bar-track"><div class="stat-bar-fill" id="fwdRateBar" style="width:0%;"></div></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 2: FETCH / DECODE -->
+  <div class="tab-panel" id="tab-fetch">
+    <div class="fetch-layout" style="width:100%;">
+      <!-- Memory / Program view -->
+      <div class="panel" style="border-bottom:none;">
+        <div class="panel-header"><div class="panel-title">INSTRUCTION MEMORY</div><div class="panel-badge">RV32I</div></div>
+        <div class="panel-body">
+          <div class="pc-control">
+            <div class="pc-label">PC →</div>
+            <div class="pc-addr" id="fetchPC">0x00000000</div>
+          </div>
+          <table class="memory-table" id="memoryTable">
+            <thead><tr><th>ADDR</th><th>HEX</th><th>MNEM</th><th>OPERANDS</th></tr></thead>
+            <tbody id="memoryTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Decode visualization -->
+      <div class="panel" style="border-bottom:none;">
+        <div class="panel-header"><div class="panel-title">INSTRUCTION DECODE</div><div class="panel-badge" id="decodeBadge">NO INSTR</div></div>
+        <div class="decode-visual">
+          <div class="section-title">32-BIT INSTRUCTION WORD</div>
+          <div class="instr-bits">
+            <div style="font-size:9px; color:var(--text3); margin-bottom:2px; font-family:'Share Tech Mono',monospace; display:flex; gap:1px;" id="bitPositions"></div>
+            <div class="bits-row" id="bitsRow"></div>
+          </div>
+
+          <div class="section-title" style="margin-top:4px;">DECODED FIELDS</div>
+          <div class="decode-fields" id="decodeFields">
+            <div class="decode-field highlight-purple">
+              <div class="df-label">OPCODE [6:0]</div>
+              <div class="df-val" id="df-opcode">—</div>
+              <div class="df-sub" id="df-opcode-type">—</div>
+            </div>
+            <div class="decode-field highlight-green">
+              <div class="df-label">RD [11:7]</div>
+              <div class="df-val" id="df-rd">—</div>
+              <div class="df-sub" id="df-rd-name">—</div>
+            </div>
+            <div class="decode-field highlight-yellow">
+              <div class="df-label">FUNCT3 [14:12]</div>
+              <div class="df-val" id="df-funct3">—</div>
+              <div class="df-sub" id="df-funct3-op">—</div>
+            </div>
+            <div class="decode-field highlight-orange">
+              <div class="df-label">RS1 [19:15]</div>
+              <div class="df-val" id="df-rs1">—</div>
+              <div class="df-sub" id="df-rs1-val">—</div>
+            </div>
+            <div class="decode-field" style="border-color:var(--accent2);">
+              <div class="df-label">RS2 [24:20]</div>
+              <div class="df-val" style="color:var(--accent2);" id="df-rs2">—</div>
+              <div class="df-sub" id="df-rs2-val">—</div>
+            </div>
+            <div class="decode-field" style="border-color:var(--red);">
+              <div class="df-label">FUNCT7 / IMM [31:25]</div>
+              <div class="df-val" style="color:var(--red);" id="df-funct7">—</div>
+              <div class="df-sub" id="df-funct7-sub">—</div>
+            </div>
+          </div>
+
+          <div class="section-title">CONTROL SIGNALS GENERATED</div>
+          <div class="ctrl-signals" id="ctrlSignals">
+            <div class="ctrl-sig" id="cs-regwrite">RegWrite</div>
+            <div class="ctrl-sig" id="cs-memread">MemRead</div>
+            <div class="ctrl-sig" id="cs-memwrite">MemWrite</div>
+            <div class="ctrl-sig" id="cs-branch">Branch</div>
+            <div class="ctrl-sig" id="cs-jump">Jump</div>
+            <div class="ctrl-sig" id="cs-alusrc">ALUSrc</div>
+            <div class="ctrl-sig" id="cs-memtoreg">MemToReg</div>
+            <div class="ctrl-sig" id="cs-aluzero">ALUZero</div>
+            <div class="ctrl-sig" id="cs-unsigned">Unsigned</div>
+          </div>
+
+          <div class="section-title">IMMEDIATE GENERATION</div>
+          <div style="background:var(--bg2); border:1px solid var(--border); padding:8px; font-family:'Share Tech Mono',monospace; font-size:11px;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+              <span style="color:var(--text3);">IMM TYPE:</span><span id="immType" class="c-yellow">—</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+              <span style="color:var(--text3);">IMM VALUE:</span><span id="immVal" class="c-accent">—</span>
+            </div>
+            <div style="display:flex; justify-content:space-between;">
+              <span style="color:var(--text3);">SIGN EXTEND:</span><span id="immSext" class="c-green">—</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Hazard detection -->
+      <div class="panel" style="border-right:none; border-bottom:none;">
+        <div class="panel-header"><div class="panel-title">HAZARD DETECTION</div></div>
+        <div class="panel-body">
+          <div class="section-title">FORWARDING PATHS</div>
+          <div id="fwdPaths">
+            <div class="fwd-path" id="fwd-EX_MEM"><span class="c-text3">EX/MEM</span><span class="fwd-arrow">→</span><span class="c-text3">EX</span><span style="flex:1;"></span><span id="fwd-EX_MEM-val" class="mono c-text3">—</span></div>
+            <div class="fwd-path" id="fwd-MEM_WB"><span class="c-text3">MEM/WB</span><span class="fwd-arrow">→</span><span class="c-text3">EX</span><span style="flex:1;"></span><span id="fwd-MEM_WB-val" class="mono c-text3">—</span></div>
+            <div class="fwd-path" id="fwd-WB"><span class="c-text3">WB</span><span class="fwd-arrow">→</span><span class="c-text3">ID</span><span style="flex:1;"></span><span id="fwd-WB-val" class="mono c-text3">—</span></div>
+          </div>
+
+          <div class="section-title" style="margin-top:10px;">LOAD-USE HAZARD</div>
+          <div style="background:var(--bg2); border:1px solid var(--border); padding:8px; font-family:'Share Tech Mono',monospace; font-size:10px;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+              <span style="color:var(--text3);">DETECTED:</span><span id="loadUseDetect" class="c-red">NO</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+              <span style="color:var(--text3);">STALL CYCLES:</span><span id="loadUseStalls" class="c-orange">0</span>
+            </div>
+            <div style="display:flex; justify-content:space-between;">
+              <span style="color:var(--text3);">BUBBLE INSERT:</span><span id="loadUseBubble" class="c-text3">—</span>
+            </div>
+          </div>
+
+          <div class="section-title" style="margin-top:10px;">DATA DEPENDENCY TABLE</div>
+          <table class="forward-table" id="depTable">
+            <thead><tr><th>INSTR</th><th>READS</th><th>WRITES</th><th>STATUS</th></tr></thead>
+            <tbody id="depTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 3: ALU / EXECUTE -->
+  <div class="tab-panel" id="tab-alu">
+    <div class="alu-layout" style="width:100%;">
+      <!-- ALU diagram -->
+      <div class="panel" style="border-bottom:none;">
+        <div class="panel-header"><div class="panel-title">ALU / EXECUTE UNIT</div><div class="panel-badge">32-BIT INTEGER</div></div>
+        <div class="alu-diagram-wrap">
+          <svg id="aluSvg" viewBox="0 0 480 420" width="100%" style="max-height:100%;">
+            <!-- Background grid -->
+            <defs>
+              <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+                <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#0d1525" stroke-width="0.5"/>
+              </pattern>
+              <filter id="glow">
+                <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+                <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+              </filter>
+            </defs>
+            <rect width="480" height="420" fill="url(#grid)"/>
+
+            <!-- MUX A -->
+            <polygon points="30,80 30,130 55,115 55,95" fill="#0a1020" stroke="#243650" stroke-width="1"/>
+            <text x="38" y="109" fill="#405070" font-size="7" font-family="Share Tech Mono">MUX</text>
+            <text x="36" y="118" fill="#405070" font-size="7" font-family="Share Tech Mono">ForA</text>
+            
+            <!-- MUX B -->
+            <polygon points="30,160 30,210 55,195 55,175" fill="#0a1020" stroke="#243650" stroke-width="1"/>
+            <text x="38" y="189" fill="#405070" font-size="7" font-family="Share Tech Mono">MUX</text>
+            <text x="36" y="198" fill="#405070" font-size="7" font-family="Share Tech Mono">ForB</text>
+
+            <!-- ALU body (trapezoid) -->
+            <polygon id="aluBody" points="120,60 120,270 200,240 200,90" fill="#080d18" stroke="#1a2840" stroke-width="1.5"/>
+            
+            <!-- ALU label -->
+            <text x="140" y="160" fill="#405070" font-size="20" font-family="Orbitron" font-weight="700">ALU</text>
+            <text x="143" y="175" fill="#405070" font-size="8" font-family="Share Tech Mono">RV32I</text>
+
+            <!-- ALU inputs wires -->
+            <line id="wireA" x1="55" y1="105" x2="120" y2="130" stroke="#243650" stroke-width="1.5"/>
+            <line id="wireB" x1="55" y1="185" x2="120" y2="200" stroke="#243650" stroke-width="1.5"/>
+            
+            <!-- Register sources -->
+            <rect x="0" y="55" width="28" height="18" fill="#080d18" stroke="#1a2840"/>
+            <text x="4" y="68" fill="#7090b0" font-size="8" font-family="Share Tech Mono" id="rs1Label">RS1</text>
+            <line x1="28" y1="64" x2="30" y2="105" stroke="#243650" stroke-width="1"/>
+            
+            <rect x="0" y="80" width="28" height="18" fill="#080d18" stroke="#1a2840"/>
+            <text x="4" y="93" fill="#405070" font-size="7" font-family="Share Tech Mono">FWD-A</text>
+            
+            <rect x="0" y="155" width="28" height="18" fill="#080d18" stroke="#1a2840"/>
+            <text x="4" y="168" fill="#7090b0" font-size="8" font-family="Share Tech Mono" id="rs2Label">RS2</text>
+            <line x1="28" y1="164" x2="30" y2="185" stroke="#243650" stroke-width="1"/>
+            
+            <rect x="0" y="180" width="28" height="18" fill="#080d18" stroke="#1a2840"/>
+            <text x="4" y="193" fill="#405070" font-size="7" font-family="Share Tech Mono">IMM</text>
+
+            <!-- Output wire -->
+            <line id="wireOut" x1="200" y1="165" x2="280" y2="165" stroke="#243650" stroke-width="1.5"/>
+            
+            <!-- Result register -->
+            <rect x="280" y="145" width="80" height="40" fill="#080d18" stroke="#243650" stroke-width="1.5" rx="2"/>
+            <text x="295" y="161" fill="#405070" font-size="8" font-family="Share Tech Mono">RESULT</text>
+            <text x="290" y="178" fill="#405070" font-size="11" font-family="Share Tech Mono" id="aluResultText">0x00000000</text>
+            
+            <!-- Flags -->
+            <rect x="370" y="100" width="100" height="90" fill="#080d18" stroke="#1a2840" rx="2"/>
+            <text x="390" y="115" fill="#405070" font-size="8" font-family="Orbitron">FLAGS</text>
+            <text x="378" y="133" fill="#405070" font-size="8" font-family="Share Tech Mono">ZERO:</text>
+            <text x="430" y="133" fill="#405070" font-size="9" font-family="Share Tech Mono" id="flagZero">0</text>
+            <text x="378" y="148" fill="#405070" font-size="8" font-family="Share Tech Mono">NEG:</text>
+            <text x="430" y="148" fill="#405070" font-size="9" font-family="Share Tech Mono" id="flagNeg">0</text>
+            <text x="378" y="163" fill="#405070" font-size="8" font-family="Share Tech Mono">OVFL:</text>
+            <text x="430" y="163" fill="#405070" font-size="9" font-family="Share Tech Mono" id="flagOvfl">0</text>
+            <text x="378" y="178" fill="#405070" font-size="8" font-family="Share Tech Mono">CARRY:</text>
+            <text x="430" y="178" fill="#405070" font-size="9" font-family="Share Tech Mono" id="flagCarry">0</text>
+            
+            <!-- Wire to flags -->
+            <line x1="360" y1="165" x2="370" y2="145" stroke="#243650" stroke-width="1"/>
+
+            <!-- ALU operation -->
+            <rect x="130" y="270" width="80" height="30" fill="#080d18" stroke="#1a2840" rx="2"/>
+            <text x="145" y="282" fill="#405070" font-size="8" font-family="Share Tech Mono">ALU OP:</text>
+            <text x="145" y="294" fill="#405070" font-size="9" font-family="Share Tech Mono" id="aluOpText">NONE</text>
+
+            <!-- Operand A display -->
+            <rect x="50" y="290" width="65" height="40" fill="#080d18" stroke="#1a2840" rx="2"/>
+            <text x="60" y="305" fill="#405070" font-size="8" font-family="Share Tech Mono">OP A:</text>
+            <text x="55" y="322" fill="#405070" font-size="9" font-family="Share Tech Mono" id="opAText">0x00000000</text>
+
+            <!-- Operand B display -->
+            <rect x="225" y="290" width="65" height="40" fill="#080d18" stroke="#1a2840" rx="2"/>
+            <text x="235" y="305" fill="#405070" font-size="8" font-family="Share Tech Mono">OP B:</text>
+            <text x="230" y="322" fill="#405070" font-size="9" font-family="Share Tech Mono" id="opBText">0x00000000</text>
+
+            <!-- PC adder for branch -->
+            <rect x="60" y="340" width="120" height="30" fill="#080d18" stroke="#1a2840" rx="2"/>
+            <text x="75" y="355" fill="#405070" font-size="8" font-family="Share Tech Mono">BRANCH TARGET:</text>
+            <text x="80" y="367" fill="#405070" font-size="9" font-family="Share Tech Mono" id="branchTargetText">0x00000000</text>
+
+            <!-- Active indicator -->
+            <circle id="aluActive" cx="455" cy="60" r="6" fill="#1a2840" stroke="#243650"/>
+            <text x="435" y="78" fill="#405070" font-size="7" font-family="Share Tech Mono" id="aluActiveLabel">IDLE</text>
+          </svg>
+        </div>
+      </div>
+
+      <!-- Execute detail panel -->
+      <div class="panel" style="border-right:none; border-bottom:none;">
+        <div class="panel-header"><div class="panel-title">EXECUTION DETAIL</div></div>
+        <div class="panel-body">
+          <div class="section-title">CURRENT OPERATION</div>
+          <div style="background:var(--bg2); border:1px solid var(--border); padding:10px; margin-bottom:10px;">
+            <div style="font-family:'Share Tech Mono',monospace; font-size:14px; color:var(--yellow); text-align:center; margin-bottom:8px;" id="currentExecInstr">—</div>
+            <div class="grid-2" style="gap:6px;">
+              <div class="decode-field"><div class="df-label">OPERAND A</div><div class="df-val" id="execOpA">—</div></div>
+              <div class="decode-field"><div class="df-label">OPERAND B</div><div class="df-val" id="execOpB">—</div></div>
+              <div class="decode-field highlight-green"><div class="df-label">RESULT</div><div class="df-val" id="execResult">—</div></div>
+              <div class="decode-field" style="border-color:var(--yellow);"><div class="df-label">OPERATION</div><div class="df-val" style="color:var(--yellow);" id="execOp">—</div></div>
+            </div>
+          </div>
+
+          <div class="section-title">ALU OPERATIONS</div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:3px; margin-bottom:10px;">
+            <div class="ctrl-sig" id="alu-add">ADD/ADDI</div>
+            <div class="ctrl-sig" id="alu-sub">SUB</div>
+            <div class="ctrl-sig" id="alu-and">AND/ANDI</div>
+            <div class="ctrl-sig" id="alu-or">OR/ORI</div>
+            <div class="ctrl-sig" id="alu-xor">XOR/XORI</div>
+            <div class="ctrl-sig" id="alu-sll">SLL</div>
+            <div class="ctrl-sig" id="alu-srl">SRL</div>
+            <div class="ctrl-sig" id="alu-sra">SRA</div>
+            <div class="ctrl-sig" id="alu-slt">SLT</div>
+            <div class="ctrl-sig" id="alu-sltu">SLTU</div>
+            <div class="ctrl-sig" id="alu-mul">MUL</div>
+            <div class="ctrl-sig" id="alu-div">DIV</div>
+          </div>
+
+          <div class="section-title">FORWARDING UNIT STATUS</div>
+          <table class="forward-table">
+            <thead><tr><th>PATH</th><th>SRC</th><th>DEST</th><th>ACTIVE</th><th>VALUE</th></tr></thead>
+            <tbody id="fwdUnitTable">
+              <tr id="fwd-row-EX"><td>EX/MEM→EX</td><td id="fwd-src-ex">—</td><td id="fwd-dst-ex">—</td><td id="fwd-active-ex" class="c-text3">NO</td><td id="fwd-val-ex" class="mono">—</td></tr>
+              <tr id="fwd-row-MEM"><td>MEM/WB→EX</td><td id="fwd-src-mem">—</td><td id="fwd-dst-mem">—</td><td id="fwd-active-mem" class="c-text3">NO</td><td id="fwd-val-mem" class="mono">—</td></tr>
+              <tr id="fwd-row-WB"><td>WB→ID</td><td id="fwd-src-wb">—</td><td id="fwd-dst-wb">—</td><td id="fwd-active-wb" class="c-text3">NO</td><td id="fwd-val-wb" class="mono">—</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 4: MEMORY HIERARCHY -->
+  <div class="tab-panel" id="tab-memory">
+    <div class="mem-layout" style="width:100%;">
+      <!-- L1 I-Cache -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">L1 I-CACHE</div>
+          <div class="panel-badge">32KB · 8-WAY · 64B LINE</div>
+        </div>
+        <div class="panel-body">
+          <div style="display:flex; gap:12px; margin-bottom:8px;">
+            <div><div style="font-size:9px; color:var(--text3);">HIT RATE</div><div style="font-family:'Share Tech Mono',monospace; font-size:16px; color:var(--green); text-shadow:0 0 8px var(--green);" id="icacheHitRate">100%</div></div>
+            <div><div style="font-size:9px; color:var(--text3);">HITS</div><div style="font-family:'Share Tech Mono',monospace; font-size:16px; color:var(--accent);" id="icacheHits">0</div></div>
+            <div><div style="font-size:9px; color:var(--text3);">MISSES</div><div style="font-family:'Share Tech Mono',monospace; font-size:16px; color:var(--red);" id="icacheMisses">0</div></div>
+            <div><div style="font-size:9px; color:var(--text3);">LATENCY</div><div style="font-family:'Share Tech Mono',monospace; font-size:16px; color:var(--yellow);" id="icacheLatency">1</div></div>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:2px;" id="icacheVisual"></div>
+        </div>
+      </div>
+
+      <!-- L1 D-Cache -->
+      <div class="panel" style="border-right:none;">
+        <div class="panel-header">
+          <div class="panel-title">L1 D-CACHE</div>
+          <div class="panel-badge">32KB · 8-WAY · 64B LINE</div>
+        </div>
+        <div class="panel-body">
+          <div style="display:flex; gap:12px; margin-bottom:8px;">
+            <div><div style="font-size:9px; color:var(--text3);">HIT RATE</div><div style="font-family:'Share Tech Mono',monospace; font-size:16px; color:var(--green);" id="dcacheHitRate">100%</div></div>
+            <div><div style="font-size:9px; color:var(--text3);">HITS</div><div style="font-family:'Share Tech Mono',monospace; font-size:16px; color:var(--accent);" id="dcacheHits">0</div></div>
+            <div><div style="font-size:9px; color:var(--text3);">MISSES</div><div style="font-family:'Share Tech Mono',monospace; font-size:16px; color:var(--red);" id="dcacheMisses">0</div></div>
+            <div><div style="font-size:9px; color:var(--text3);">DIRTY</div><div style="font-family:'Share Tech Mono',monospace; font-size:16px; color:var(--orange);" id="dcacheDirty">0</div></div>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:2px;" id="dcacheVisual"></div>
+        </div>
+      </div>
+
+      <!-- L2 Cache + TLB -->
+      <div class="panel" style="border-bottom:none;">
+        <div class="panel-header"><div class="panel-title">L2 CACHE + TLB</div><div class="panel-badge">256KB UNIFIED</div></div>
+        <div class="panel-body">
+          <div class="section-title">L2 UNIFIED CACHE</div>
+          <div style="display:flex; gap:12px; margin-bottom:8px;">
+            <div><div style="font-size:9px; color:var(--text3);">HIT RATE</div><div style="font-family:'Share Tech Mono',monospace; font-size:14px; color:var(--green);" id="l2HitRate">100%</div></div>
+            <div><div style="font-size:9px; color:var(--text3);">HITS</div><div style="font-family:'Share Tech Mono',monospace; font-size:14px; color:var(--accent);" id="l2Hits">0</div></div>
+            <div><div style="font-size:9px; color:var(--text3);">MISSES</div><div style="font-family:'Share Tech Mono',monospace; font-size:14px; color:var(--red);" id="l2Misses">0</div></div>
+          </div>
+          <div style="height:40px; background:var(--bg2); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; font-family:'Share Tech Mono',monospace; font-size:9px; color:var(--text3); margin-bottom:8px;" id="l2AccessIndicator">IDLE</div>
+          
+          <div class="section-title">TRANSLATION LOOKASIDE BUFFER</div>
+          <div style="display:flex; gap:8px; margin-bottom:6px;">
+            <div><div style="font-size:9px; color:var(--text3);">ITLB HIT</div><div style="font-family:'Share Tech Mono',monospace; color:var(--green);" id="tlbIHits">0</div></div>
+            <div><div style="font-size:9px; color:var(--text3);">DTLB HIT</div><div style="font-family:'Share Tech Mono',monospace; color:var(--green);" id="tlbDHits">0</div></div>
+            <div><div style="font-size:9px; color:var(--text3);">MISS</div><div style="font-family:'Share Tech Mono',monospace; color:var(--red);" id="tlbMisses">0</div></div>
+          </div>
+          <table class="forward-table" style="font-size:9px;">
+            <thead><tr><th>VPFN</th><th>PPFN</th><th>V</th><th>D</th><th>PROT</th></tr></thead>
+            <tbody id="tlbTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- DRAM + Memory hierarchy -->
+      <div class="panel" style="border-right:none; border-bottom:none;">
+        <div class="panel-header"><div class="panel-title">MAIN MEMORY + HIERARCHY</div></div>
+        <div class="panel-body">
+          <div class="section-title">MEMORY HIERARCHY LATENCY</div>
+          <div style="display:flex; flex-direction:column; gap:4px; margin-bottom:10px;">
+            <div class="stat-bar">
+              <div class="stat-bar-label"><span class="name c-green">L1 Cache (32KB)</span><span class="val">1 cycle · ~0.5ns</span></div>
+              <div class="stat-bar-track"><div class="stat-bar-fill" style="width:8%;"></div></div>
+            </div>
+            <div class="stat-bar">
+              <div class="stat-bar-label"><span class="name c-accent">L2 Cache (256KB)</span><span class="val">10 cycles · ~5ns</span></div>
+              <div class="stat-bar-track"><div class="stat-bar-fill" style="width:30%;"></div></div>
+            </div>
+            <div class="stat-bar">
+              <div class="stat-bar-label"><span class="name c-yellow">L3 Cache (8MB)</span><span class="val">40 cycles · ~20ns</span></div>
+              <div class="stat-bar-track"><div class="stat-bar-fill" style="width:55%;background:linear-gradient(90deg,var(--yellow),#ffee66);"></div></div>
+            </div>
+            <div class="stat-bar">
+              <div class="stat-bar-label"><span class="name c-orange">DRAM (DDR5)</span><span class="val">200 cycles · ~100ns</span></div>
+              <div class="stat-bar-track"><div class="stat-bar-fill" style="width:80%;background:linear-gradient(90deg,var(--orange),#ffaa44);"></div></div>
+            </div>
+            <div class="stat-bar">
+              <div class="stat-bar-label"><span class="name c-red">SSD (NVMe)</span><span class="val">~100µs</span></div>
+              <div class="stat-bar-track"><div class="stat-bar-fill" style="width:100%;background:linear-gradient(90deg,var(--red),#ff6677);"></div></div>
+            </div>
+          </div>
+
+          <div class="section-title">MEMORY ACCESS LOG</div>
+          <div id="memAccessLog" style="display:flex; flex-direction:column; gap:2px; overflow-y:auto; max-height:120px;"></div>
+
+          <div class="section-title" style="margin-top:8px;">DATA MEMORY (WORD VIEW)</div>
+          <table class="memory-table" style="font-size:9px;">
+            <thead><tr><th>ADDR</th><th>HEX</th><th>DEC</th></tr></thead>
+            <tbody id="dataMemBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 5: TIMING DIAGRAM -->
+  <div class="tab-panel" id="tab-timing">
+    <div style="padding:8px; border-bottom:1px solid var(--border); background:var(--bg2); display:flex; gap:8px; align-items:center; flex-shrink:0;">
+      <div style="font-size:10px; color:var(--text3); letter-spacing:1px; text-transform:uppercase;">PIPELINE TIMING DIAGRAM</div>
+      <div style="margin-left:auto; display:flex; gap:8px; align-items:center;">
+        <div style="display:flex; gap:4px;">
+          <div style="display:flex; align-items:center; gap:3px; font-size:10px; color:var(--accent2);"><div style="width:12px; height:8px; background:rgba(0,136,255,0.3); border:1px solid rgba(0,136,255,0.5);"></div>IF</div>
+          <div style="display:flex; align-items:center; gap:3px; font-size:10px; color:var(--purple);"><div style="width:12px; height:8px; background:rgba(170,68,255,0.3); border:1px solid rgba(170,68,255,0.5);"></div>ID</div>
+          <div style="display:flex; align-items:center; gap:3px; font-size:10px; color:var(--yellow);"><div style="width:12px; height:8px; background:rgba(255,221,0,0.2); border:1px solid rgba(255,221,0,0.5);"></div>EX</div>
+          <div style="display:flex; align-items:center; gap:3px; font-size:10px; color:var(--orange);"><div style="width:12px; height:8px; background:rgba(255,136,0,0.2); border:1px solid rgba(255,136,0,0.5);"></div>MEM</div>
+          <div style="display:flex; align-items:center; gap:3px; font-size:10px; color:var(--green);"><div style="width:12px; height:8px; background:rgba(0,255,136,0.2); border:1px solid rgba(0,255,136,0.5);"></div>WB</div>
+          <div style="display:flex; align-items:center; gap:3px; font-size:10px; color:var(--red);"><div style="width:12px; height:8px; background:rgba(255,51,85,0.2); border:1px solid rgba(255,51,85,0.5);"></div>STALL</div>
+        </div>
+        <button class="btn" onclick="clearTiming()">CLEAR</button>
+      </div>
+    </div>
+    <div class="timing-diagram" id="timingDiagram">
+      <div class="timing-header">
+        <div class="timing-instr-col">INSTRUCTION</div>
+        <div class="timing-cycle-header" id="timingCycleHeader"></div>
+      </div>
+      <div id="timingRows"></div>
+    </div>
+  </div>
+
+  <!-- TAB 6: BRANCH PREDICTOR -->
+  <div class="tab-panel" id="tab-branch">
+    <div class="branch-layout" style="width:100%;">
+      <!-- BTB -->
+      <div class="panel" style="border-bottom:none;">
+        <div class="panel-header"><div class="panel-title">BRANCH TARGET BUFFER</div><div class="panel-badge">64-ENTRY DIRECT-MAPPED</div></div>
+        <div class="panel-body">
+          <div style="display:flex; gap:12px; margin-bottom:8px;">
+            <div><div style="font-size:9px; color:var(--text3);">ACCURACY</div><div style="font-family:'Share Tech Mono',monospace; font-size:16px; color:var(--green);" id="btbAccuracy">—</div></div>
+            <div><div style="font-size:9px; color:var(--text3);">CORRECT</div><div style="font-family:'Share Tech Mono',monospace; font-size:16px; color:var(--accent);" id="btbCorrect">0</div></div>
+            <div><div style="font-size:9px; color:var(--text3);">MISPRED</div><div style="font-family:'Share Tech Mono',monospace; font-size:16px; color:var(--red);" id="btbMispred">0</div></div>
+            <div><div style="font-size:9px; color:var(--text3);">PENALTY</div><div style="font-family:'Share Tech Mono',monospace; font-size:16px; color:var(--orange);" id="btbPenalty">0</div></div>
+          </div>
+          <table class="btb-table" id="btbTable">
+            <thead><tr><th>IDX</th><th>PC TAG</th><th>TARGET</th><th>STATE</th><th>OUTCOME</th></tr></thead>
+            <tbody id="btbTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 2-bit predictor + history -->
+      <div class="panel" style="border-right:none; border-bottom:none;">
+        <div class="panel-header"><div class="panel-title">2-BIT SATURATING COUNTER FSM</div></div>
+        <div class="panel-body">
+          <div class="fsm-visual">
+            <div style="font-size:10px; color:var(--text3); letter-spacing:1px; text-transform:uppercase; margin-bottom:8px;">PREDICTOR STATE MACHINE</div>
+            <div class="fsm-states">
+              <div class="fsm-state sn" id="fsm-SN">
+                <div style="font-family:'Share Tech Mono',monospace; font-size:13px; color:var(--red);">SN</div>
+                <div class="fsm-state-label">Strongly Not</div>
+                <div class="fsm-predict not-taken">NOT TAKEN</div>
+              </div>
+              <div class="fsm-state wn" id="fsm-WN">
+                <div style="font-family:'Share Tech Mono',monospace; font-size:13px; color:var(--orange);">WN</div>
+                <div class="fsm-state-label">Weakly Not</div>
+                <div class="fsm-predict not-taken">NOT TAKEN</div>
+              </div>
+              <div class="fsm-state wt" id="fsm-WT">
+                <div style="font-family:'Share Tech Mono',monospace; font-size:13px; color:var(--yellow);">WT</div>
+                <div class="fsm-state-label">Weakly Taken</div>
+                <div class="fsm-predict taken">TAKEN</div>
+              </div>
+              <div class="fsm-state st" id="fsm-ST">
+                <div style="font-family:'Share Tech Mono',monospace; font-size:13px; color:var(--green);">ST</div>
+                <div class="fsm-state-label">Strongly Taken</div>
+                <div class="fsm-predict taken">TAKEN</div>
+              </div>
+            </div>
+            <div style="font-size:10px; color:var(--text3); margin-top:8px;">Current State: <span id="currentFSMState" style="font-family:'Share Tech Mono',monospace; color:var(--accent);">WT</span></div>
+            <div style="display:flex; gap:8px; margin-top:12px;">
+              <button class="btn green" onclick="fsmTaken()" style="flex:1;">BRANCH TAKEN</button>
+              <button class="btn orange" onclick="fsmNotTaken()" style="flex:1;">NOT TAKEN</button>
+            </div>
+
+            <div style="margin-top:16px; width:100%;">
+              <div class="section-title">BRANCH HISTORY REGISTER</div>
+              <div style="display:flex; gap:2px; margin-top:6px;" id="bhrDisplay"></div>
+            </div>
+
+            <div style="margin-top:12px; width:100%;">
+              <div class="section-title">RECENT BRANCHES</div>
+              <div id="branchHistoryLog" style="display:flex; flex-direction:column; gap:2px; max-height:120px; overflow-y:auto;"></div>
+            </div>
+
+            <div style="margin-top:12px; width:100%;">
+              <div class="section-title">RETURN ADDRESS STACK</div>
+              <div id="rasDisplay" style="display:flex; flex-direction:column; gap:2px;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 7: OUT-OF-ORDER / ROB -->
+  <div class="tab-panel" id="tab-ooo">
+    <div class="ooo-layout" style="width:100%;">
+      <!-- Issue Queue / Reservation Stations -->
+      <div class="panel" style="border-bottom:none;">
+        <div class="panel-header"><div class="panel-title">RESERVATION STATIONS</div><div class="panel-badge">16 ENTRIES</div></div>
+        <div class="panel-body">
+          <div id="rsDisplay"></div>
+        </div>
+      </div>
+
+      <!-- Reorder Buffer -->
+      <div class="panel" style="border-bottom:none;">
+        <div class="panel-header"><div class="panel-title">REORDER BUFFER</div><div class="panel-badge">32 ENTRIES</div></div>
+        <div class="panel-body">
+          <div style="display:flex; gap:8px; margin-bottom:8px; font-family:'Share Tech Mono',monospace; font-size:10px;">
+            <div><span class="c-text3">HEAD: </span><span class="c-accent2" id="robHead">0</span></div>
+            <div><span class="c-text3">TAIL: </span><span class="c-orange" id="robTail">0</span></div>
+            <div><span class="c-text3">USED: </span><span class="c-green" id="robUsed">0</span>/32</div>
+          </div>
+          <table class="rob-table" id="robTable">
+            <thead><tr><th>IDX</th><th>INSTR</th><th>DEST</th><th>VALUE</th><th>STATE</th></tr></thead>
+            <tbody id="robBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Execution units + Commit -->
+      <div class="panel" style="border-right:none; border-bottom:none;">
+        <div class="panel-header"><div class="panel-title">EXECUTION UNITS + COMMIT</div></div>
+        <div class="panel-body">
+          <div class="section-title">FUNCTIONAL UNITS</div>
+          <div style="display:flex; flex-direction:column; gap:4px; margin-bottom:12px;" id="fuDisplay">
+            <div class="rs-entry" id="fu-alu1">
+              <div class="rs-row">
+                <span style="color:var(--accent); font-size:10px; width:60px;">INT ALU 1</span>
+                <span id="fu-alu1-status" class="c-text3" style="font-size:10px;">IDLE</span>
+                <span id="fu-alu1-instr" class="c-yellow" style="font-size:10px; margin-left:auto;">—</span>
+              </div>
+            </div>
+            <div class="rs-entry" id="fu-alu2">
+              <div class="rs-row">
+                <span style="color:var(--accent); font-size:10px; width:60px;">INT ALU 2</span>
+                <span id="fu-alu2-status" class="c-text3" style="font-size:10px;">IDLE</span>
+                <span id="fu-alu2-instr" class="c-yellow" style="font-size:10px; margin-left:auto;">—</span>
+              </div>
+            </div>
+            <div class="rs-entry" id="fu-mul">
+              <div class="rs-row">
+                <span style="color:var(--purple); font-size:10px; width:60px;">MUL/DIV</span>
+                <span id="fu-mul-status" class="c-text3" style="font-size:10px;">IDLE</span>
+                <span id="fu-mul-instr" class="c-yellow" style="font-size:10px; margin-left:auto;">—</span>
+              </div>
+            </div>
+            <div class="rs-entry" id="fu-lsu">
+              <div class="rs-row">
+                <span style="color:var(--orange); font-size:10px; width:60px;">LOAD/STORE</span>
+                <span id="fu-lsu-status" class="c-text3" style="font-size:10px;">IDLE</span>
+                <span id="fu-lsu-instr" class="c-yellow" style="font-size:10px; margin-left:auto;">—</span>
+              </div>
+            </div>
+            <div class="rs-entry" id="fu-bru">
+              <div class="rs-row">
+                <span style="color:var(--yellow); font-size:10px; width:60px;">BRANCH</span>
+                <span id="fu-bru-status" class="c-text3" style="font-size:10px;">IDLE</span>
+                <span id="fu-bru-instr" class="c-yellow" style="font-size:10px; margin-left:auto;">—</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="section-title">COMMIT STAGE (IN-ORDER)</div>
+          <div style="background:var(--bg2); border:1px solid var(--border); padding:8px; margin-bottom:8px;">
+            <div style="font-family:'Share Tech Mono',monospace; font-size:10px; display:flex; flex-direction:column; gap:4px;">
+              <div style="display:flex; justify-content:space-between;"><span class="c-text3">COMMITTED:</span><span id="oooCommitted" class="c-green">0</span></div>
+              <div style="display:flex; justify-content:space-between;"><span class="c-text3">SQUASHED:</span><span id="oooSquashed" class="c-red">0</span></div>
+              <div style="display:flex; justify-content:space-between;"><span class="c-text3">LAST COMMIT:</span><span id="oooLastCommit" class="c-yellow">—</span></div>
+            </div>
+          </div>
+
+          <div class="section-title">REGISTER ALIAS TABLE (RAT)</div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:2px;" id="ratDisplay"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- STATUS BAR -->
+<div class="status-bar">
+  <div class="status-item"><div class="status-dot" id="simStatusDot"></div><div class="status-label">SIM</div><div class="status-val" id="simStatusVal">IDLE</div></div>
+  <div class="status-item"><div class="status-label">STAGE</div><div class="status-val" id="currentStageVal">—</div></div>
+  <div class="status-item"><div class="status-label">INSTR</div><div class="status-val c-yellow" id="currentInstrVal">—</div></div>
+  <div class="status-item"><div class="status-label">CACHE</div><div class="status-val" id="cacheStatusVal">WARM</div></div>
+  <div class="status-item"><div class="status-label">BRANCH</div><div class="status-val" id="branchStatusVal">—</div></div>
+  <div class="status-item" style="margin-left:auto;"><div class="status-label">FREQ</div><div class="status-val c-accent">3.2 GHz</div></div>
+  <div class="status-item"><div class="status-label">TEMP</div><div class="status-val" id="tempVal">42°C</div></div>
+  <div class="status-item"><div class="status-label">POWER</div><div class="status-val" id="powerVal">12W</div></div>
+</div>
+
+<!-- HELP OVERLAY -->
+<div class="help-overlay" id="helpOverlay" onclick="this.classList.remove('show')">
+  <div class="help-box" onclick="event.stopPropagation()">
+    <h2>CPU VISUALIZER · HELP</h2>
+    <div class="help-row"><div class="help-key">STEP ▶</div><div class="help-desc">Advance one clock cycle through the pipeline</div></div>
+    <div class="help-row"><div class="help-key">AUTO RUN</div><div class="help-desc">Continuously step at the selected speed</div></div>
+    <div class="help-row"><div class="help-key">RESET</div><div class="help-desc">Clear all pipeline state, registers, and counters</div></div>
+    <div class="help-row"><div class="help-key">QUEUE</div><div class="help-desc">Add instruction to the fetch queue</div></div>
+    <div class="help-row"><div class="help-key">PRESETS</div><div class="help-desc">Click instruction buttons to quickly queue them</div></div>
+    <div class="help-row"><div class="help-key">LOAD PROG</div><div class="help-desc">Load a pre-defined program (hazards demo, fibonacci...)</div></div>
+    <div class="help-row"><div class="help-key">TABS 01-07</div><div class="help-desc">Dive deeper into each CPU subsystem</div></div>
+    <div class="help-row"><div class="help-key">FSM BTNS</div><div class="help-desc">Manually drive branch predictor state (Tab 06)</div></div>
+    <div style="margin-top:16px; padding:8px; background:var(--bg2); border:1px solid var(--border); font-size:11px; color:var(--text3);">
+      Try: Load "HAZARD DEMO" → AUTO RUN to see RAW hazards, forwarding, and stalls in action.
+    </div>
+    <button class="btn" style="margin-top:12px; width:100%;" onclick="document.getElementById('helpOverlay').classList.remove('show')">CLOSE</button>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// CPU SIMULATION ENGINE
+// ============================================================
+
+const STAGES = ['IF','ID','EX','MEM','WB'];
+const REG_NAMES = ['zero','ra','sp','gp','tp','t0','t1','t2','s0','s1','a0','a1','a2','a3','a4','a5','a6','a7','s2','s3','s4','s5','s6','s7','s8','s9','s10','s11','t3','t4','t5','t6'];
+
+let sim = null;
+let autoRunInterval = null;
+let speedMs = 800;
+let totalCycles = 0;
+let totalInstrs = 0;
+let totalStalls = 0;
+let totalRaw = 0;
+let totalBranchMispred = 0;
+let totalFwd = 0;
+let cacheMisses = 0;
+
+// Pipeline state
+let pipeline = { IF: null, ID: null, EX: null, MEM: null, WB: null };
+let pipelineRegs = { IF_ID: null, ID_EX: null, EX_MEM: null, MEM_WB: null };
+let instrQueue = [];
+let registers = new Array(32).fill(0);
+registers[2] = 0x7FFFFFFC; // SP
+let memory = {};
+let instructionMemory = [];
+let pc = 0;
+let programCounter = 0;
+
+// Branch predictor
+let bpState = 'WT'; // SN, WN, WT, ST
+let bhrRegister = new Array(8).fill(0);
+let btbEntries = [];
+let rasStack = [];
+let branchHistory = [];
+let btbCorrect = 0;
+let btbMispred = 0;
+
+// Cache simulation
+let icacheData = [];
+let dcacheData = [];
+let icacheHits = 0, icacheMisses = 0;
+let dcacheHits = 0, dcacheMissesCnt = 0;
+let l2Hits = 0, l2Misses = 0;
+let tlbIHits = 0, tlbDHits = 0, tlbMissesCnt = 0;
+
+// ROB / OOO
+let rob = [];
+let rsList = [];
+let rat = new Array(32).fill(-1); // -1 = not renamed
+let robHead = 0, robTail = 0;
+let oooCommitted = 0, oooSquashed = 0;
+
+// Timing diagram
+let timingData = []; // [{label, cells:[stage or '']}]
+let maxCycles = 20;
+let currentCycle = 0;
+
+// Stats
+let rawHazards = 0;
+let stallCycles = 0;
+let mispredictions = 0;
+let fwdUsed = 0;
+
+// Performance
+let temp = 42;
+let power = 12;
+
+// ============================================================
+// INSTRUCTION DEFINITIONS
+// ============================================================
+const INSTR_DB = {
+  'ADD':  { type:'R', opcode:'0110011', funct3:'000', funct7:'0000000', aluOp:'ADD', regWrite:true },
+  'SUB':  { type:'R', opcode:'0110011', funct3:'000', funct7:'0100000', aluOp:'SUB', regWrite:true },
+  'AND':  { type:'R', opcode:'0110011', funct3:'111', funct7:'0000000', aluOp:'AND', regWrite:true },
+  'OR':   { type:'R', opcode:'0110011', funct3:'110', funct7:'0000000', aluOp:'OR',  regWrite:true },
+  'XOR':  { type:'R', opcode:'0110011', funct3:'100', funct7:'0000000', aluOp:'XOR', regWrite:true },
+  'SLL':  { type:'R', opcode:'0110011', funct3:'001', funct7:'0000000', aluOp:'SLL', regWrite:true },
+  'SRL':  { type:'R', opcode:'0110011', funct3:'101', funct7:'0000000', aluOp:'SRL', regWrite:true },
+  'SRA':  { type:'R', opcode:'0110011', funct3:'101', funct7:'0100000', aluOp:'SRA', regWrite:true },
+  'SLT':  { type:'R', opcode:'0110011', funct3:'010', funct7:'0000000', aluOp:'SLT', regWrite:true },
+  'SLTU': { type:'R', opcode:'0110011', funct3:'011', funct7:'0000000', aluOp:'SLTU',regWrite:true },
+  'MUL':  { type:'R', opcode:'0110011', funct3:'000', funct7:'0000001', aluOp:'MUL', regWrite:true, mulDiv:true },
+  'DIV':  { type:'R', opcode:'0110011', funct3:'100', funct7:'0000001', aluOp:'DIV', regWrite:true, mulDiv:true },
+  'ADDI': { type:'I', opcode:'0010011', funct3:'000', aluOp:'ADD', regWrite:true },
+  'ANDI': { type:'I', opcode:'0010011', funct3:'111', aluOp:'AND', regWrite:true },
+  'ORI':  { type:'I', opcode:'0010011', funct3:'110', aluOp:'OR',  regWrite:true },
+  'XORI': { type:'I', opcode:'0010011', funct3:'100', aluOp:'XOR', regWrite:true },
+  'SLTI': { type:'I', opcode:'0010011', funct3:'010', aluOp:'SLT', regWrite:true },
+  'SLLI': { type:'I', opcode:'0010011', funct3:'001', aluOp:'SLL', regWrite:true },
+  'SRLI': { type:'I', opcode:'0010011', funct3:'101', aluOp:'SRL', regWrite:true },
+  'LW':   { type:'L', opcode:'0000011', funct3:'010', aluOp:'ADD', regWrite:true,  memRead:true },
+  'LH':   { type:'L', opcode:'0000011', funct3:'001', aluOp:'ADD', regWrite:true,  memRead:true },
+  'LB':   { type:'L', opcode:'0000011', funct3:'000', aluOp:'ADD', regWrite:true,  memRead:true },
+  'SW':   { type:'S', opcode:'0100011', funct3:'010', aluOp:'ADD', memWrite:true },
+  'SH':   { type:'S', opcode:'0100011', funct3:'001', aluOp:'ADD', memWrite:true },
+  'SB':   { type:'S', opcode:'0100011', funct3:'000', aluOp:'ADD', memWrite:true },
+  'BEQ':  { type:'B', opcode:'1100011', funct3:'000', aluOp:'SUB', branch:true },
+  'BNE':  { type:'B', opcode:'1100011', funct3:'001', aluOp:'SUB', branch:true },
+  'BLT':  { type:'B', opcode:'1100011', funct3:'100', aluOp:'SLT', branch:true },
+  'BGE':  { type:'B', opcode:'1100011', funct3:'101', aluOp:'SLT', branch:true },
+  'JAL':  { type:'J', opcode:'1101111', aluOp:'ADD', regWrite:true, jump:true },
+  'JALR': { type:'I', opcode:'1100111', funct3:'000', aluOp:'ADD', regWrite:true, jump:true },
+  'LUI':  { type:'U', opcode:'0110111', aluOp:'LUI', regWrite:true },
+  'AUIPC':{ type:'U', opcode:'0010111', aluOp:'ADD', regWrite:true },
+  'NOP':  { type:'R', opcode:'0010011', funct3:'000', aluOp:'ADD', regWrite:false },
+};
+
+// ============================================================
+// INSTRUCTION PARSER
+// ============================================================
+function parseInstr(raw) {
+  if (!raw) return null;
+  raw = raw.trim().toUpperCase().replace(/\s+/g,' ').replace(/,\s*/g,',');
+  let parts = raw.split(' ');
+  let mnem = parts[0];
+  let ops = parts.slice(1).join('').split(',');
+  let def = INSTR_DB[mnem];
+  if (!def && mnem !== 'NOP') {
+    // Try to find closest
+    for (let k of Object.keys(INSTR_DB)) {
+      if (raw.startsWith(k)) { mnem = k; def = INSTR_DB[k]; break; }
+    }
+  }
+  if (!def) def = INSTR_DB['NOP'];
+  
+  let parsed = { raw, mnem, type: def.type, def,
+    rd:0, rs1:0, rs2:0, imm:0,
+    encoding: '', hex: '' };
+
+  // Parse register names
+  const parseReg = s => {
+    if (!s) return 0;
+    s = s.trim();
+    if (s.match(/^R\d+$/)) return parseInt(s.slice(1)) % 32;
+    if (s.match(/^X\d+$/)) return parseInt(s.slice(1)) % 32;
+    let idx = REG_NAMES.indexOf(s.toLowerCase());
+    return idx >= 0 ? idx : 0;
+  };
+  const parseImm = s => {
+    if (!s) return 0;
+    s = s.trim();
+    // Handle "offset(base)" like 0(R1)
+    let m = s.match(/(-?\d+)\((.+)\)/);
+    if (m) { parsed.rs1 = parseReg(m[2]); return parseInt(m[1]); }
+    if (s.startsWith('0X')) return parseInt(s, 16);
+    return parseInt(s) || 0;
+  };
+
+  if (def.type === 'R') {
+    parsed.rd  = ops[0] ? parseReg(ops[0]) : 0;
+    parsed.rs1 = ops[1] ? parseReg(ops[1]) : 0;
+    parsed.rs2 = ops[2] ? parseReg(ops[2]) : 0;
+  } else if (def.type === 'I' || def.type === 'L') {
+    parsed.rd  = ops[0] ? parseReg(ops[0]) : 0;
+    if (def.type === 'L') {
+      let m = (ops[1]||'').match(/(-?\d+)\((.+)\)/);
+      if (m) { parsed.imm = parseInt(m[1]); parsed.rs1 = parseReg(m[2]); }
+      else { parsed.rs1 = ops[1] ? parseReg(ops[1]) : 0; parsed.imm = ops[2] ? parseInt(ops[2]) : 0; }
+    } else {
+      parsed.rs1 = ops[1] ? parseReg(ops[1]) : 0;
+      parsed.imm = ops[2] ? parseImm(ops[2]) : 0;
+    }
+  } else if (def.type === 'S') {
+    parsed.rs2 = ops[0] ? parseReg(ops[0]) : 0;
+    let m = (ops[1]||'').match(/(-?\d+)\((.+)\)/);
+    if (m) { parsed.imm = parseInt(m[1]); parsed.rs1 = parseReg(m[2]); }
+    else { parsed.rs1 = ops[1] ? parseReg(ops[1]) : 0; parsed.imm = ops[2] ? parseInt(ops[2]) : 0; }
+  } else if (def.type === 'B') {
+    parsed.rs1 = ops[0] ? parseReg(ops[0]) : 0;
+    parsed.rs2 = ops[1] ? parseReg(ops[1]) : 0;
+    parsed.imm = ops[2] ? parseImm(ops[2]) : 8;
+  } else if (def.type === 'J') {
+    parsed.rd  = ops[0] ? parseReg(ops[0]) : 0;
+    parsed.imm = ops[1] ? parseImm(ops[1]) : 0;
+  } else if (def.type === 'U') {
+    parsed.rd  = ops[0] ? parseReg(ops[0]) : 0;
+    parsed.imm = ops[1] ? parseImm(ops[1]) : 0;
+  }
+
+  // Generate pseudo-encoding
+  let bits = def.opcode || '0000000';
+  let rd5 = (parsed.rd & 0x1F).toString(2).padStart(5,'0');
+  let rs15 = (parsed.rs1 & 0x1F).toString(2).padStart(5,'0');
+  let rs25 = (parsed.rs2 & 0x1F).toString(2).padStart(5,'0');
+  let f3 = (def.funct3||'000');
+  let f7 = (def.funct7||'0000000');
+  let imm12 = (parsed.imm & 0xFFF).toString(2).padStart(12,'0');
+
+  if (def.type === 'R') parsed.encoding = f7 + rs25 + rs15 + f3 + rd5 + bits;
+  else if (def.type === 'I' || def.type === 'L') parsed.encoding = imm12 + rs15 + f3 + rd5 + bits;
+  else if (def.type === 'S') { let i = imm12; parsed.encoding = i.slice(0,7) + rs25 + rs15 + f3 + i.slice(7) + bits; }
+  else if (def.type === 'B') parsed.encoding = '0' + imm12.slice(1,7) + rs25 + rs15 + f3 + imm12.slice(8,12) + '0' + bits;
+  else if (def.type === 'J') parsed.encoding = '0'.repeat(12) + '00000' + '000' + rd5 + bits;
+  else if (def.type === 'U') parsed.encoding = (parsed.imm & 0xFFFFF).toString(2).padStart(20,'0') + rd5 + bits;
+  else parsed.encoding = '0'.repeat(32);
+
+  parsed.encoding = parsed.encoding.padEnd(32,'0').slice(0,32);
+  parsed.hex = '0x' + parseInt(parsed.encoding, 2).toString(16).padStart(8,'0').toUpperCase();
+  return parsed;
+}
+
+// ============================================================
+// ALU
+// ============================================================
+function aluExecute(op, a, b) {
+  a = a | 0; b = b | 0;
+  switch(op) {
+    case 'ADD':  return (a + b) | 0;
+    case 'SUB':  return (a - b) | 0;
+    case 'AND':  return a & b;
+    case 'OR':   return a | b;
+    case 'XOR':  return a ^ b;
+    case 'SLL':  return a << (b & 31);
+    case 'SRL':  return (a >>> (b & 31)) | 0;
+    case 'SRA':  return a >> (b & 31);
+    case 'SLT':  return a < b ? 1 : 0;
+    case 'SLTU': return (a >>> 0) < (b >>> 0) ? 1 : 0;
+    case 'MUL':  return Math.imul(a, b) | 0;
+    case 'DIV':  return b !== 0 ? (a / b | 0) : -1;
+    case 'LUI':  return b << 12;
+    default:     return a + b;
+  }
+}
+
+// ============================================================
+// INIT
+// ============================================================
+function init() {
+  initRegisters();
+  initCache();
+  initBTB();
+  initROB();
+  initTLB();
+  initDataMem();
+  renderTimingHeader();
+  updateAll();
+}
+
+function initRegisters() {
+  registers = new Array(32).fill(0);
+  registers[0] = 0;
+  registers[1] = 0x00000008; // ra
+  registers[2] = 0x7FFFFFFC; // sp
+  registers[8] = 0x00001000; // s0/fp
+  registers[10] = 5;         // a0 - some test value
+  registers[11] = 3;         // a1
+  renderRegisters();
+}
+
+function initCache() {
+  // I-cache: 8 sets × 8 ways
+  icacheData = [];
+  for (let s = 0; s < 8; s++) {
+    let set = [];
+    for (let w = 0; w < 8; w++) set.push({ valid: false, dirty: false, tag: 0, data: '—', lru: w });
+    icacheData.push(set);
+  }
+  // D-cache: 8 sets × 8 ways
+  dcacheData = [];
+  for (let s = 0; s < 8; s++) {
+    let set = [];
+    for (let w = 0; w < 8; w++) set.push({ valid: false, dirty: false, tag: 0, data: '—', lru: w });
+    dcacheData.push(set);
+  }
+  renderCache();
+}
+
+function initBTB() {
+  btbEntries = [];
+  for (let i = 0; i < 16; i++) btbEntries.push({ valid: false, tag: 0, target: 0, state: 'WT', count: 0 });
+  renderBTB();
+}
+
+function initROB() {
+  rob = [];
+  for (let i = 0; i < 16; i++) rob.push({ valid: false, instr: '—', dest: -1, value: 0, state: 'EMPTY' });
+  rsList = [];
+  rat = new Array(32).fill(-1);
+  renderROB();
+  renderRS();
+  renderRAT();
+}
+
+function initTLB() {
+  // Populate some TLB entries
+  document.getElementById('tlbTableBody').innerHTML = 
+    `<tr><td class="mono c-text3">0x0000</td><td class="mono c-accent2">0x0000</td><td class="c-green">1</td><td class="c-text3">0</td><td class="c-text3">RX</td></tr>
+     <tr><td class="mono c-text3">0x0001</td><td class="mono c-accent2">0x0001</td><td class="c-green">1</td><td class="c-text3">0</td><td class="c-text3">RX</td></tr>
+     <tr><td class="mono c-text3">0x7FFF</td><td class="mono c-accent2">0x7FFF</td><td class="c-green">1</td><td class="c-orange">1</td><td class="c-text3">RW</td></tr>
+     <tr><td class="mono c-text3">0x1000</td><td class="mono c-accent2">0x1000</td><td class="c-green">1</td><td class="c-orange">1</td><td class="c-text3">RW</td></tr>`;
+}
+
+function initDataMem() {
+  // Populate some data memory
+  let body = document.getElementById('dataMemBody');
+  body.innerHTML = '';
+  for (let i = 0; i < 16; i++) {
+    let addr = 0x1000 + i*4;
+    let val = memory['0x'+addr.toString(16).toUpperCase()] || 0;
+    body.innerHTML += `<tr><td class="mono c-text3">0x${addr.toString(16).padStart(8,'0').toUpperCase()}</td><td class="mono c-purple">0x${(val>>>0).toString(16).padStart(8,'0').toUpperCase()}</td><td class="mono c-text2">${val}</td></tr>`;
+  }
+}
+
+// ============================================================
+// PROGRAMS
+// ============================================================
+const PROGRAMS = {
+  hazards: [
+    'ADD R1,R2,R3',
+    'ADD R4,R1,R3',   // RAW on R1
+    'SUB R5,R1,R4',   // RAW on R1 and R4
+    'AND R6,R5,R2',   // RAW on R5
+    'LW R7,0(R8)',
+    'ADD R9,R7,R1',   // Load-Use on R7 (needs stall)
+    'OR R10,R9,R6',
+    'SW R10,4(R2)',
+    'BEQ R1,R2,8',
+    'ADD R11,R1,R2',
+    'SUB R12,R11,R3',
+  ],
+  fib: [
+    'ADDI R1,R0,0',   // fib(0) = 0
+    'ADDI R2,R0,1',   // fib(1) = 1
+    'ADDI R5,R0,8',   // count = 8
+    'ADD R3,R1,R2',   // fib(n) = fib(n-1) + fib(n-2)
+    'ADD R1,R2,R0',   // shift
+    'ADD R2,R3,R0',   // shift
+    'ADDI R5,R5,-1',  // count--
+    'BNE R5,R0,-16',  // loop
+    'SW R2,0(R8)',     // store result
+  ],
+  bubble: [
+    'ADDI R1,R0,8',   // n = 8
+    'ADDI R2,R0,0',   // i = 0
+    'LW R3,0(R8)',     // a[i]
+    'LW R4,4(R8)',     // a[i+1]
+    'SLT R5,R4,R3',   // a[i+1] < a[i]?
+    'BEQ R5,R0,8',    // if not, skip swap
+    'SW R4,0(R8)',     // swap
+    'SW R3,4(R8)',
+    'ADDI R2,R2,1',   // i++
+    'BNE R2,R1,-28',  // loop
+    'ADD R10,R2,R0',
+  ],
+};
+
+function loadProgram(name) {
+  instrQueue = [];
+  let prog = PROGRAMS[name] || [];
+  prog.forEach(s => {
+    let p = parseInstr(s);
+    if (p) instrQueue.push(p);
+  });
+  instructionMemory = [...instrQueue];
+  updateInstrQueueDisplay();
+  updateMemoryTable();
+  addLog(`LOADED PROGRAM: ${name.toUpperCase()} (${instrQueue.length} instrs)`, 'fetch');
+}
+
+// ============================================================
+// SIMULATION STEP
+// ============================================================
+function step() {
+  totalCycles++;
+  currentCycle++;
+  temp = Math.min(95, temp + (Math.random() > 0.7 ? 1 : 0) - (Math.random() > 0.8 ? 1 : 0));
+  power = Math.max(5, Math.min(65, power + (Math.random() * 4 - 2) | 0));
+
+  // Propagate pipeline (WB first, then backwards)
+  let wb = pipeline.MEM;
+  let mem = pipeline.EX;
+  let ex = pipeline.ID;
+  let id = pipeline.IF;
+  let fetch_instr = instrQueue.length > 0 ? instrQueue.shift() : null;
+
+  // Detect Load-Use hazard
+  let loadUse = false;
+  if (pipeline.ID && pipeline.IF) {
+    let id_i = pipeline.ID;
+    let if_i = pipeline.IF;
+    if (id_i.def && id_i.def.memRead) {
+      if (id_i.rd !== 0 && (id_i.rd === if_i.rs1 || id_i.rd === if_i.rs2)) {
+        loadUse = true;
+      }
+    }
+  }
+
+  if (loadUse) {
+    // Insert bubble (stall)
+    totalStalls++;
+    stallCycles++;
+    rawHazards++;
+    totalRaw++;
+    // Stall: keep IF and ID, insert NOP in EX
+    pipeline.WB = pipeline.MEM;
+    pipeline.MEM = pipeline.EX;
+    let bubble = parseInstr('NOP');
+    bubble.isBubble = true;
+    pipeline.EX = bubble;
+    // Keep pipeline.ID and pipeline.IF unchanged
+    // Push back fetch
+    if (fetch_instr) instrQueue.unshift(fetch_instr);
+    
+    highlightHazard('raw');
+    addLog(totalCycles, 'STALL', `Load-Use: ${pipeline.ID.mnem} R${pipeline.ID.rd} needed by ${pipeline.IF.mnem}`, 'hazard');
+  } else {
+    // Normal advance
+    pipeline.WB = pipeline.MEM;
+    pipeline.MEM = pipeline.EX;
+    
+    // Check for RAW and apply forwarding
+    let exInstr = pipeline.ID;
+    if (exInstr && !exInstr.isBubble) {
+      let fwdA = checkForward(exInstr.rs1);
+      let fwdB = checkForward(exInstr.rs2);
+      if (fwdA.forward || fwdB.forward) {
+        totalFwd++;
+        fwdUsed++;
+      }
+    }
+    pipeline.EX = pipeline.ID;
+    pipeline.ID = pipeline.IF;
+    pipeline.IF = fetch_instr;
+  }
+
+  // Execute WB
+  if (pipeline.WB && !pipeline.WB.isBubble) {
+    executeWB(pipeline.WB);
+    totalInstrs++;
+    addLog(totalCycles, 'WB', `Committed: ${pipeline.WB.raw}`, 'writeback');
+    updateTimingRow(pipeline.WB, 'WB', currentCycle);
+    addROBEntry(pipeline.WB, 'COMMIT');
+  }
+
+  // Execute MEM
+  if (pipeline.MEM && !pipeline.MEM.isBubble) {
+    executeMEM(pipeline.MEM);
+    updateTimingRow(pipeline.MEM, 'MEM', currentCycle);
+  }
+
+  // Execute EX
+  if (pipeline.EX && !pipeline.EX.isBubble) {
+    executeEX(pipeline.EX);
+    updateTimingRow(pipeline.EX, 'EX', currentCycle);
+  }
+
+  // Log ID
+  if (pipeline.ID && !pipeline.ID.isBubble) {
+    addLog(totalCycles, 'ID', `Decode: ${pipeline.ID.raw}`, 'decode');
+    updateDecode(pipeline.ID);
+    updateTimingRow(pipeline.ID, 'ID', currentCycle);
+  }
+
+  // Log IF
+  if (pipeline.IF) {
+    programCounter += 4;
+    pc = programCounter;
+    addLog(totalCycles, 'IF', `Fetch: ${pipeline.IF.raw} @ 0x${((programCounter-4)>>>0).toString(16).padStart(8,'0').toUpperCase()}`, 'fetch');
+    updateTimingRow(pipeline.IF, 'IF', currentCycle);
+    
+    // Cache access
+    simulateCacheAccess('icache', programCounter-4);
+  }
+
+  // Update all displays
+  updateAll();
+  updateInstrQueueDisplay();
+}
+
+function checkForward(reg) {
+  if (reg === 0) return { forward: false };
+  // EX/MEM forwarding
+  if (pipeline.MEM && pipeline.MEM.rd === reg && pipeline.MEM.def && pipeline.MEM.def.regWrite) {
+    return { forward: true, source: 'EX/MEM', value: pipeline.MEM._result };
+  }
+  // MEM/WB forwarding  
+  if (pipeline.WB && pipeline.WB.rd === reg && pipeline.WB.def && pipeline.WB.def.regWrite) {
+    return { forward: true, source: 'MEM/WB', value: pipeline.WB._result };
+  }
+  return { forward: false };
+}
+
+function executeEX(instr) {
+  let fwdA = checkForward(instr.rs1);
+  let fwdB = checkForward(instr.rs2);
+  let opA = fwdA.forward ? fwdA.value : registers[instr.rs1];
+  let opB = instr.def.type === 'I' || instr.def.type === 'L' || instr.def.type === 'S' ? instr.imm : 
+            (fwdB.forward ? fwdB.value : registers[instr.rs2]);
+  
+  let result = aluExecute(instr.def.aluOp, opA, opB);
+  instr._result = result;
+  instr._opA = opA;
+  instr._opB = opB;
+  instr._memAddr = (instr.def.memRead || instr.def.memWrite) ? result : null;
+
+  // Update ALU display
+  updateALUDisplay(instr, opA, opB, result, fwdA, fwdB);
+  addLog(totalCycles, 'EX', `Execute: ${instr.raw} → ${result} (${instr.def.aluOp})`, 'execute');
+
+  // Branch evaluation
+  if (instr.def.branch) {
+    let taken = false;
+    switch(instr.mnem) {
+      case 'BEQ': taken = opA === opB; break;
+      case 'BNE': taken = opA !== opB; break;
+      case 'BLT': taken = opA < opB; break;
+      case 'BGE': taken = opA >= opB; break;
+    }
+    instr._branchTaken = taken;
+    instr._branchTarget = programCounter + instr.imm - 4;
+    
+    // Check prediction
+    let predicted = (bpState === 'WT' || bpState === 'ST');
+    if (predicted !== taken) {
+      totalBranchMispred++;
+      mispredictions++;
+      btbMispred++;
+      addLog(totalCycles, 'BRANCH', `MISPREDICTION! Predicted:${predicted?'T':'N'} Actual:${taken?'T':'N'} Flushing...`, 'hazard');
+      highlightHazard('control');
+    } else {
+      btbCorrect++;
+    }
+    updateFSM(taken);
+    branchHistory.unshift({ instr: instr.raw, taken, predicted, cycle: totalCycles });
+    if (branchHistory.length > 8) branchHistory.pop();
+    renderBranchHistory();
+  }
+}
+
+function executeMEM(instr) {
+  if (instr.def.memRead) {
+    let addr = instr._memAddr || (registers[instr.rs1] + instr.imm);
+    let key = '0x' + (addr >>> 0).toString(16).toUpperCase();
+    instr._loadVal = memory[key] || 0;
+    instr._result = instr._loadVal;
+    simulateCacheAccess('dcache', addr);
+    addLog(totalCycles, 'MEM', `Load: ${key} → ${instr._loadVal}`, 'memory');
+    logMemAccess('LW', addr, instr._loadVal);
+  } else if (instr.def.memWrite) {
+    let addr = instr._memAddr || (registers[instr.rs1] + instr.imm);
+    let key = '0x' + (addr >>> 0).toString(16).toUpperCase();
+    memory[key] = registers[instr.rs2];
+    simulateCacheAccess('dcache', addr, true);
+    addLog(totalCycles, 'MEM', `Store: ${key} ← ${registers[instr.rs2]}`, 'memory');
+    logMemAccess('SW', addr, registers[instr.rs2]);
+    initDataMem();
+  }
+}
+
+function executeWB(instr) {
+  if (instr.def.regWrite && instr.rd !== 0) {
+    let val = (instr.def.memRead && instr._loadVal !== undefined) ? instr._loadVal : (instr._result || 0);
+    registers[instr.rd] = val;
+    flashRegister(instr.rd);
+  }
+  // Handle jump (JAL)
+  if (instr.def.jump && instr.rd !== 0) {
+    registers[instr.rd] = programCounter; // return address
+  }
+}
+
+// ============================================================
+// CACHE SIMULATION
+// ============================================================
+function simulateCacheAccess(type, addr, write = false) {
+  let set = (addr >> 6) % 8;
+  let tag = (addr >> 9) & 0xFFFF;
+  let cache = type === 'icache' ? icacheData : dcacheData;
+  
+  // Check for hit
+  let hitWay = -1;
+  for (let w = 0; w < cache[set].length; w++) {
+    if (cache[set][w].valid && cache[set][w].tag === tag) { hitWay = w; break; }
+  }
+
+  if (hitWay >= 0) {
+    // Hit
+    if (type === 'icache') { icacheHits++; tlbIHits++; }
+    else { dcacheHits++; tlbDHits++; if (write) cache[set][hitWay].dirty = true; }
+    cache[set][hitWay].lru = 0;
+    cache[set].forEach((l, i) => { if (i !== hitWay) l.lru++; });
+    cache[set][hitWay].data = '0x' + (addr>>>0).toString(16).padStart(8,'0').toUpperCase().slice(-8);
+    // Flash hit
+    setTimeout(() => renderCacheSet(type, set, 'hit', hitWay), 0);
+  } else {
+    // Miss
+    if (type === 'icache') { icacheMisses++; cacheMisses++; l2Hits++; }
+    else { dcacheMissesCnt++; cacheMisses++; l2Hits++; }
+    
+    // LRU eviction
+    let lruWay = 0;
+    cache[set].forEach((l, i) => { if (l.lru > cache[set][lruWay].lru) lruWay = i; });
+    cache[set][lruWay] = { valid: true, dirty: write, tag, data: '0x'+addr.toString(16).padStart(8,'0').toUpperCase().slice(-8), lru: 0 };
+    cache[set].forEach((l, i) => { if (i !== lruWay) l.lru++; });
+    setTimeout(() => renderCacheSet(type, set, 'miss', lruWay), 0);
+  }
+  
+  updateCacheStats();
+}
+
+// ============================================================
+// RENDER FUNCTIONS
+// ============================================================
+function renderRegisters() {
+  let grid = document.getElementById('registerGrid');
+  grid.innerHTML = '';
+  for (let i = 0; i < 32; i++) {
+    let hex = (registers[i]>>>0).toString(16).padStart(8,'0').toUpperCase();
+    grid.innerHTML += `<div class="reg-item" id="reg-${i}">
+      <span class="reg-name">R${i}<span style="font-size:8px;color:var(--text3);"> ${REG_NAMES[i]}</span></span>
+      <span class="reg-val" id="reg-val-${i}">0x${hex}</span>
+    </div>`;
+  }
+}
+
+function flashRegister(idx) {
+  let el = document.getElementById('reg-'+idx);
+  let valEl = document.getElementById('reg-val-'+idx);
+  if (el) {
+    el.className = 'reg-item written';
+    let hex = (registers[idx]>>>0).toString(16).padStart(8,'0').toUpperCase();
+    if (valEl) valEl.textContent = '0x'+hex;
+    setTimeout(() => { if (el) el.className = 'reg-item'; }, 600);
+  }
+}
+
+function updatePipelineStages() {
+  STAGES.forEach(s => {
+    let el = document.getElementById('stage'+s);
+    let instr = pipeline[s];
+    let instrEl = document.getElementById('stage'+s+'-instr');
+    if (!el) return;
+    
+    if (!instr) {
+      el.className = 'stage';
+      instrEl.textContent = '—';
+    } else if (instr.isBubble) {
+      el.className = 'stage stall';
+      instrEl.textContent = 'NOP';
+    } else {
+      el.className = 'stage occupied';
+      instrEl.textContent = instr.mnem;
+    }
+  });
+
+  // Update pipeline register displays
+  const prs = [['IF','IF_ID'],['ID','ID_EX'],['EX','EX_MEM'],['MEM','MEM_WB']];
+  prs.forEach(([stage, reg]) => {
+    let instr = pipeline[stage];
+    let el = document.getElementById('pr'+reg+'_val');
+    if (el) el.textContent = instr ? (instr.isBubble ? 'NOP/BUBBLE' : instr.raw) : 'EMPTY';
+  });
+}
+
+function updateDecode(instr) {
+  if (!instr || !instr.def) return;
+  document.getElementById('decodeBadge').textContent = instr.type + '-TYPE';
+  
+  // Bit display
+  let bits = instr.encoding;
+  let bitsRow = document.getElementById('bitsRow');
+  bitsRow.innerHTML = '';
+  
+  // Build bit groups based on type
+  let groups = [];
+  if (instr.def.type === 'R') {
+    groups = [
+      { start:25, end:31, cls:'funct7', label:'funct7' },
+      { start:20, end:24, cls:'rs2', label:'rs2' },
+      { start:15, end:19, cls:'rs1', label:'rs1' },
+      { start:12, end:14, cls:'funct3', label:'funct3' },
+      { start:7,  end:11, cls:'rd', label:'rd' },
+      { start:0,  end:6,  cls:'opcode', label:'opcode' },
+    ];
+  } else {
+    groups = [
+      { start:20, end:31, cls:'funct7', label:'imm[11:0]' },
+      { start:15, end:19, cls:'rs1', label:'rs1' },
+      { start:12, end:14, cls:'funct3', label:'funct3' },
+      { start:7,  end:11, cls:'rd', label:'rd' },
+      { start:0,  end:6,  cls:'opcode', label:'opcode' },
+    ];
+  }
+  
+  // Reverse for display (bit 31 on left)
+  let revBits = bits.split('').reverse().join('').split('').reverse();
+  groups.forEach(g => {
+    let div = document.createElement('div');
+    div.className = `bit-group ${g.cls}`;
+    let cells = document.createElement('div');
+    cells.className = 'bit-cells';
+    // bits 31 down to 0, slice [31-end .. 31-start]
+    let slice = bits.slice(31-g.end, 32-g.start);
+    for (let b of slice) {
+      let c = document.createElement('div');
+      c.className = `bit-cell ${b==='1'?'one':''}`;
+      c.textContent = b;
+      cells.appendChild(c);
+    }
+    let lbl = document.createElement('div');
+    lbl.className = 'bit-group-label';
+    lbl.textContent = g.label;
+    div.appendChild(cells);
+    div.appendChild(lbl);
+    bitsRow.appendChild(div);
+  });
+
+  // Decoded fields
+  let rdName = REG_NAMES[instr.rd] || 'r'+instr.rd;
+  let rs1Name = REG_NAMES[instr.rs1] || 'r'+instr.rs1;
+  let rs2Name = REG_NAMES[instr.rs2] || 'r'+instr.rs2;
+  
+  setText('df-opcode', '0b'+instr.def.opcode);
+  setText('df-opcode-type', instr.def.type+'-TYPE');
+  setText('df-rd', 'R'+instr.rd);
+  setText('df-rd-name', rdName);
+  setText('df-funct3', '0b'+(instr.def.funct3||'000'));
+  setText('df-funct3-op', instr.def.aluOp||'—');
+  setText('df-rs1', 'R'+instr.rs1);
+  setText('df-rs1-val', `val=${registers[instr.rs1]}`);
+  setText('df-rs2', 'R'+instr.rs2);
+  setText('df-rs2-val', `val=${registers[instr.rs2]}`);
+  setText('df-funct7', instr.def.funct7 || '—');
+  setText('df-funct7-sub', instr.def.type==='I'?'(imm extension)':'funct7');
+  
+  // Control signals
+  const sigs = {
+    regwrite: !!instr.def.regWrite,
+    memread: !!instr.def.memRead,
+    memwrite: !!instr.def.memWrite,
+    branch: !!instr.def.branch,
+    jump: !!instr.def.jump,
+    alusrc: instr.def.type !== 'R',
+    memtoreg: !!instr.def.memRead,
+    aluzero: false,
+    unsigned: instr.mnem === 'SLTU' || instr.mnem === 'BLTU',
+  };
+  Object.keys(sigs).forEach(k => {
+    let el = document.getElementById('cs-'+k);
+    if (el) { el.className = 'ctrl-sig ' + (sigs[k] ? 'on' : 'off'); }
+  });
+
+  // Immediate
+  let immTypes = { R:'—', I:'I-type (sign-ext)', L:'I-type (load)', S:'S-type', B:'B-type', J:'J-type', U:'U-type' };
+  setText('immType', immTypes[instr.def.type] || '—');
+  setText('immVal', instr.imm !== undefined ? instr.imm.toString() : '—');
+  setText('immSext', instr.imm !== undefined ? '0x'+(instr.imm>>>0).toString(16).padStart(8,'0').toUpperCase() : '—');
+}
+
+function updateALUDisplay(instr, opA, opB, result, fwdA, fwdB) {
+  let svg = document.getElementById('aluSvg');
+  
+  // Activate ALU
+  let body = document.getElementById('aluBody');
+  if (body) { body.setAttribute('stroke', 'var(--accent)'); body.setAttribute('fill', '#0a1428'); }
+  let active = document.getElementById('aluActive');
+  if (active) { active.setAttribute('fill', 'var(--green)'); }
+  let lbl = document.getElementById('aluActiveLabel');
+  if (lbl) lbl.setAttribute('fill', 'var(--green)');
+  
+  // Update texts
+  const setAtr = (id, val) => { let el = document.getElementById(id); if (el) el.setAttribute('fill', 'var(--text)') && (el.textContent = val); };
+  let resEl = document.getElementById('aluResultText'); if (resEl) { resEl.textContent = '0x'+(result>>>0).toString(16).padStart(8,'0').toUpperCase(); resEl.setAttribute('fill', 'var(--green)'); }
+  let opAEl = document.getElementById('opAText'); if (opAEl) { opAEl.textContent = '0x'+(opA>>>0).toString(16).padStart(8,'0').toUpperCase(); opAEl.setAttribute('fill', 'var(--accent)'); }
+  let opBEl = document.getElementById('opBText'); if (opBEl) { opBEl.textContent = '0x'+(opB>>>0).toString(16).padStart(8,'0').toUpperCase(); opBEl.setAttribute('fill', 'var(--accent2)'); }
+  let opEl = document.getElementById('aluOpText'); if (opEl) { opEl.textContent = instr.def.aluOp||'—'; opEl.setAttribute('fill', 'var(--yellow)'); }
+  let rs1El = document.getElementById('rs1Label'); if (rs1El) { rs1El.textContent = 'R'+instr.rs1; rs1El.setAttribute('fill', fwdA.forward ? '#00ff88' : '#7090b0'); }
+  let rs2El = document.getElementById('rs2Label'); if (rs2El) { rs2El.textContent = 'R'+instr.rs2; rs2El.setAttribute('fill', fwdB.forward ? '#00ff88' : '#7090b0'); }
+  
+  // Flags
+  let zero = result === 0 ? 1 : 0;
+  let neg = (result >> 31) & 1;
+  let ovfl = 0; // simplified
+  let fzEl = document.getElementById('flagZero'); if (fzEl) { fzEl.textContent = zero; fzEl.setAttribute('fill', zero ? 'var(--green)' : '#405070'); }
+  let fnEl = document.getElementById('flagNeg'); if (fnEl) { fnEl.textContent = neg; fnEl.setAttribute('fill', neg ? 'var(--red)' : '#405070'); }
+  let foEl = document.getElementById('flagOvfl'); if (foEl) { foEl.textContent = ovfl; foEl.setAttribute('fill', '#405070'); }
+  let fcEl = document.getElementById('flagCarry'); if (fcEl) { fcEl.textContent = '0'; fcEl.setAttribute('fill', '#405070'); }
+  
+  let btEl = document.getElementById('branchTargetText'); if (btEl) { btEl.textContent = instr.def.branch ? '0x'+(programCounter+instr.imm-4>>>0).toString(16).padStart(8,'0').toUpperCase() : 'N/A'; }
+  
+  // Exec detail panel
+  setText('currentExecInstr', instr.raw);
+  setText('execOpA', '0x'+(opA>>>0).toString(16).padStart(8,'0').toUpperCase() + ' ('+opA+')' + (fwdA.forward ? ' [FWD]' : ''));
+  setText('execOpB', '0x'+(opB>>>0).toString(16).padStart(8,'0').toUpperCase() + ' ('+opB+')' + (fwdB.forward ? ' [FWD]' : ''));
+  setText('execResult', '0x'+(result>>>0).toString(16).padStart(8,'0').toUpperCase() + ' ('+result+')');
+  setText('execOp', instr.def.aluOp);
+  
+  // Highlight ALU op
+  ['add','sub','and','or','xor','sll','srl','sra','slt','sltu','mul','div'].forEach(op => {
+    let el = document.getElementById('alu-'+op);
+    if (el) el.className = 'ctrl-sig ' + (instr.def.aluOp && instr.def.aluOp.toLowerCase() === op ? 'on' : '');
+  });
+
+  // Forwarding
+  let exFwd = fwdA.forward || fwdB.forward;
+  updateForwardingDisplay(fwdA, fwdB, instr);
+}
+
+function updateForwardingDisplay(fwdA, fwdB, instr) {
+  // Tab 2 forwarding paths
+  let fwdEX = document.getElementById('fwd-EX_MEM');
+  let fwdMEM = document.getElementById('fwd-MEM_WB');
+  if (fwdEX) fwdEX.className = 'fwd-path' + (fwdA.source === 'EX/MEM' || fwdB.source === 'EX/MEM' ? ' active' : '');
+  if (fwdMEM) fwdMEM.className = 'fwd-path' + (fwdA.source === 'MEM/WB' || fwdB.source === 'MEM/WB' ? ' active' : '');
+  
+  let v = fwdA.forward ? fwdA.value : (fwdB.forward ? fwdB.value : null);
+  if (v !== null) {
+    if (fwdA.source === 'EX/MEM') setText('fwd-EX_MEM-val', '0x'+(v>>>0).toString(16).padStart(8,'0').toUpperCase());
+    if (fwdA.source === 'MEM/WB') setText('fwd-MEM_WB-val', '0x'+(v>>>0).toString(16).padStart(8,'0').toUpperCase());
+  }
+
+  // Tab 3 forwarding table
+  let rowEX = document.getElementById('fwd-row-EX');
+  let rowMEM = document.getElementById('fwd-row-MEM');
+  if (rowEX) rowEX.className = fwdA.source === 'EX/MEM' ? 'active-forward' : '';
+  if (rowMEM) rowMEM.className = fwdA.source === 'MEM/WB' ? 'active-forward' : '';
+  
+  if (fwdA.forward) {
+    setText('fwd-active-ex', fwdA.source === 'EX/MEM' ? 'YES' : 'NO');
+    setText('fwd-active-mem', fwdA.source === 'MEM/WB' ? 'YES' : 'NO');
+    setText('fwd-val-ex', fwdA.source === 'EX/MEM' ? '0x'+(fwdA.value>>>0).toString(16).padStart(8,'0').toUpperCase() : '—');
+    let el1 = document.getElementById('fwd-active-ex'); if (el1) el1.className = fwdA.source === 'EX/MEM' ? 'c-green' : 'c-text3';
+    let el2 = document.getElementById('fwd-active-mem'); if (el2) el2.className = fwdA.source === 'MEM/WB' ? 'c-green' : 'c-text3';
+  }
+}
+
+function renderCacheSet(type, setIdx, outcome, wayIdx) {
+  let cache = type === 'icache' ? icacheData : dcacheData;
+  let container = type === 'icache' ? 'icacheVisual' : 'dcacheVisual';
+  let el = document.getElementById(container);
+  if (!el) return;
+  
+  // Re-render just this set
+  let setEls = el.querySelectorAll('.cache-set');
+  if (setEls[setIdx]) {
+    let lines = setEls[setIdx].querySelectorAll('.cache-line');
+    if (lines[wayIdx]) {
+      lines[wayIdx].className = 'cache-line valid ' + outcome;
+      setTimeout(() => { if (lines[wayIdx]) lines[wayIdx].className = 'cache-line valid'; }, 1000);
+    }
+  }
+}
+
+function renderCache() {
+  ['icache','dcache'].forEach(type => {
+    let cache = type === 'icache' ? icacheData : dcacheData;
+    let container = document.getElementById(type === 'icache' ? 'icacheVisual' : 'dcacheVisual');
+    if (!container) return;
+    container.innerHTML = '';
+    cache.forEach((set, s) => {
+      let setDiv = document.createElement('div');
+      setDiv.className = 'cache-set';
+      setDiv.innerHTML = `<div class="cache-set-label">Set ${s}</div>`;
+      // Show only 4 ways for space
+      set.slice(0,4).forEach((line, w) => {
+        let lineDiv = document.createElement('div');
+        lineDiv.className = `cache-line ${line.valid ? 'valid' : ''}`;
+        lineDiv.innerHTML = `<div class="cl-v ${line.valid?'valid':'invalid'}"></div><div class="cl-d ${line.dirty?'dirty':''}">D</div><div class="cl-tag">0x${line.tag.toString(16).padStart(4,'0').toUpperCase()}</div><div class="cl-data">${line.data}</div><div class="cl-lru">${line.lru}</div>`;
+        setDiv.appendChild(lineDiv);
+      });
+      container.appendChild(setDiv);
+    });
+  });
+}
+
+function updateCacheStats() {
+  let iTotal = icacheHits + icacheMisses;
+  let dTotal = dcacheHits + dcacheMissesCnt;
+  let l2Total = l2Hits + l2Misses;
+  
+  setText('icacheHitRate', iTotal ? Math.round(icacheHits/iTotal*100)+'%' : '100%');
+  setText('icacheHits', icacheHits);
+  setText('icacheMisses', icacheMisses);
+  setText('dcacheHitRate', dTotal ? Math.round(dcacheHits/dTotal*100)+'%' : '100%');
+  setText('dcacheHits', dcacheHits);
+  setText('dcacheMisses', dcacheMissesCnt);
+  setText('dcacheDirty', dcacheData.flat().filter(l => l.dirty).length);
+  setText('l2HitRate', l2Total ? Math.round(l2Hits/l2Total*100)+'%' : '100%');
+  setText('l2Hits', l2Hits);
+  setText('l2Misses', l2Misses);
+  setText('tlbIHits', tlbIHits);
+  setText('tlbDHits', tlbDHits);
+  setText('tlbMisses', tlbMissesCnt);
+}
+
+function renderBTB() {
+  let body = document.getElementById('btbTableBody');
+  if (!body) return;
+  body.innerHTML = '';
+  btbEntries.slice(0,12).forEach((e, i) => {
+    let stateColors = { SN:'c-red', WN:'c-orange', WT:'c-yellow', ST:'c-green' };
+    body.innerHTML += `<tr class="${e.valid ? 'predict-'+(e.state==='WT'||e.state==='ST'?'taken':'not') : ''}">
+      <td class="mono c-text3">${i.toString(16).padStart(2,'0')}</td>
+      <td class="mono c-text3">${e.valid ? '0x'+e.tag.toString(16).padStart(4,'0').toUpperCase() : '—'}</td>
+      <td class="mono c-accent2">${e.valid ? '0x'+e.target.toString(16).padStart(8,'0').toUpperCase() : '—'}</td>
+      <td class="mono ${stateColors[e.state]||''}">${e.state}</td>
+      <td class="mono ${e.state==='ST'||e.state==='WT'?'c-green':'c-red'}">${e.valid ? (e.state==='ST'||e.state==='WT' ? 'TAKEN' : 'NOT') : '—'}</td>
+    </tr>`;
+  });
+  
+  let total = btbCorrect + btbMispred;
+  setText('btbAccuracy', total ? Math.round(btbCorrect/total*100)+'%' : '—');
+  setText('btbCorrect', btbCorrect);
+  setText('btbMispred', btbMispred);
+  setText('btbPenalty', btbMispred * 3);
+}
+
+function updateFSM(taken) {
+  const transitions = {
+    SN: { taken: 'WN', notTaken: 'SN' },
+    WN: { taken: 'WT', notTaken: 'SN' },
+    WT: { taken: 'ST', notTaken: 'WN' },
+    ST: { taken: 'ST', notTaken: 'WT' },
+  };
+  let prev = bpState;
+  bpState = transitions[bpState][taken ? 'taken' : 'notTaken'];
+  
+  // Update BHR
+  bhrRegister.shift();
+  bhrRegister.push(taken ? 1 : 0);
+  
+  // Update FSM display
+  ['SN','WN','WT','ST'].forEach(s => {
+    let el = document.getElementById('fsm-'+s);
+    if (el) el.className = 'fsm-state ' + s.toLowerCase() + (bpState === s ? ' current' : '');
+  });
+  setText('currentFSMState', bpState);
+  
+  // BHR display
+  let bhrEl = document.getElementById('bhrDisplay');
+  if (bhrEl) {
+    bhrEl.innerHTML = bhrRegister.map(b => `<div style="width:20px;height:20px;border:1px solid var(--border2);background:var(--bg2);display:flex;align-items:center;justify-content:center;font-family:'Share Tech Mono',monospace;font-size:11px;color:${b?'var(--green)':'var(--red)'};">${b}</div>`).join('');
+  }
+  
+  renderBTB();
+}
+
+function fsmTaken() { updateFSM(true); }
+function fsmNotTaken() { updateFSM(false); }
+
+function renderBranchHistory() {
+  let el = document.getElementById('branchHistoryLog');
+  if (!el) return;
+  el.innerHTML = branchHistory.map(b => 
+    `<div class="log-entry ${b.taken?'execute':'hazard'}" style="font-size:9px;">
+      <span class="log-tick">C${b.cycle}</span>
+      <span class="log-stage ${b.taken?'execute':'hazard'}" style="width:40px;">${b.taken?'TAKEN':'NOT'}</span>
+      <span class="log-msg">${b.instr} ${b.predicted !== b.taken ? '⚠ MISPRED' : '✓'}</span>
+    </div>`).join('');
+}
+
+function addROBEntry(instr, state) {
+  // Simple ROB visualization
+  let freeSlot = rob.findIndex(e => !e.valid);
+  if (freeSlot < 0) freeSlot = 0;
+  rob[freeSlot] = { valid: state !== 'COMMIT', instr: instr.raw, dest: instr.rd, value: instr._result || 0, state };
+  robHead = (robHead + (state==='COMMIT'?1:0)) % 16;
+  if (state !== 'COMMIT') robTail = (robTail + 1) % 16;
+  if (state === 'COMMIT') oooCommitted++;
+  renderROB();
+}
+
+function renderROB() {
+  let body = document.getElementById('robBody');
+  if (!body) return;
+  body.innerHTML = '';
+  rob.forEach((e, i) => {
+    let stateClass = e.state === 'COMMIT' ? 'rob-state-ready' : e.state === 'EX' ? 'rob-state-exec' : 'rob-state-issue';
+    let rowClass = i === robHead ? 'head-row' : i === robTail ? 'tail-row' : e.state === 'COMMIT' ? 'ready-row' : '';
+    body.innerHTML += `<tr class="${rowClass}">
+      <td class="mono c-text3">${i}${i===robHead?'←H':''}${i===robTail?'←T':''}</td>
+      <td class="mono c-yellow">${e.instr}</td>
+      <td class="mono c-accent2">${e.dest >= 0 ? 'R'+e.dest : '—'}</td>
+      <td class="mono c-green">${e.valid ? '0x'+(e.value>>>0).toString(16).padStart(8,'0').toUpperCase() : '—'}</td>
+      <td class="mono ${stateClass}">${e.state}</td>
+    </tr>`;
+  });
+  setText('robHead', robHead);
+  setText('robTail', robTail);
+  setText('robUsed', rob.filter(e=>e.valid).length);
+  setText('oooCommitted', oooCommitted);
+  setText('oooSquashed', oooSquashed);
+  if (pipeline.WB) setText('oooLastCommit', pipeline.WB.raw || '—');
+}
+
+function renderRS() {
+  let el = document.getElementById('rsDisplay');
+  if (!el) return;
+  // Show last few instructions as RS entries
+  let entries = [pipeline.IF, pipeline.ID, pipeline.EX, pipeline.MEM].filter(Boolean).slice(0,6);
+  if (entries.length === 0) { el.innerHTML = '<div style="color:var(--text3);font-size:10px;padding:8px;">No pending operations</div>'; return; }
+  el.innerHTML = entries.map((instr, i) => {
+    let stage = ['IF','ID','EX','MEM'][i];
+    let ready = stage === 'EX' || stage === 'MEM';
+    return `<div class="rs-entry ${ready?'ready-to-issue':''}">
+      <div class="rs-row">
+        <span class="rs-label" style="width:30px;">[${i}]</span>
+        <span class="rs-val c-yellow">${instr.isBubble?'NOP':instr.raw}</span>
+        <span style="margin-left:auto;font-size:9px;color:${ready?'var(--green)':'var(--orange)'};">${stage}</span>
+      </div>
+      ${!instr.isBubble ? `<div class="rs-row">
+        <span class="rs-field"><span class="rs-label">RS1:</span><span class="rs-val ${ready?'ready':'waiting'}">R${instr.rs1}=${registers[instr.rs1]}</span></span>
+        <span class="rs-field" style="margin-left:12px;"><span class="rs-label">RS2:</span><span class="rs-val ${ready?'ready':'waiting'}">R${instr.rs2}=${registers[instr.rs2]}</span></span>
+      </div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function renderRAT() {
+  let el = document.getElementById('ratDisplay');
+  if (!el) return;
+  el.innerHTML = '';
+  for (let i = 0; i < 16; i++) {
+    el.innerHTML += `<div style="display:flex;gap:4px;align-items:center;font-family:'Share Tech Mono',monospace;font-size:9px;padding:2px 4px;background:var(--bg2);border:1px solid var(--border);">
+      <span class="c-text3">R${i}:</span>
+      <span class="${rat[i]>=0?'c-orange':'c-text3'}">${rat[i]>=0?'ROB'+rat[i]:'ARCH'}</span>
+    </div>`;
+  }
+}
+
+function updateMemoryTable() {
+  let body = document.getElementById('memoryTableBody');
+  if (!body) return;
+  body.innerHTML = '';
+  instructionMemory.forEach((instr, i) => {
+    let addr = i * 4;
+    let isCurrent = addr === (programCounter - 4) || (i === 0 && programCounter <= 4);
+    body.innerHTML += `<tr class="${isCurrent ? 'pc-row' : ''}">
+      <td class="addr">0x${addr.toString(16).padStart(8,'0').toUpperCase()}</td>
+      <td class="hex">${instr.hex}</td>
+      <td class="mnem">${instr.mnem}</td>
+      <td class="operand">${instr.raw.replace(instr.mnem,'').trim()}</td>
+    </tr>`;
+  });
+}
+
+function updateInstrQueueDisplay() {
+  let el = document.getElementById('instrQueueDisplay');
+  if (!el) return;
+  el.innerHTML = '';
+  instrQueue.forEach((instr, i) => {
+    el.innerHTML += `<div style="display:flex;gap:6px;padding:3px 6px;background:var(--bg2);border:1px solid var(--border);border-left:2px solid var(--accent2);font-family:'Share Tech Mono',monospace;font-size:10px;">
+      <span class="c-text3">${i.toString().padStart(2,'0')}</span>
+      <span class="c-yellow">${instr.mnem}</span>
+      <span class="c-text2">${instr.raw.replace(instr.mnem,'').trim()}</span>
+      <span style="margin-left:auto;color:var(--text3);font-size:9px;">${instr.def.type}</span>
+    </div>`;
+  });
+  setText('queueBadge', instrQueue.length+'/16');
+}
+
+function addLog(cycle, stage, msg, cls = 'fetch') {
+  let log = document.getElementById('execLog');
+  if (!log) return;
+  let entry = document.createElement('div');
+  entry.className = `log-entry ${cls}`;
+  entry.innerHTML = `<span class="log-tick">C${cycle}</span><span class="log-stage ${cls}">${stage}</span><span class="log-msg">${msg}</span>`;
+  log.insertBefore(entry, log.firstChild);
+  while (log.children.length > 80) log.removeChild(log.lastChild);
+}
+
+function logMemAccess(type, addr, val) {
+  let el = document.getElementById('memAccessLog');
+  if (!el) return;
+  let e = document.createElement('div');
+  e.className = 'log-entry memory';
+  e.innerHTML = `<span class="log-tick">C${totalCycles}</span><span class="log-stage memory">${type}</span><span class="log-msg">0x${(addr>>>0).toString(16).padStart(8,'0').toUpperCase()} = ${val}</span>`;
+  el.insertBefore(e, el.firstChild);
+  while (el.children.length > 20) el.removeChild(el.lastChild);
+  
+  // L2 indicator
+  let l2El = document.getElementById('l2AccessIndicator');
+  if (l2El) {
+    l2El.textContent = `${type} @ 0x${(addr>>>0).toString(16).padStart(8,'0').toUpperCase()}`;
+    l2El.style.color = 'var(--accent)';
+    setTimeout(() => { l2El.textContent = 'IDLE'; l2El.style.color = 'var(--text3)'; }, 800);
+  }
+}
+
+function highlightHazard(type) {
+  let badges = document.querySelectorAll('.hazard-badge');
+  badges.forEach(b => {
+    b.classList.remove('active');
+    if (b.classList.contains(type)) {
+      b.classList.add('active');
+      setTimeout(() => b.classList.remove('active'), 2000);
+    }
+  });
+}
+
+// Timing diagram
+function updateTimingRow(instr, stage, cycle) {
+  if (!instr || instr.isBubble) return;
+  let label = instr.raw;
+  let existing = timingData.find(r => r.label === label && r.startCycle && cycle - r.startCycle < 10);
+  if (!existing) {
+    existing = { label, cells: {}, startCycle: cycle };
+    timingData.unshift(existing);
+    if (timingData.length > 12) timingData.pop();
+  }
+  existing.cells[cycle] = stage;
+  renderTimingDiagram();
+}
+
+function renderTimingHeader() {
+  let header = document.getElementById('timingCycleHeader');
+  if (!header) return;
+  header.innerHTML = '';
+  for (let c = 1; c <= maxCycles; c++) {
+    header.innerHTML += `<div class="timing-cycle-cell ${c === currentCycle ? 'current' : ''}">C${c}</div>`;
+  }
+}
+
+function renderTimingDiagram() {
+  let rows = document.getElementById('timingRows');
+  if (!rows) return;
+  rows.innerHTML = '';
+  
+  renderTimingHeader();
+  
+  timingData.forEach(row => {
+    let div = document.createElement('div');
+    div.className = 'timing-row';
+    div.innerHTML = `<div class="timing-row-label">${row.label.slice(0,18)}</div>`;
+    let cells = document.createElement('div');
+    cells.className = 'timing-cells';
+    for (let c = 1; c <= maxCycles; c++) {
+      let s = row.cells[c] || '';
+      cells.innerHTML += `<div class="timing-cell ${s}">${s}</div>`;
+    }
+    div.appendChild(cells);
+    rows.appendChild(div);
+  });
+}
+
+function clearTiming() {
+  timingData = [];
+  currentCycle = 0;
+  renderTimingDiagram();
+}
+
+// Dependency table
+function updateDepTable() {
+  let body = document.getElementById('depTableBody');
+  if (!body) return;
+  let entries = [pipeline.IF, pipeline.ID, pipeline.EX, pipeline.MEM, pipeline.WB].filter(Boolean);
+  body.innerHTML = entries.map(instr => {
+    let reads = [instr.rs1 !== 0 ? 'R'+instr.rs1 : '', instr.rs2 !== 0 ? 'R'+instr.rs2 : ''].filter(Boolean).join(',') || '—';
+    let writes = instr.def.regWrite && instr.rd !== 0 ? 'R'+instr.rd : '—';
+    let fwdA = checkForward(instr.rs1);
+    let fwdB = checkForward(instr.rs2);
+    let status = fwdA.forward || fwdB.forward ? 'FORWARD' : 'CLEAR';
+    let statusColor = status === 'FORWARD' ? 'c-accent' : 'c-green';
+    return `<tr>
+      <td class="mono c-yellow">${instr.mnem}</td>
+      <td class="mono c-orange">${reads}</td>
+      <td class="mono c-green">${writes}</td>
+      <td class="mono ${statusColor}">${status}</td>
+    </tr>`;
+  }).join('');
+}
+
+function updateAll() {
+  // Header stats
+  setText('cycleCount', totalCycles);
+  setText('instrCount', totalInstrs);
+  setText('cpiDisplay', totalInstrs > 0 ? (totalCycles/totalInstrs).toFixed(2) : '—');
+  setText('ipcDisplay', totalCycles > 0 ? (totalInstrs/totalCycles).toFixed(2) : '—');
+  setText('stallCount', totalStalls);
+  setText('missCount', cacheMisses);
+
+  // Pipeline stages
+  updatePipelineStages();
+
+  // PC
+  setText('pcDisplay', '0x'+(pc>>>0).toString(16).padStart(8,'0').toUpperCase());
+  setText('pcPlusDisplay', 'PC+4: 0x'+((pc+4)>>>0).toString(16).padStart(8,'0').toUpperCase());
+  setText('fetchPC', '0x'+(pc>>>0).toString(16).padStart(8,'0').toUpperCase());
+  
+  // Bus values
+  setText('instrBusVal', pipeline.ID ? pipeline.ID.hex : '—');
+  setText('dataBusVal', pipeline.EX ? '0x'+(pipeline.EX._result!==undefined?(pipeline.EX._result>>>0).toString(16).padStart(8,'0').toUpperCase():'00000000') : '—');
+  setText('ctrlBusVal', pipeline.EX ? pipeline.EX.def.aluOp||'—' : '—');
+
+  // Status bar
+  let simDot = document.getElementById('simStatusDot');
+  if (simDot) simDot.className = autoRunInterval ? 'status-dot' : 'status-dot yellow';
+  setText('simStatusVal', autoRunInterval ? 'RUNNING' : (totalCycles > 0 ? 'PAUSED' : 'IDLE'));
+  let curInstr = pipeline.EX || pipeline.ID || pipeline.IF;
+  setText('currentStageVal', curInstr ? (pipeline.EX ? 'EX' : pipeline.ID ? 'ID' : 'IF') : '—');
+  setText('currentInstrVal', curInstr ? (curInstr.isBubble ? 'NOP' : curInstr.mnem) : '—');
+  setText('tempVal', temp+'°C');
+  setText('powerVal', power+'W');
+  
+  // Performance stats
+  let totalOps = totalInstrs + totalStalls;
+  let maxStalls = Math.max(totalStalls, 1);
+  let maxFwd = Math.max(totalFwd, 1);
+  setText('rawStat', totalRaw);
+  setText('stallStat', totalStalls);
+  setText('branchMispredStat', totalBranchMispred);
+  setText('fwdStat', totalFwd);
+  let eff = totalCycles > 0 ? Math.round(totalInstrs/totalCycles*100) : 0;
+  setText('effStat', eff+'%');
+  let fwdRate = (totalInstrs + totalStalls) > 0 ? Math.round(totalFwd/(totalInstrs+1)*100) : 0;
+  setText('fwdRateStat', Math.min(fwdRate,100)+'%');
+  
+  setWidth('rawBar', Math.min(totalRaw/20*100,100)+'%');
+  setWidth('stallBar', Math.min(totalStalls/20*100,100)+'%');
+  setWidth('branchBar', Math.min(totalBranchMispred/5*100,100)+'%');
+  setWidth('fwdBar', Math.min(totalFwd/20*100,100)+'%');
+  setWidth('effBar', eff+'%');
+  setWidth('fwdRateBar', Math.min(fwdRate,100)+'%');
+
+  // Update registers
+  for (let i = 0; i < 32; i++) {
+    let el = document.getElementById('reg-val-'+i);
+    if (el) el.textContent = '0x'+(registers[i]>>>0).toString(16).padStart(8,'0').toUpperCase();
+  }
+
+  // Forwarding indicators
+  updateDepTable();
+  renderRS();
+  renderRAT();
+
+  // FU display
+  updateFUDisplay();
+  
+  // RAS
+  renderRAS();
+  
+  // Run light
+  let rl = document.getElementById('runLight');
+  if (rl) rl.className = 'run-light ' + (autoRunInterval ? 'running' : 'paused');
+}
+
+function updateFUDisplay() {
+  const fus = [
+    { id: 'alu1', label: 'INT ALU 1', instr: pipeline.EX },
+    { id: 'alu2', label: 'INT ALU 2', instr: pipeline.MEM },
+    { id: 'mul', label: 'MUL/DIV', instr: pipeline.EX && pipeline.EX.def.mulDiv ? pipeline.EX : null },
+    { id: 'lsu', label: 'LOAD/STORE', instr: pipeline.MEM && (pipeline.MEM.def.memRead||pipeline.MEM.def.memWrite) ? pipeline.MEM : null },
+    { id: 'bru', label: 'BRANCH', instr: pipeline.EX && pipeline.EX.def.branch ? pipeline.EX : null },
+  ];
+  
+  fus.forEach(fu => {
+    let el = document.getElementById('fu-'+fu.id);
+    let statusEl = document.getElementById('fu-'+fu.id+'-status');
+    let instrEl = document.getElementById('fu-'+fu.id+'-instr');
+    if (!el || !statusEl || !instrEl) return;
+    if (fu.instr && !fu.instr.isBubble) {
+      el.className = 'rs-entry ready-to-issue';
+      statusEl.textContent = 'BUSY';
+      statusEl.className = 'c-yellow';
+      instrEl.textContent = fu.instr.raw;
+    } else {
+      el.className = 'rs-entry';
+      statusEl.textContent = 'IDLE';
+      statusEl.className = 'c-text3';
+      instrEl.textContent = '—';
+    }
+  });
+}
+
+function renderRAS() {
+  let el = document.getElementById('rasDisplay');
+  if (!el) return;
+  if (rasStack.length === 0) {
+    el.innerHTML = '<div style="font-size:10px;color:var(--text3);padding:4px;">Empty</div>';
+    return;
+  }
+  el.innerHTML = rasStack.slice(0,6).map((addr, i) =>
+    `<div style="display:flex;gap:8px;padding:3px 6px;background:var(--bg2);border:1px solid var(--border);font-family:'Share Tech Mono',monospace;font-size:10px;">
+      <span class="c-text3">[${i}]</span>
+      <span class="c-accent2">0x${(addr>>>0).toString(16).padStart(8,'0').toUpperCase()}</span>
+      ${i===0?'<span class="c-green" style="margin-left:auto;">← TOP</span>':''}
+    </div>`
+  ).join('');
+}
+
+// ============================================================
+// HELPERS
+// ============================================================
+function setText(id, val) {
+  let el = document.getElementById(id);
+  if (el) el.textContent = val;
+}
+function setWidth(id, val) {
+  let el = document.getElementById(id);
+  if (el) el.style.width = val;
+}
+
+function addInstruction() {
+  let input = document.getElementById('instrInputMain');
+  let raw = input.value.trim();
+  if (!raw) return;
+  let instr = parseInstr(raw);
+  if (instr) {
+    instrQueue.push(instr);
+    if (!instructionMemory.find(i => i.raw === instr.raw)) instructionMemory.push(instr);
+    updateInstrQueueDisplay();
+    updateMemoryTable();
+    input.value = '';
+    addLog(totalCycles, 'QUEUE', `Added: ${instr.raw}`, 'fetch');
+  }
+}
+
+function queuePreset(raw) {
+  let instr = parseInstr(raw);
+  if (instr) {
+    instrQueue.push(instr);
+    if (!instructionMemory.find(i => i.raw === raw)) instructionMemory.push(instr);
+    updateInstrQueueDisplay();
+    updateMemoryTable();
+  }
+}
+
+function toggleRun() {
+  if (autoRunInterval) {
+    clearInterval(autoRunInterval);
+    autoRunInterval = null;
+    document.getElementById('btnRun').textContent = 'AUTO RUN';
+    document.getElementById('btnRun').classList.remove('active');
+  } else {
+    autoRunInterval = setInterval(() => {
+      if (instrQueue.length === 0 && !pipeline.IF && !pipeline.ID && !pipeline.EX && !pipeline.MEM && !pipeline.WB) {
+        clearInterval(autoRunInterval);
+        autoRunInterval = null;
+        document.getElementById('btnRun').textContent = 'AUTO RUN';
+        document.getElementById('btnRun').classList.remove('active');
+        addLog(totalCycles, 'SIM', 'All instructions completed', 'writeback');
+        return;
+      }
+      step();
+    }, speedMs);
+    document.getElementById('btnRun').textContent = 'STOP ■';
+    document.getElementById('btnRun').classList.add('active');
+  }
+  let rl = document.getElementById('runLight');
+  if (rl) rl.className = 'run-light ' + (autoRunInterval ? 'running' : 'paused');
+}
+
+function updateSpeed(val) {
+  speedMs = 2100 - parseInt(val);
+  if (autoRunInterval) {
+    clearInterval(autoRunInterval);
+    autoRunInterval = setInterval(() => step(), speedMs);
+  }
+}
+
+function resetSim() {
+  if (autoRunInterval) { clearInterval(autoRunInterval); autoRunInterval = null; }
+  pipeline = { IF: null, ID: null, EX: null, MEM: null, WB: null };
+  instrQueue = [];
+  instructionMemory = [];
+  pc = 0; programCounter = 0;
+  totalCycles = 0; totalInstrs = 0; totalStalls = 0; totalRaw = 0; totalBranchMispred = 0; totalFwd = 0; cacheMisses = 0;
+  rawHazards = 0; stallCycles = 0; mispredictions = 0; fwdUsed = 0;
+  icacheHits = 0; icacheMisses = 0; dcacheHits = 0; dcacheMissesCnt = 0;
+  l2Hits = 0; l2Misses = 0; tlbIHits = 0; tlbDHits = 0; tlbMissesCnt = 0;
+  btbCorrect = 0; btbMispred = 0;
+  branchHistory = [];
+  timingData = []; currentCycle = 0;
+  bpState = 'WT'; bhrRegister = new Array(8).fill(0);
+  oooCommitted = 0; oooSquashed = 0;
+  temp = 42; power = 12;
+  memory = {};
+  
+  initRegisters();
+  initCache();
+  initBTB();
+  initROB();
+  updateInstrQueueDisplay();
+  updateMemoryTable();
+  updateAll();
+  clearLog();
+  renderTimingDiagram();
+  renderBranchHistory();
+  
+  document.getElementById('btnRun').textContent = 'AUTO RUN';
+  document.getElementById('btnRun').classList.remove('active');
+  document.getElementById('runLight').className = 'run-light paused';
+
+  // Reset decode display
+  document.getElementById('bitsRow').innerHTML = '';
+  document.getElementById('decodeBadge').textContent = 'NO INSTR';
+  setText('df-opcode','—'); setText('df-rd','—'); setText('df-funct3','—');
+  setText('df-rs1','—'); setText('df-rs2','—'); setText('df-funct7','—');
+  
+  addLog(0, 'SIM', 'Simulation reset', 'fetch');
+}
+
+function clearLog() {
+  let log = document.getElementById('execLog');
+  if (log) log.innerHTML = '';
+}
+
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach((t,i) => {
+    t.classList.remove('active');
+  });
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  
+  let tabs = document.querySelectorAll('.tab');
+  let panels = document.querySelectorAll('.tab-panel');
+  
+  const tabMap = { overview:0, fetch:1, alu:2, memory:3, timing:4, branch:5, ooo:6 };
+  let idx = tabMap[name];
+  if (tabs[idx]) tabs[idx].classList.add('active');
+  
+  let panel = document.getElementById('tab-'+name);
+  if (panel) {
+    panel.classList.add('active');
+    panel.style.display = name === 'overview' ? 'flex' : 'flex';
+  }
+  
+  // Refresh panels
+  if (name === 'memory') renderCache();
+  if (name === 'timing') renderTimingDiagram();
+  if (name === 'branch') { renderBTB(); renderBranchHistory(); }
+  if (name === 'ooo') { renderROB(); renderRS(); renderRAT(); }
+  if (name === 'fetch') { updateMemoryTable(); if (pipeline.ID) updateDecode(pipeline.ID); }
+}
+
+function showHelp() {
+  document.getElementById('helpOverlay').classList.add('show');
+}
+
+// ============================================================
+// BOOT
+// ============================================================
+window.addEventListener('load', () => {
+  init();
+  // Load hazard demo by default
+  loadProgram('hazards');
+  addLog(0, 'BOOT', 'CPU Visualizer v1.0 · RISC-V RV32I · 5-Stage Pipeline', 'writeback');
+  addLog(0, 'BOOT', 'Hazard demo loaded. Press STEP or AUTO RUN to begin.', 'fetch');
+  updateFSM(true); updateFSM(true); // Start in WT
+  bpState = 'WT';
+  ['SN','WN','WT','ST'].forEach(s => {
+    let el = document.getElementById('fsm-'+s);
+    if (el) el.className = 'fsm-state ' + s.toLowerCase() + (bpState === s ? ' current' : '');
+  });
+});
+</script>
+</body>
+</html>
