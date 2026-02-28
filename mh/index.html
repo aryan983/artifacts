@@ -70,9 +70,20 @@ border-radius:6px; cursor:pointer; transition:all .2s; letter-spacing:.4px;
 canvas { width:100%; height:620px; background:var(–surface); border-radius:12px; border:1px solid var(–border); display:block; }
 @media(max-width:500px){ canvas { height:500px; } }
 
-.info-panel { width:320px; flex-shrink:0; display:flex; flex-direction:column; gap:12px; }
+.info-panel { width:340px; flex-shrink:0; display:flex; flex-direction:column; gap:12px; }
 .info-card { background:var(–surface); border:1px solid var(–border); border-radius:10px; padding:14px; }
 .info-card h3 { font-size:.65rem; font-family:‘JetBrains Mono’,monospace; text-transform:uppercase; letter-spacing:2px; color:var(–dim); margin-bottom:10px; }
+
+/* Bottom section (easy explain + perf) */
+.bottom-section { max-width:1600px; margin:0 auto; padding:0 16px 30px; }
+.bottom-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+
+@media(min-width:1101px) {
+.info-panel { width:340px; }
+.perf-bars { height:32px; }
+.perf-bar-val { font-size:.58rem; }
+.perf-label { min-width:70px; font-size:.75rem; }
+}
 
 /* Accordion */
 .acc-item { border-bottom:1px solid var(–border); }
@@ -183,6 +194,7 @@ position:absolute; top:-12px; width:100%; text-align:center; white-space:nowrap;
 .main-container { flex-direction:column; }
 .info-panel { width:100%; flex-direction:row; flex-wrap:wrap; }
 .info-card { flex:1; min-width:260px; }
+.bottom-grid { grid-template-columns:1fr; }
 }
 </style>
 
@@ -227,6 +239,47 @@ position:absolute; top:-12px; width:100%; text-align:center; white-space:nowrap;
 <div class="main-container">
   <div class="viz-area"><canvas id="canvas"></canvas></div>
   <div class="info-panel">
+
+```
+<div class="info-card" id="key-card"></div>
+
+<div class="info-card">
+  <h3>Cache States (MSI)</h3>
+  <div class="state-row"><div class="state-dot" style="background:#51cf66"></div><span class="state-label">Modified</span><span class="state-desc">Dirty, exclusive</span></div>
+  <div class="state-row"><div class="state-dot" style="background:#339af0"></div><span class="state-label">Shared</span><span class="state-desc">Clean, multi-reader</span></div>
+  <div class="state-row"><div class="state-dot" style="background:#555"></div><span class="state-label">Invalid</span><span class="state-desc">Stale / absent</span></div>
+</div>
+
+<div class="info-card">
+  <h3>Live Stats</h3>
+  <div class="stats-grid">
+    <div class="stat-item"><div class="stat-value" id="stat-hits" style="color:var(--smem)">0</div><div class="stat-label">Hits</div></div>
+    <div class="stat-item"><div class="stat-value" id="stat-misses" style="color:var(--l1)">0</div><div class="stat-label">Misses</div></div>
+    <div class="stat-item"><div class="stat-value" id="stat-inv" style="color:var(--coherency)">0</div><div class="stat-label">Invalidations</div></div>
+    <div class="stat-item"><div class="stat-value" id="stat-wb" style="color:var(--l2)">0</div><div class="stat-label">Write-Backs</div></div>
+  </div>
+</div>
+
+<div class="info-card explainer" id="explainer-card">
+  <h3>What's Happening</h3>
+  <div id="explainer-title" class="explainer-title" style="color:var(--dim)"><span class="dot" style="background:var(--dim)"></span>Click a scenario or wait for auto...</div>
+  <ol class="step-list" id="step-list"></ol>
+  <div class="explainer-summary" id="explainer-summary"></div>
+</div>
+
+<div class="info-card">
+  <h3>Event Log</h3>
+  <div class="event-log" id="event-log"></div>
+</div>
+```
+
+  </div>
+</div>
+
+<!-- BELOW-FOLD: Easy Explain + Perf (full width on desktop) -->
+
+<div class="bottom-section">
+  <div class="bottom-grid">
 
 ```
 <!-- EASY EXPLAIN -->
@@ -301,37 +354,6 @@ position:absolute; top:-12px; width:100%; text-align:center; white-space:nowrap;
     <div class="perf-legend-item"><div class="perf-legend-dot" style="background:#ffa94d"></div>Ampere</div>
     <div class="perf-legend-item"><div class="perf-legend-dot" style="background:#845ef7"></div>Hopper</div>
   </div>
-</div>
-
-<div class="info-card" id="key-card"></div>
-
-<div class="info-card">
-  <h3>Cache States (MSI)</h3>
-  <div class="state-row"><div class="state-dot" style="background:#51cf66"></div><span class="state-label">Modified</span><span class="state-desc">Dirty, exclusive</span></div>
-  <div class="state-row"><div class="state-dot" style="background:#339af0"></div><span class="state-label">Shared</span><span class="state-desc">Clean, multi-reader</span></div>
-  <div class="state-row"><div class="state-dot" style="background:#555"></div><span class="state-label">Invalid</span><span class="state-desc">Stale / absent</span></div>
-</div>
-
-<div class="info-card">
-  <h3>Live Stats</h3>
-  <div class="stats-grid">
-    <div class="stat-item"><div class="stat-value" id="stat-hits" style="color:var(--smem)">0</div><div class="stat-label">Hits</div></div>
-    <div class="stat-item"><div class="stat-value" id="stat-misses" style="color:var(--l1)">0</div><div class="stat-label">Misses</div></div>
-    <div class="stat-item"><div class="stat-value" id="stat-inv" style="color:var(--coherency)">0</div><div class="stat-label">Invalidations</div></div>
-    <div class="stat-item"><div class="stat-value" id="stat-wb" style="color:var(--l2)">0</div><div class="stat-label">Write-Backs</div></div>
-  </div>
-</div>
-
-<div class="info-card explainer" id="explainer-card">
-  <h3>What's Happening</h3>
-  <div id="explainer-title" class="explainer-title" style="color:var(--dim)"><span class="dot" style="background:var(--dim)"></span>Click a scenario or wait for auto...</div>
-  <ol class="step-list" id="step-list"></ol>
-  <div class="explainer-summary" id="explainer-summary"></div>
-</div>
-
-<div class="info-card">
-  <h3>Event Log</h3>
-  <div class="event-log" id="event-log"></div>
 </div>
 ```
 
