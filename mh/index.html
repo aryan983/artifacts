@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -23,52 +22,102 @@ header { text-align:center; padding:20px 16px 10px; }
 header h1 { font-size:clamp(1.6rem,3.5vw,2.6rem); font-weight:800; letter-spacing:-1px;
 background:linear-gradient(135deg,#ff6b6b,#ffa94d,#51cf66,#339af0,#845ef7);
 -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
-header p { color:var(–dim); font-family:‘JetBrains Mono’,monospace; font-size:.75rem; margin-top:4px; letter-spacing:2px; text-transform:uppercase; }
+header p { color:var(--dim); font-family:'JetBrains Mono',monospace; font-size:.75rem; margin-top:4px; letter-spacing:2px; text-transform:uppercase; }
 
 .arch-tabs { display:flex; justify-content:center; gap:0; padding:10px 16px 6px; flex-wrap:wrap; }
 .arch-tab {
-background:var(–surface); border:1px solid var(–border); color:var(–dim);
-font-family:‘JetBrains Mono’,monospace; font-size:.7rem; padding:8px 14px;
+background:var(--surface); border:1px solid var(--border); color:var(--dim);
+font-family:'JetBrains Mono',monospace; font-size:.7rem; padding:8px 14px;
 cursor:pointer; transition:all .2s; letter-spacing:.3px; position:relative;
 border-right:none;
 }
 .arch-tab:first-child { border-radius:6px 0 0 6px; }
-.arch-tab:last-child { border-radius:0 6px 6px 0; border-right:1px solid var(–border); }
-.arch-tab:hover { color:var(–text); background:var(–surface2); }
-.arch-tab.active { background:var(–surface2); color:#fff; border-color:var(–accent-color,var(–global)); }
-.arch-tab.active::after { content:’’; position:absolute; bottom:-1px; left:10%; right:10%; height:2px; background:var(–accent-color,var(–global)); border-radius:1px; }
-.arch-tab .tab-gen { display:block; font-size:.55rem; color:var(–dim); margin-top:2px; font-weight:400; }
-.arch-tab.active .tab-gen { color:var(–accent-color,var(–global)); }
+.arch-tab:last-child { border-radius:0 6px 6px 0; border-right:1px solid var(--border); }
+.arch-tab:hover { color:var(--text); background:var(--surface2); }
+.arch-tab.active { background:var(--surface2); color:#fff; border-color:var(--accent-color,var(--global)); }
+.arch-tab.active::after { content:''; position:absolute; bottom:-1px; left:10%; right:10%; height:2px; background:var(--accent-color,var(--global)); border-radius:1px; }
+.arch-tab .tab-gen { display:block; font-size:.55rem; color:var(--dim); margin-top:2px; font-weight:400; }
+.arch-tab.active .tab-gen { color:var(--accent-color,var(--global)); }
 
 .diff-banner {
 max-width:1200px; margin:6px auto 0; padding:8px 14px;
-background:var(–surface); border:1px solid var(–border); border-radius:8px;
+background:var(--surface); border:1px solid var(--border); border-radius:8px;
 font-size:.75rem; line-height:1.5; display:none; text-align:center;
 }
 .diff-banner.visible { display:block; }
-.diff-banner .new-tag { color:var(–new-block); font-weight:600; }
-.diff-banner .changed-tag { color:var(–changed); font-weight:600; }
+.diff-banner .new-tag { color:var(--new-block); font-weight:600; }
+.diff-banner .changed-tag { color:var(--changed); font-weight:600; }
 .diff-banner .removed-tag { color:#ff6b6b; font-weight:600; text-decoration:line-through; }
 
 .controls { display:flex; justify-content:center; gap:12px; padding:12px 20px; flex-wrap:wrap; }
 .controls button {
-background:var(–surface2); border:1px solid var(–border); color:var(–text);
-font-family:‘JetBrains Mono’,monospace; font-size:.75rem; padding:8px 16px;
+background:var(--surface2); border:1px solid var(--border); color:var(--text);
+font-family:'JetBrains Mono',monospace; font-size:.75rem; padding:8px 16px;
 border-radius:6px; cursor:pointer; transition:all .2s; letter-spacing:.5px;
 }
-.controls button:hover { border-color:var(–coherency); color:#fff; }
-.controls button.active { background:var(–coherency); border-color:var(–coherency); color:#fff; }
+.controls button:hover { border-color:var(--coherency); color:#fff; }
+.controls button.active { background:var(--coherency); border-color:var(--coherency); color:#fff; }
 .controls button.reset-btn { background:transparent; border-color:#ff6b6b50; color:#ff6b6b; }
 .controls button.reset-btn:hover { background:#ff6b6b20; border-color:#ff6b6b; }
 
 .main-container { display:flex; gap:24px; padding:12px 20px; max-width:1200px; margin:0 auto; align-items:flex-start; }
-.viz-area { flex:1; min-width:0; max-width:700px; }
-canvas { width:100%; height:520px; background:var(–surface); border-radius:12px; border:1px solid var(–border); display:block; }
+.viz-area { flex:1; min-width:0; max-width:700px; position:relative; }
+canvas { width:100%; height:520px; background:var(--surface); border-radius:12px; border:1px solid var(--border); display:block; cursor:default; }
 @media(max-width:500px){ canvas { height:500px; } .viz-area { max-width:none; } }
 
+/* ── Tooltip ── */
+#block-tooltip {
+  position:absolute; pointer-events:none; z-index:100;
+  background:#0d0f16; border:1px solid var(--border);
+  border-radius:10px; padding:11px 14px; max-width:240px;
+  box-shadow: 0 8px 32px rgba(0,0,0,.7);
+  opacity:0; transition:opacity .15s;
+  font-size:.75rem; line-height:1.55;
+}
+#block-tooltip.visible { opacity:1; }
+#block-tooltip .tt-title { font-weight:700; font-size:.85rem; margin-bottom:6px; display:flex; align-items:center; gap:7px; }
+#block-tooltip .tt-dot { width:9px; height:9px; border-radius:3px; flex-shrink:0; }
+#block-tooltip .tt-desc { color:var(--dim); margin-bottom:7px; }
+#block-tooltip .tt-meta { display:flex; flex-wrap:wrap; gap:5px; }
+#block-tooltip .tt-chip {
+  font-family:'JetBrains Mono',monospace; font-size:.6rem; font-weight:600;
+  padding:2px 7px; border-radius:4px;
+}
+#block-tooltip .tt-hint {
+  margin-top:8px; padding-top:6px; border-top:1px solid var(--border);
+  font-size:.65rem; color:#6b7094; font-family:'JetBrains Mono',monospace;
+  display:flex; align-items:center; gap:5px;
+}
+#block-tooltip .tt-hint::before { content:'◉'; font-size:.7rem; }
+
+/* ── Selection panel ── */
+#sel-panel {
+  background:var(--surface); border:1px solid var(--border); border-radius:10px;
+  padding:14px; display:none; margin-top:12px;
+}
+#sel-panel.visible { display:block; }
+#sel-panel h4 { font-size:.65rem; font-family:'JetBrains Mono',monospace; text-transform:uppercase; letter-spacing:2px; color:var(--dim); margin-bottom:10px; }
+#sel-panel .sel-name { font-weight:700; font-size:.95rem; margin-bottom:6px; }
+#sel-panel .sel-desc { font-size:.78rem; color:var(--dim); line-height:1.55; margin-bottom:10px; }
+#sel-panel .sel-connections { }
+#sel-panel .sel-connections h5 { font-size:.6rem; font-family:'JetBrains Mono',monospace; text-transform:uppercase; letter-spacing:1.5px; color:var(--dim); margin-bottom:7px; }
+#sel-panel .conn-list { display:flex; flex-direction:column; gap:5px; }
+#sel-panel .conn-item {
+  display:flex; align-items:flex-start; gap:8px; padding:7px 10px;
+  background:var(--bg); border-radius:6px; border:1px solid var(--border);
+  font-size:.75rem; line-height:1.45; cursor:pointer; transition:border-color .15s;
+}
+#sel-panel .conn-item:hover { border-color: #4a4d5a; }
+#sel-panel .conn-item .ci-arrow { font-family:'JetBrains Mono',monospace; font-size:.7rem; flex-shrink:0; margin-top:1px; }
+#sel-panel .conn-item .ci-body { flex:1; }
+#sel-panel .conn-item .ci-target { font-weight:600; }
+#sel-panel .conn-item .ci-why { color:var(--dim); font-size:.7rem; display:block; }
+#sel-panel .close-btn { float:right; font-size:.7rem; color:var(--dim); cursor:pointer; font-family:'JetBrains Mono',monospace; padding:2px 6px; border:1px solid var(--border); border-radius:4px; }
+#sel-panel .close-btn:hover { color:var(--text); }
+
 .info-panel { width:360px; flex-shrink:0; display:flex; flex-direction:column; gap:12px; }
-.info-card { background:var(–surface); border:1px solid var(–border); border-radius:10px; padding:14px; }
-.info-card h3 { font-size:.65rem; font-family:‘JetBrains Mono’,monospace; text-transform:uppercase; letter-spacing:2px; color:var(–dim); margin-bottom:10px; }
+.info-card { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:14px; }
+.info-card h3 { font-size:.65rem; font-family:'JetBrains Mono',monospace; text-transform:uppercase; letter-spacing:2px; color:var(--dim); margin-bottom:10px; }
 
 .bottom-section { max-width:1200px; margin:0 auto; padding:0 20px 30px; }
 .bottom-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
@@ -79,99 +128,99 @@ canvas { width:100%; height:520px; background:var(–surface); border-radius:12p
 .perf-label { min-width:70px; font-size:.75rem; }
 }
 
-.acc-item { border-bottom:1px solid var(–border); }
+.acc-item { border-bottom:1px solid var(--border); }
 .acc-item:last-child { border-bottom:none; }
 .acc-head { display:flex; align-items:center; gap:8px; padding:8px 0; cursor:pointer; user-select:none; -webkit-user-select:none; }
 .acc-head:active { opacity:.7; }
 .acc-dot { width:8px; height:8px; border-radius:3px; flex-shrink:0; }
 .acc-title { flex:1; font-weight:600; font-size:.8rem; }
-.acc-meta { font-family:‘JetBrains Mono’,monospace; font-size:.6rem; color:var(–dim); }
-.acc-chev { font-size:.65rem; color:var(–dim); transition:transform .25s; }
+.acc-meta { font-family:'JetBrains Mono',monospace; font-size:.6rem; color:var(--dim); }
+.acc-chev { font-size:.65rem; color:var(--dim); transition:transform .25s; }
 .acc-item.open .acc-chev { transform:rotate(90deg); }
 .acc-body { max-height:0; overflow:hidden; transition:max-height .3s,padding .3s; padding:0 0 0 16px; }
 .acc-item.open .acc-body { max-height:350px; padding:0 0 8px 16px; }
-.acc-body p { font-size:.75rem; line-height:1.5; color:var(–dim); margin:0; }
-.acc-body p strong { color:var(–text); }
-.acc-badge-new { font-size:.55rem; background:var(–new-block); color:#000; padding:1px 5px; border-radius:3px; font-weight:700; margin-left:4px; }
-.acc-badge-changed { font-size:.55rem; background:var(–changed); color:#000; padding:1px 5px; border-radius:3px; font-weight:700; margin-left:4px; }
+.acc-body p { font-size:.75rem; line-height:1.5; color:var(--dim); margin:0; }
+.acc-body p strong { color:var(--text); }
+.acc-badge-new { font-size:.55rem; background:var(--new-block); color:#000; padding:1px 5px; border-radius:3px; font-weight:700; margin-left:4px; }
+.acc-badge-changed { font-size:.55rem; background:var(--changed); color:#000; padding:1px 5px; border-radius:3px; font-weight:700; margin-left:4px; }
 
 .stats-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
-.stat-item { background:var(–bg); border-radius:6px; padding:8px; text-align:center; }
-.stat-value { font-size:1.3rem; font-weight:700; font-family:‘JetBrains Mono’,monospace; }
-.stat-label { font-size:.6rem; color:var(–dim); text-transform:uppercase; letter-spacing:1px; margin-top:1px; }
+.stat-item { background:var(--bg); border-radius:6px; padding:8px; text-align:center; }
+.stat-value { font-size:1.3rem; font-weight:700; font-family:'JetBrains Mono',monospace; }
+.stat-label { font-size:.6rem; color:var(--dim); text-transform:uppercase; letter-spacing:1px; margin-top:1px; }
 
 .state-row { display:flex; align-items:center; gap:8px; margin-bottom:6px; font-size:.8rem; }
 .state-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
 .state-label { font-weight:600; min-width:70px; }
-.state-desc { color:var(–dim); font-size:.73rem; }
+.state-desc { color:var(--dim); font-size:.73rem; }
 
 .explainer { position:relative; overflow:hidden; min-height:100px; max-height:400px; }
-.explainer::before { content:’’; position:absolute; top:0; left:0; right:0; height:3px;
-background:linear-gradient(90deg,var(–l1),var(–l2),var(–smem),var(–global),var(–dram)); border-radius:10px 10px 0 0; opacity:.6; }
+.explainer::before { content:''; position:absolute; top:0; left:0; right:0; height:3px;
+background:linear-gradient(90deg,var(--l1),var(--l2),var(--smem),var(--global),var(--dram)); border-radius:10px 10px 0 0; opacity:.6; }
 .explainer-title { font-weight:700; font-size:.95rem; margin-bottom:8px; display:flex; align-items:center; gap:8px; }
 .explainer-title .dot { width:8px; height:8px; border-radius:50%; animation:pulse-dot 1.5s ease-in-out infinite; }
 @keyframes pulse-dot { 0%,100%{opacity:.5;transform:scale(1)} 50%{opacity:1;transform:scale(1.3)} }
-.step-list { list-style:none; max-height:220px; overflow-y:auto; overscroll-behavior:contain; scrollbar-width:thin; scrollbar-color:var(–border) transparent; }
-.step-list::-webkit-scrollbar{width:4px} .step-list::-webkit-scrollbar-thumb{background:var(–border);border-radius:2px}
+.step-list { list-style:none; max-height:220px; overflow-y:auto; overscroll-behavior:contain; scrollbar-width:thin; scrollbar-color:var(--border) transparent; }
+.step-list::-webkit-scrollbar{width:4px} .step-list::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
 .step-list li { display:flex; align-items:flex-start; gap:8px; padding:5px 0; font-size:.78rem; line-height:1.4; opacity:0; transform:translateX(-6px); transition:opacity .4s,transform .4s; }
 .step-list li.visible { opacity:1; transform:translateX(0); }
 .step-list li.active { opacity:1; transform:translateX(0); }
 .step-list li.past { opacity:.4; }
-.step-num { font-family:‘JetBrains Mono’,monospace; font-size:.65rem; font-weight:600; min-width:18px; height:18px; display:flex; align-items:center; justify-content:center; border-radius:4px; flex-shrink:0; }
+.step-num { font-family:'JetBrains Mono',monospace; font-size:.65rem; font-weight:600; min-width:18px; height:18px; display:flex; align-items:center; justify-content:center; border-radius:4px; flex-shrink:0; }
 .step-text { flex:1; }
-.step-text .micro { display:block; font-size:.68rem; color:var(–dim); font-family:‘JetBrains Mono’,monospace; margin-top:1px; }
-.explainer-summary { margin-top:8px; padding-top:8px; border-top:1px solid var(–border); font-size:.73rem; color:var(–dim); font-style:italic; opacity:0; transition:opacity .5s; }
+.step-text .micro { display:block; font-size:.68rem; color:var(--dim); font-family:'JetBrains Mono',monospace; margin-top:1px; }
+.explainer-summary { margin-top:8px; padding-top:8px; border-top:1px solid var(--border); font-size:.73rem; color:var(--dim); font-style:italic; opacity:0; transition:opacity .5s; }
 .explainer-summary.visible { opacity:1; }
 
-.event-log { max-height:160px; overflow-y:auto; overscroll-behavior:contain; scrollbar-width:thin; scrollbar-color:var(–border) transparent; }
-.event-log::-webkit-scrollbar{width:4px} .event-log::-webkit-scrollbar-thumb{background:var(–border);border-radius:2px}
-.log-entry { font-family:‘JetBrains Mono’,monospace; font-size:.65rem; padding:3px 0; border-bottom:1px solid rgba(42,45,58,.5); color:var(–dim); animation:fadeIn .3s; }
+.event-log { max-height:160px; overflow-y:auto; overscroll-behavior:contain; scrollbar-width:thin; scrollbar-color:var(--border) transparent; }
+.event-log::-webkit-scrollbar{width:4px} .event-log::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.log-entry { font-family:'JetBrains Mono',monospace; font-size:.65rem; padding:3px 0; border-bottom:1px solid rgba(42,45,58,.5); color:var(--dim); animation:fadeIn .3s; }
 .log-entry .tag { display:inline-block; padding:1px 5px; border-radius:3px; font-size:.6rem; margin-right:3px; }
 @keyframes fadeIn { from{opacity:0;transform:translateY(-4px)} to{opacity:1;transform:translateY(0)} }
 
 .arch-intro { max-width:1200px; margin:6px auto 0; padding:0 20px; }
 .arch-intro-inner {
-background:var(–surface); border:1px solid var(–border); border-radius:10px;
+background:var(--surface); border:1px solid var(--border); border-radius:10px;
 padding:14px 16px; display:flex; gap:14px; align-items:flex-start;
 }
 .arch-intro-badge {
-font-family:‘JetBrains Mono’,monospace; font-size:.6rem; font-weight:700;
+font-family:'JetBrains Mono',monospace; font-size:.6rem; font-weight:700;
 padding:4px 10px; border-radius:5px; white-space:nowrap; flex-shrink:0; margin-top:2px;
 }
-.arch-intro-text { font-size:.8rem; line-height:1.55; color:var(–dim); }
-.arch-intro-text strong { color:var(–text); }
+.arch-intro-text { font-size:.8rem; line-height:1.55; color:var(--dim); }
+.arch-intro-text strong { color:var(--text); }
 
-.easy-card { border-left:3px solid var(–smem); }
-.easy-card h3 span { color:var(–smem); font-size:.6rem; margin-left:6px; font-weight:400; }
-.easy-q { padding:8px 0; border-bottom:1px solid var(–border); cursor:pointer; user-select:none; -webkit-user-select:none; }
+.easy-card { border-left:3px solid var(--smem); }
+.easy-card h3 span { color:var(--smem); font-size:.6rem; margin-left:6px; font-weight:400; }
+.easy-q { padding:8px 0; border-bottom:1px solid var(--border); cursor:pointer; user-select:none; -webkit-user-select:none; }
 .easy-q:last-child { border-bottom:none; }
 .easy-q:active { opacity:.7; }
 .easy-head { display:flex; align-items:center; gap:8px; }
 .easy-emoji { font-size:1rem; flex-shrink:0; width:22px; text-align:center; }
 .easy-title { flex:1; font-weight:600; font-size:.82rem; }
-.easy-chev { font-size:.65rem; color:var(–dim); transition:transform .25s; }
+.easy-chev { font-size:.65rem; color:var(--dim); transition:transform .25s; }
 .easy-q.open .easy-chev { transform:rotate(90deg); }
 .easy-body { max-height:0; overflow:hidden; transition:max-height .3s,padding .3s; padding:0 0 0 30px; }
 .easy-q.open .easy-body { max-height:500px; padding:4px 0 6px 30px; }
-.easy-body p { font-size:.78rem; line-height:1.6; color:var(–dim); margin:0 0 6px; }
-.easy-body p strong { color:var(–text); }
-.easy-body .analogy { font-style:italic; color:var(–smem); font-size:.73rem; }
+.easy-body p { font-size:.78rem; line-height:1.6; color:var(--dim); margin:0 0 6px; }
+.easy-body p strong { color:var(--text); }
+.easy-body .analogy { font-style:italic; color:var(--smem); font-size:.73rem; }
 
 .perf-card h3 { margin-bottom:12px; }
 .perf-row { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
-.perf-label { font-size:.7rem; font-family:‘JetBrains Mono’,monospace; color:var(–dim); min-width:65px; flex-shrink:0; }
+.perf-label { font-size:.7rem; font-family:'JetBrains Mono',monospace; color:var(--dim); min-width:65px; flex-shrink:0; }
 .perf-bars { flex:1; display:flex; gap:2px; height:28px; align-items:flex-end; }
 .perf-bar {
 flex:1; border-radius:2px 2px 0 0; position:relative; min-height:2px;
 transition:height .4s ease; display:flex; align-items:flex-end; justify-content:center;
 }
 .perf-bar-val {
-font-family:‘JetBrains Mono’,monospace; font-size:.5rem; font-weight:600;
+font-family:'JetBrains Mono',monospace; font-size:.5rem; font-weight:600;
 position:absolute; top:-12px; width:100%; text-align:center; white-space:nowrap;
 }
 .perf-bar.active { outline:1px solid #fff3; outline-offset:1px; }
 .perf-legend { display:flex; gap:10px; margin-top:10px; flex-wrap:wrap; justify-content:center; }
-.perf-legend-item { display:flex; align-items:center; gap:4px; font-size:.6rem; font-family:‘JetBrains Mono’,monospace; color:var(–dim); }
+.perf-legend-item { display:flex; align-items:center; gap:4px; font-size:.6rem; font-family:'JetBrains Mono',monospace; color:var(--dim); }
 .perf-legend-dot { width:8px; height:8px; border-radius:2px; }
 
 @media(max-width:1100px) {
@@ -181,29 +230,20 @@ position:absolute; top:-12px; width:100%; text-align:center; white-space:nowrap;
 .bottom-grid { grid-template-columns:1fr; }
 }
 </style>
-
 </head>
 <body>
 <div class="grain"></div>
 
 <header>
   <h1>GPU Cache Coherency</h1>
-  <p>Architecture Explorer &middot; Memory Hierarchy &middot; Data Flow</p>
+  <p>Architecture Explorer · Memory Hierarchy · Data Flow</p>
 </header>
 
 <div class="arch-tabs" id="arch-tabs">
-  <div class="arch-tab active" data-arch="pascal" style="--accent-color:#51cf66" onclick="switchArch('pascal')">
-    Pascal<span class="tab-gen">SM 6.1 &middot; 2016</span>
-  </div>
-  <div class="arch-tab" data-arch="volta" style="--accent-color:#339af0" onclick="switchArch('volta')">
-    Volta<span class="tab-gen">SM 7.0 &middot; 2017</span>
-  </div>
-  <div class="arch-tab" data-arch="ampere" style="--accent-color:#ffa94d" onclick="switchArch('ampere')">
-    Ampere<span class="tab-gen">SM 8.0 &middot; 2020</span>
-  </div>
-  <div class="arch-tab" data-arch="hopper" style="--accent-color:#845ef7" onclick="switchArch('hopper')">
-    Hopper<span class="tab-gen">SM 9.0 &middot; 2022</span>
-  </div>
+  <div class="arch-tab active" data-arch="pascal" style="--accent-color:#51cf66" onclick="switchArch('pascal')">Pascal<span class="tab-gen">SM 6.1 · 2016</span></div>
+  <div class="arch-tab" data-arch="volta" style="--accent-color:#339af0" onclick="switchArch('volta')">Volta<span class="tab-gen">SM 7.0 · 2017</span></div>
+  <div class="arch-tab" data-arch="ampere" style="--accent-color:#ffa94d" onclick="switchArch('ampere')">Ampere<span class="tab-gen">SM 8.0 · 2020</span></div>
+  <div class="arch-tab" data-arch="hopper" style="--accent-color:#845ef7" onclick="switchArch('hopper')">Hopper<span class="tab-gen">SM 9.0 · 2022</span></div>
 </div>
 
 <div class="diff-banner" id="diff-banner"></div>
@@ -220,7 +260,27 @@ position:absolute; top:-12px; width:100%; text-align:center; white-space:nowrap;
 </div>
 
 <div class="main-container">
-  <div class="viz-area"><canvas id="canvas"></canvas></div>
+  <div class="viz-area">
+    <canvas id="canvas"></canvas>
+    <!-- Tooltip -->
+    <div id="block-tooltip">
+      <div class="tt-title"><div class="tt-dot" id="tt-dot"></div><span id="tt-name"></span></div>
+      <div class="tt-desc" id="tt-desc"></div>
+      <div class="tt-meta" id="tt-meta"></div>
+      <div class="tt-hint" id="tt-hint">Click to explore connections</div>
+    </div>
+    <!-- Selection panel -->
+    <div id="sel-panel">
+      <span class="close-btn" onclick="clearSelection()">✕ close</span>
+      <h4>Block Selected</h4>
+      <div class="sel-name" id="sel-name"></div>
+      <div class="sel-desc" id="sel-desc"></div>
+      <div class="sel-connections">
+        <h5>Connects To</h5>
+        <div class="conn-list" id="conn-list"></div>
+      </div>
+    </div>
+  </div>
   <div class="info-panel">
     <div class="info-card" id="key-card"></div>
     <div class="info-card">
@@ -257,66 +317,39 @@ position:absolute; top:-12px; width:100%; text-align:center; white-space:nowrap;
       <h3>Easy Explain <span>for beginners</span></h3>
       <div class="easy-q" onclick="this.classList.toggle('open')">
         <div class="easy-head"><span class="easy-emoji">🏠</span><span class="easy-title">What is a cache?</span><span class="easy-chev">▸</span></div>
-        <div class="easy-body">
-          <p>A cache is a <strong>small, fast storage</strong> that keeps copies of frequently used data close to where it's needed.</p>
-          <p class="analogy">Analogy: Your desk (cache) vs the library (main memory). You keep the books you're reading on your desk so you don't have to walk to the library every time.</p>
-        </div>
+        <div class="easy-body"><p>A cache is a <strong>small, fast storage</strong> that keeps copies of frequently used data close to where it's needed.</p><p class="analogy">Analogy: Your desk (cache) vs the library (main memory). You keep the books you're reading on your desk so you don't have to walk to the library every time.</p></div>
       </div>
       <div class="easy-q" onclick="this.classList.toggle('open')">
         <div class="easy-head"><span class="easy-emoji">🤝</span><span class="easy-title">What is cache coherency?</span><span class="easy-chev">▸</span></div>
-        <div class="easy-body">
-          <p>When <strong>multiple processors</strong> (SMs) each have their own cache, they might hold different copies of the same data. Cache coherency keeps everyone's copies consistent.</p>
-          <p class="analogy">Analogy: 5 people editing copies of the same document. If Alice changes page 3, everyone else needs to know their page 3 is outdated.</p>
-        </div>
+        <div class="easy-body"><p>When <strong>multiple processors</strong> (SMs) each have their own cache, they might hold different copies of the same data. Cache coherency keeps everyone's copies consistent.</p></div>
       </div>
       <div class="easy-q" onclick="this.classList.toggle('open')">
         <div class="easy-head"><span class="easy-emoji">📦</span><span class="easy-title">What is an SM?</span><span class="easy-chev">▸</span></div>
-        <div class="easy-body">
-          <p>A <strong>Streaming Multiprocessor</strong> is the GPU's core compute unit. Each SM runs thousands of threads in parallel using "warps" (groups of 32 threads).</p>
-          <p class="analogy">Analogy: Each SM is like a team at a company with its own whiteboard (shared memory) and desk space (L1 cache).</p>
-        </div>
-      </div>
-      <div class="easy-q" onclick="this.classList.toggle('open')">
-        <div class="easy-head"><span class="easy-emoji">🔺</span><span class="easy-title">Why is there a hierarchy?</span><span class="easy-chev">▸</span></div>
-        <div class="easy-body">
-          <p><strong>Fast memory is small, big memory is slow</strong>. Registers (~1 cycle) → Shared Mem (~20) → L1 (~28) → L2 (~200) → HBM (~400+).</p>
-        </div>
+        <div class="easy-body"><p>A <strong>Streaming Multiprocessor</strong> is the GPU's core compute unit. Each SM runs thousands of threads in parallel using "warps" (groups of 32 threads).</p></div>
       </div>
       <div class="easy-q" onclick="this.classList.toggle('open')">
         <div class="easy-head"><span class="easy-emoji">⚡</span><span class="easy-title">Shared memory vs L1?</span><span class="easy-chev">▸</span></div>
-        <div class="easy-body">
-          <p><strong>L1</strong> is automatic — hardware decides what to cache. <strong>Shared memory</strong> is manual — programmer explicitly loads data. Faster and predictable, but more work.</p>
-          <p class="analogy">Analogy: L1 is auto-complete. Shared memory is copy-pasting exactly what you need.</p>
-        </div>
+        <div class="easy-body"><p><strong>L1</strong> is automatic — hardware decides what to cache. <strong>Shared memory</strong> is manual — programmer explicitly loads data. Faster and predictable, but more work.</p></div>
       </div>
       <div class="easy-q" onclick="this.classList.toggle('open')">
         <div class="easy-head"><span class="easy-emoji">🚫</span><span class="easy-title">What does "invalidate" mean?</span><span class="easy-chev">▸</span></div>
-        <div class="easy-body">
-          <p>When one SM writes, others' cached copies become <strong>outdated</strong>. Invalidation says "throw away your copy." Next access fetches fresh from L2.</p>
-        </div>
+        <div class="easy-body"><p>When one SM writes, others' cached copies become <strong>outdated</strong>. Invalidation says "throw away your copy." Next access fetches fresh from L2.</p></div>
       </div>
       <div class="easy-q" onclick="this.classList.toggle('open')">
         <div class="easy-head"><span class="easy-emoji">🔄</span><span class="easy-title">What does "write-evict" mean?</span><span class="easy-chev">▸</span></div>
-        <div class="easy-body">
-          <p>Instead of keeping a dirty copy in L1, the SM <strong>drops the L1 copy entirely</strong> and writes straight to L2. Simpler than CPU write-back but more L2 traffic.</p>
-          <p class="analogy">Analogy: Instead of updating your desk copy, you throw it away and update the master filing cabinet directly.</p>
-        </div>
+        <div class="easy-body"><p>Instead of keeping a dirty copy in L1, the SM <strong>drops the L1 copy entirely</strong> and writes straight to L2. Simpler than CPU write-back but more L2 traffic.</p></div>
       </div>
     </div>
-
-```
-<div class="info-card perf-card">
-  <h3>Performance Across Architectures</h3>
-  <div id="perf-chart"></div>
-  <div class="perf-legend">
-    <div class="perf-legend-item"><div class="perf-legend-dot" style="background:#51cf66"></div>Pascal</div>
-    <div class="perf-legend-item"><div class="perf-legend-dot" style="background:#339af0"></div>Volta</div>
-    <div class="perf-legend-item"><div class="perf-legend-dot" style="background:#ffa94d"></div>Ampere</div>
-    <div class="perf-legend-item"><div class="perf-legend-dot" style="background:#845ef7"></div>Hopper</div>
-  </div>
-</div>
-```
-
+    <div class="info-card perf-card">
+      <h3>Performance Across Architectures</h3>
+      <div id="perf-chart"></div>
+      <div class="perf-legend">
+        <div class="perf-legend-item"><div class="perf-legend-dot" style="background:#51cf66"></div>Pascal</div>
+        <div class="perf-legend-item"><div class="perf-legend-dot" style="background:#339af0"></div>Volta</div>
+        <div class="perf-legend-item"><div class="perf-legend-dot" style="background:#ffa94d"></div>Ampere</div>
+        <div class="perf-legend-item"><div class="perf-legend-dot" style="background:#845ef7"></div>Hopper</div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -345,84 +378,100 @@ function rrect(x, y, w, h, r) {
   ctx.arcTo(x,y,x+r,y,r); ctx.closePath();
 }
 
+// ─── Block metadata: purpose, latency, size, connections ───
+var BLOCK_INFO = {
+  regs:      { name:'Register File', color:'#a8b0d0', desc:'Fastest storage on the chip. Each thread gets its own private registers — no sharing, no coherency needed. 32-bit per lane, ~255 per thread.', chips:[{t:'~1 cycle',c:'#51cf66'},{t:'private',c:'#339af0'}], connects:[{to:'l1',arrow:'→',why:'Spill registers to L1 when exhausted (register spilling)'},{to:'smem',arrow:'↔',why:'Threads read/write shared mem via LDS/STS instructions'}] },
+  l1:        { name:'L1 Cache (unified)', color:'#ff6b6b', desc:'Per-SM cache. Pascal: read-only for global data — zero coherency overhead. Volta+: caches writes too, requires invalidation protocol when another SM writes to the same address.', chips:[{t:'~28 cycles',c:'#ffa94d'},{t:'per-SM',c:'#339af0'}], connects:[{to:'bus',arrow:'→',why:'Miss → sends RdReq or INV across coherency bus'},{to:'smem',arrow:'↔',why:'Shares physical SRAM pool (Volta+); split is software-configurable'},{to:'regs',arrow:'←',why:'Fills data into thread registers on cache hit/fill'}] },
+  texCache:  { name:'Texture Cache (TEX$)', color:'#e599f7', desc:'Separate read-only cache optimized for 2D spatial locality. Used for sampled textures. Pascal keeps this distinct from L1; Volta+ merged them.', chips:[{t:'read-only',c:'#e599f7'},{t:'~24KB',c:'#a0a0a0'}], connects:[{to:'l2',arrow:'→',why:'All misses fetch from L2'},{to:'regs',arrow:'←',why:'Filtered/sampled results go into registers'}] },
+  smem:      { name:'Shared Memory (SMEM)', color:'#51cf66', desc:'Software-managed on-chip SRAM. Threads in the same CTA (thread block) share this scratchpad. No coherency protocol — programmer controls all reads/writes explicitly. 32 memory banks.', chips:[{t:'~20 cycles',c:'#51cf66'},{t:'per-CTA',c:'#339af0'},{t:'no coherency',c:'#f06595'}], connects:[{to:'regs',arrow:'↔',why:'LDS/STS instructions move data between threads and SMEM'},{to:'l1',arrow:'↔',why:'Shares the same physical SRAM as L1 (Volta+), split is configurable'},{to:'async',arrow:'←',why:'cp.async loads data from global memory directly into SMEM (Ampere+)'}] },
+  tma:       { name:'Tensor Memory Accelerator (TMA)', color:'#22d3ee', desc:'Hopper hardware DMA engine. Handles bulk multi-dimensional tensor transfers between global memory and SMEM. Offloads address calculation from threads, freeing them for compute.', chips:[{t:'NEW: Hopper',c:'#22d3ee'},{t:'hardware DMA',c:'#845ef7'}], connects:[{to:'smem',arrow:'→',why:'Deposits tensor tiles directly into SMEM with tensor-aware addressing'},{to:'globalMem',arrow:'←',why:'Reads from global memory with N-D tensor coordinate logic'}] },
+  dsmem:     { name:'Distributed Shared Memory (DSMEM)', color:'#22d3ee', desc:'Hopper feature. SMs within the same Thread Block Cluster can directly read each other\'s shared memory — at roughly SMEM latency — without going through L2. Enables tighter SM cooperation.', chips:[{t:'NEW: Hopper',c:'#22d3ee'},{t:'cluster-scope',c:'#845ef7'},{t:'~20 cycles',c:'#51cf66'}], connects:[{to:'smem',arrow:'↔',why:'DSMEM is a window into another SM\'s SMEM within the cluster'},{to:'bus',arrow:'↔',why:'Cluster bus carries cross-SM DSMEM traffic'}] },
+  async:     { name:'Async Copy (cp.async)', color:'#22d3ee', desc:'Ampere+ instruction that moves data from global to shared memory without occupying registers or stalling the warp. Like a mini-DMA per thread, enabling compute-memory overlap.', chips:[{t:'Ampere+',c:'#ffa94d'},{t:'bypass regs',c:'#51cf66'}], connects:[{to:'smem',arrow:'→',why:'Destination: deposits data directly into SMEM'},{to:'globalMem',arrow:'←',why:'Source: reads from global memory without touching registers'}] },
+  bus:       { name:'Coherency Bus / Crossbar', color:'#f06595', desc:'The shared interconnect between all SMs and the L2. Carries read requests, data responses, and invalidation messages. Pascal uses a simple crossbar (L1 is read-only). Volta+ must broadcast INV messages when writes occur.', chips:[{t:'shared fabric',c:'#f06595'},{t:'broadcast INV',c:'#339af0'}], connects:[{to:'l1',arrow:'↔',why:'Delivers RdReq/DATA/INV messages to each SM\'s L1'},{to:'l2',arrow:'↔',why:'Connects all SMs to the shared L2 cache'}] },
+  l2:        { name:'L2 Cache (unified)', color:'#ffa94d', desc:'Shared by all SMs — the point of coherence. All cache lines must pass through L2. Ampere introduced 10× larger L2 (40 MB) with software-controlled persistence windows. Hopper: 50 MB.', chips:[{t:'~200 cycles',c:'#ffa94d'},{t:'unified',c:'#339af0'},{t:'coherence point',c:'#f06595'}], connects:[{to:'bus',arrow:'↔',why:'Serves read/write requests from all SMs via the coherency bus'},{to:'globalMem',arrow:'↔',why:'Evicts dirty lines down to DRAM; fetches missing lines up on miss'}] },
+  l2Persist: { name:'L2 Persistence Window', color:'#ffa94d', desc:'Ampere+ feature. You can pin a set of addresses to always stay in L2. Useful for weights or lookup tables accessed repeatedly across many kernels. Set via cudaAccessPolicyWindow.', chips:[{t:'Ampere+',c:'#ffa94d'},{t:'software ctrl',c:'#51cf66'}], connects:[{to:'l2',arrow:'↔',why:'A sub-region of the L2 pinned via CUDA API policy'},{to:'globalMem',arrow:'←',why:'Persistently caches frequently-read global data in L2'}] },
+  globalMem: { name:'Global Memory Interface', color:'#339af0', desc:'The on-chip logic (memory controllers + NoC) that bridges L2 to physical DRAM. Handles address translation, ECC, and row/bank scheduling. Multiple controllers run in parallel for bandwidth.', chips:[{t:'memory ctrl',c:'#339af0'},{t:'multi-channel',c:'#845ef7'}], connects:[{to:'l2',arrow:'↔',why:'Receives evictions from L2; returns fetched DRAM data to L2'},{to:'hbm',arrow:'↔',why:'Issues actual read/write commands to HBM stacks'}] },
+  hbm:       { name:'HBM / GDDR (DRAM)', color:'#845ef7', desc:'Off-chip high-bandwidth memory. HBM stacks dies vertically connected via micro-bumps. Hopper HBM3 = 3.35 TB/s. Slowest in the hierarchy but largest — all GPU memory ultimately lives here.', chips:[{t:'~400 cycles',c:'#ff6b6b'},{t:'off-chip',c:'#845ef7'},{t:'largest',c:'#6b7094'}], connects:[{to:'globalMem',arrow:'↔',why:'Memory controllers read/write HBM banks via wide parallel buses'}] },
+};
+
 var ARCHS = {
   pascal: {
-    name: 'Pascal', gen: 'SM 6.1', year: 2016, color: '#51cf66', example: 'GTX 1080 Ti',
-    smLabel: 'SM',
-    intro: "The last generation before unified L1. Pascal keeps things simple \u2014 L1 is read-only for global memory, so there's zero coherency overhead at L1. Writes go straight to L2. Great for understanding the baseline before things got complex.",
-    perf: { smCount: 28, l1Size: 24, smemSize: 96, l2Size: 4096, bw: 484, flops: 11.3, memType: 'GDDR5X', vram: 11, tdp: 250, l1Latency: 28, l2Latency: 200, dramLatency: 400 },
-    blocks: {
-      l1: { label: 'L1 (24KB)', desc: 'Read-only texture/data cache. NOT coherent with global stores.', state: true },
-      texCache: { label: 'TEX$', desc: 'Separate texture cache, read-only, ~24KB.', isNew: false },
-      sharedMem: { label: 'SMEM (48\u201396KB)', desc: 'Separate physical SRAM from L1. Configurable split.', state: false },
-      l2: { label: 'L2 Cache (3\u20134MB)', desc: 'Unified, coherent. Point of coherence for all SMs.', size: '3\u20134MB' },
-      coherencyBus: { label: 'Crossbar', desc: 'Simple crossbar \u2014 minimal coherency traffic since L1 is read-only.' },
-      globalMem: { label: 'Global Memory', desc: 'GDDR5/GDDR5X memory interface.' },
-      hbm: { label: 'GDDR5X', desc: 'High-speed GDDR, ~480 GB/s on 1080 Ti.' },
+    name:'Pascal', gen:'SM 6.1', year:2016, color:'#51cf66', example:'GTX 1080 Ti',
+    smLabel:'SM',
+    intro:"The last generation before unified L1. Pascal keeps things simple — L1 is read-only for global memory, so there's zero coherency overhead at L1. Writes go straight to L2. Great for understanding the baseline before things got complex.",
+    perf:{ smCount:28, l1Size:24, smemSize:96, l2Size:4096, bw:484, flops:11.3, memType:'GDDR5X', vram:11, tdp:250, l1Latency:28, l2Latency:200, dramLatency:400 },
+    blocks:{
+      l1:{ label:'L1 (24KB)', desc:'Read-only texture/data cache. NOT coherent with global stores.', state:true },
+      texCache:{ label:'TEX$', desc:'Separate texture cache, read-only, ~24KB.' },
+      sharedMem:{ label:'SMEM (48–96KB)', desc:'Separate physical SRAM from L1. Configurable split.', state:false },
+      l2:{ label:'L2 Cache (3–4MB)', desc:'Unified, coherent. Point of coherence for all SMs.', size:'3–4MB' },
+      coherencyBus:{ label:'Crossbar', desc:'Simple crossbar — minimal coherency traffic since L1 is read-only.' },
+      globalMem:{ label:'Global Memory', desc:'GDDR5/GDDR5X memory interface.' },
+      hbm:{ label:'GDDR5X', desc:'High-speed GDDR, ~480 GB/s on 1080 Ti.' },
     },
-    writePolicy: 'Write-through (L1 is read-only for globals)',
-    coherency: 'None at L1 \u2014 L2 is sole coherence point',
-    keyChange: null,
+    writePolicy:'Write-through (L1 is read-only for globals)',
+    coherency:'None at L1 — L2 is sole coherence point',
+    keyChange:null,
   },
   volta: {
-    name: 'Volta', gen: 'SM 7.0', year: 2017, color: '#339af0', example: 'V100',
-    smLabel: 'SM',
-    intro: "The big unification. Volta merged L1 and texture cache into a single 128KB SRAM that's also shared with SMEM. L1 now caches global writes too, which means coherency actually matters \u2014 enter write-evict and invalidation.",
-    perf: { smCount: 80, l1Size: 128, smemSize: 96, l2Size: 6144, bw: 900, flops: 15.7, memType: 'HBM2', vram: 32, tdp: 300, l1Latency: 28, l2Latency: 193, dramLatency: 370 },
-    blocks: {
-      l1: { label: 'L1 + TEX (unified, 128KB)', desc: 'L1 and texture cache merged. Shares SRAM with shared memory.', state: true, changed: true },
-      texCache: null,
-      sharedMem: { label: 'SMEM (up to 96KB)', desc: 'Shares the 128KB SRAM pool with L1. Configurable split.', changed: true },
-      l2: { label: 'L2 Cache (6MB)', desc: 'Larger L2. Write-evict policy from L1.', size: '6MB', changed: true },
-      coherencyBus: { label: 'Coherency Bus', desc: 'Now carries invalidation messages since L1 caches global data.' },
-      globalMem: { label: 'Global Memory', desc: 'HBM2 memory interface. 4 stacks.' },
-      hbm: { label: 'HBM2', desc: '900 GB/s bandwidth. Stacked DRAM.', changed: true },
+    name:'Volta', gen:'SM 7.0', year:2017, color:'#339af0', example:'V100',
+    smLabel:'SM',
+    intro:"The big unification. Volta merged L1 and texture cache into a single 128KB SRAM that's also shared with SMEM. L1 now caches global writes too, which means coherency actually matters — enter write-evict and invalidation.",
+    perf:{ smCount:80, l1Size:128, smemSize:96, l2Size:6144, bw:900, flops:15.7, memType:'HBM2', vram:32, tdp:300, l1Latency:28, l2Latency:193, dramLatency:370 },
+    blocks:{
+      l1:{ label:'L1 + TEX (unified, 128KB)', desc:'L1 and texture cache merged.', state:true, changed:true },
+      texCache:null,
+      sharedMem:{ label:'SMEM (up to 96KB)', desc:'Shares the 128KB SRAM pool with L1.', changed:true },
+      l2:{ label:'L2 Cache (6MB)', desc:'Larger L2. Write-evict policy from L1.', size:'6MB', changed:true },
+      coherencyBus:{ label:'Coherency Bus', desc:'Now carries invalidation messages.' },
+      globalMem:{ label:'Global Memory', desc:'HBM2 interface. 4 stacks.' },
+      hbm:{ label:'HBM2', desc:'900 GB/s. Stacked DRAM.', changed:true },
     },
-    writePolicy: 'Write-evict (dirty L1 line dropped, write goes to L2)',
-    coherency: 'L1 invalidation via bus, L2 is coherence point',
-    keyChange: 'L1 + TEX unified, shared SRAM pool with SMEM, HBM2',
+    writePolicy:'Write-evict (dirty L1 line dropped, write goes to L2)',
+    coherency:'L1 invalidation via bus, L2 is coherence point',
+    keyChange:'L1 + TEX unified, shared SRAM pool with SMEM, HBM2',
   },
   ampere: {
-    name: 'Ampere', gen: 'SM 8.0', year: 2020, color: '#ffa94d', example: 'A100',
-    smLabel: 'SM',
-    intro: "Ampere's headline: 10x larger L2 (40MB!) with software-controlled persistence, and async copy (cp.async) that moves data from global to shared memory without burning registers.",
-    perf: { smCount: 108, l1Size: 192, smemSize: 164, l2Size: 40960, bw: 2039, flops: 19.5, memType: 'HBM2e', vram: 80, tdp: 400, l1Latency: 33, l2Latency: 200, dramLatency: 400 },
-    blocks: {
-      l1: { label: 'L1 + TEX (192KB)', desc: 'Larger unified L1/TEX cache. Same write-evict policy.', state: true, changed: true },
-      texCache: null,
-      sharedMem: { label: 'SMEM (up to 164KB)', desc: 'Larger SMEM. New: async copy (cp.async) bypasses register file.', changed: true },
-      asyncCopy: { label: 'ASYNC COPY', desc: 'cp.async: DMA-like transfer from global to shared memory, bypassing registers.', isNew: true },
-      l2: { label: 'L2 Cache (40MB)', desc: 'Massive L2. New: persistence controls via cudaAccessPolicyWindow.', size: '40MB', changed: true },
-      l2Persist: { label: 'L2 PERSIST', desc: 'Software-controlled L2 data persistence. Pin frequently accessed data.', isNew: true },
-      coherencyBus: { label: 'Coherency Bus', desc: 'Same write-evict L1 coherency as Volta.' },
-      globalMem: { label: 'Global Memory', desc: 'HBM2e interface. 5 stacks.' },
-      hbm: { label: 'HBM2e', desc: '2 TB/s bandwidth. 80GB capacity.', changed: true },
+    name:'Ampere', gen:'SM 8.0', year:2020, color:'#ffa94d', example:'A100',
+    smLabel:'SM',
+    intro:"Ampere's headline: 10x larger L2 (40MB!) with software-controlled persistence, and async copy (cp.async) that moves data from global to shared memory without burning registers.",
+    perf:{ smCount:108, l1Size:192, smemSize:164, l2Size:40960, bw:2039, flops:19.5, memType:'HBM2e', vram:80, tdp:400, l1Latency:33, l2Latency:200, dramLatency:400 },
+    blocks:{
+      l1:{ label:'L1 + TEX (192KB)', desc:'Larger unified L1/TEX cache.', state:true, changed:true },
+      texCache:null,
+      sharedMem:{ label:'SMEM (up to 164KB)', desc:'Larger SMEM. cp.async bypasses register file.', changed:true },
+      asyncCopy:{ label:'ASYNC COPY', desc:'cp.async: DMA-like transfer from global to shared, bypassing registers.', isNew:true },
+      l2:{ label:'L2 Cache (40MB)', desc:'Massive L2. Persistence controls via cudaAccessPolicyWindow.', size:'40MB', changed:true },
+      l2Persist:{ label:'L2 PERSIST', desc:'Software-controlled L2 data persistence.', isNew:true },
+      coherencyBus:{ label:'Coherency Bus', desc:'Same write-evict L1 coherency as Volta.' },
+      globalMem:{ label:'Global Memory', desc:'HBM2e interface. 5 stacks.' },
+      hbm:{ label:'HBM2e', desc:'2 TB/s. 80GB.', changed:true },
     },
-    writePolicy: 'Write-evict (same as Volta)',
-    coherency: 'L1 write-evict + invalidation, L2 persistence controls',
-    keyChange: 'Async copy (cp.async), 10\u00d7 larger L2 with persistence',
+    writePolicy:'Write-evict (same as Volta)',
+    coherency:'L1 write-evict + invalidation, L2 persistence controls',
+    keyChange:'Async copy (cp.async), 10× larger L2 with persistence',
   },
   hopper: {
-    name: 'Hopper', gen: 'SM 9.0', year: 2022, color: '#845ef7', example: 'H100',
-    smLabel: 'SM',
-    intro: "Hopper introduces TMA (Tensor Memory Accelerator) \u2014 a hardware DMA engine for complex tensor addressing \u2014 and DSMEM, where SMs in a cluster can directly read each other's shared memory.",
-    perf: { smCount: 132, l1Size: 256, smemSize: 228, l2Size: 51200, bw: 3352, flops: 66.9, memType: 'HBM3', vram: 80, tdp: 700, l1Latency: 33, l2Latency: 200, dramLatency: 380 },
-    blocks: {
-      l1: { label: 'L1 + TEX (256KB)', desc: 'Even larger unified cache with TMA support.', state: true, changed: true },
-      texCache: null,
-      sharedMem: { label: 'SMEM (up to 228KB)', desc: 'Largest SMEM. New: DSMEM for cross-SM shared memory access.', changed: true },
-      dsmem: { label: 'DSMEM', desc: 'Distributed Shared Memory. SMs within a cluster can directly access each other\'s shared memory.', isNew: true },
-      tma: { label: 'TMA', desc: 'Tensor Memory Accelerator. Hardware DMA for bulk data transfers with tensor-aware addressing.', isNew: true },
-      asyncCopy: { label: 'ASYNC COPY', desc: 'Enhanced from Ampere with TMA integration.' },
-      l2: { label: 'L2 Cache (50MB)', desc: 'Larger still with improved persistence controls.', size: '50MB', changed: true },
-      l2Persist: { label: 'L2 PERSIST', desc: 'Refined from Ampere with better granularity.' },
-      coherencyBus: { label: 'Cluster Bus', desc: 'New cluster-level interconnect for DSMEM.', changed: true },
-      globalMem: { label: 'Global Memory', desc: 'HBM3 interface.' },
-      hbm: { label: 'HBM3', desc: '3.35 TB/s bandwidth. 80GB.', changed: true },
+    name:'Hopper', gen:'SM 9.0', year:2022, color:'#845ef7', example:'H100',
+    smLabel:'SM',
+    intro:"Hopper introduces TMA (Tensor Memory Accelerator) — a hardware DMA engine for complex tensor addressing — and DSMEM, where SMs in a cluster can directly read each other's shared memory.",
+    perf:{ smCount:132, l1Size:256, smemSize:228, l2Size:51200, bw:3352, flops:66.9, memType:'HBM3', vram:80, tdp:700, l1Latency:33, l2Latency:200, dramLatency:380 },
+    blocks:{
+      l1:{ label:'L1 + TEX (256KB)', desc:'Even larger unified cache with TMA support.', state:true, changed:true },
+      texCache:null,
+      sharedMem:{ label:'SMEM (up to 228KB)', desc:'Largest SMEM. DSMEM for cross-SM shared memory access.', changed:true },
+      dsmem:{ label:'DSMEM', desc:'Distributed Shared Memory. SMs within a cluster can directly access each other\'s shared memory.', isNew:true },
+      tma:{ label:'TMA', desc:'Tensor Memory Accelerator. Hardware DMA for bulk data transfers with tensor-aware addressing.', isNew:true },
+      asyncCopy:{ label:'ASYNC COPY', desc:'Enhanced from Ampere with TMA integration.' },
+      l2:{ label:'L2 Cache (50MB)', desc:'Larger still with improved persistence controls.', size:'50MB', changed:true },
+      l2Persist:{ label:'L2 PERSIST', desc:'Refined from Ampere with better granularity.' },
+      coherencyBus:{ label:'Cluster Bus', desc:'New cluster-level interconnect for DSMEM.', changed:true },
+      globalMem:{ label:'Global Memory', desc:'HBM3 interface.' },
+      hbm:{ label:'HBM3', desc:'3.35 TB/s. 80GB.', changed:true },
     },
-    writePolicy: 'Write-evict + TMA bulk transfers',
-    coherency: 'Cluster-level DSMEM coherency + L2 global coherence',
-    keyChange: 'TMA engine, Distributed Shared Memory (DSMEM), HBM3',
+    writePolicy:'Write-evict + TMA bulk transfers',
+    coherency:'Cluster-level DSMEM coherency + L2 global coherence',
+    keyChange:'TMA engine, Distributed Shared Memory (DSMEM), HBM3',
   }
 };
 
@@ -433,15 +482,233 @@ var autoMode = true, autoTimer = 0;
 var particles = [], flashEffects = [], stepTimers = [], bubbles = [];
 var layout = {};
 
+// ─── Hover / selection state ───
+var hoveredBlock = null;   // { type, rect:{x,y,w,h}, smIdx }
+var selectedBlock = null;  // same shape
+var connLines = [];        // animated connection lines when block selected
+var mouseX = 0, mouseY = 0;
+
+// ─── All "hit" rectangles (rebuilt each buildLayout) ───
+var hitRects = []; // [{type, x, y, w, h, smIdx}]
+
+function buildHitRects() {
+  hitRects = [];
+  // SM sub-blocks
+  for (var si = 0; si < layout.sms.length; si++) {
+    var sm = layout.sms[si];
+    for (var bi = 0; bi < sm.sub.length; bi++) {
+      var b = sm.sub[bi];
+      hitRects.push({ type: b.type, x: b.x, y: b.y, w: b.w, h: b.h, smIdx: si, label: b.label });
+    }
+  }
+  // L2
+  if (layout.l2) hitRects.push({ type: 'l2', x: layout.l2.x, y: layout.l2.y, w: layout.l2.w, h: layout.l2.h });
+  // L2 persist
+  if (layout.l2Persist) hitRects.push({ type: 'l2Persist', x: layout.l2Persist.x, y: layout.l2Persist.y, w: layout.l2Persist.w, h: layout.l2Persist.h });
+  // Bus (thin strip)
+  if (layout.bus) hitRects.push({ type: 'bus', x: layout.bus.x1, y: layout.bus.y - 12, w: layout.bus.x2 - layout.bus.x1, h: 24 });
+  // Global mem
+  if (layout.globalMem) hitRects.push({ type: 'globalMem', x: layout.globalMem.x, y: layout.globalMem.y, w: layout.globalMem.w, h: layout.globalMem.h });
+  // HBM
+  if (layout.hbm) hitRects.push({ type: 'hbm', x: layout.hbm.x, y: layout.hbm.y, w: layout.hbm.w, h: layout.hbm.h });
+}
+
+function hitTest(mx, my) {
+  for (var i = hitRects.length - 1; i >= 0; i--) {
+    var r = hitRects[i];
+    if (mx >= r.x && mx <= r.x + r.w && my >= r.y && my <= r.y + r.h) return r;
+  }
+  return null;
+}
+
+function getBlockCenter(type, smIdx) {
+  if (type === 'l2') return { x: layout.l2.x + layout.l2.w/2, y: layout.l2.y + layout.l2.h/2 };
+  if (type === 'l2Persist') return { x: layout.l2Persist.x + layout.l2Persist.w/2, y: layout.l2Persist.y + layout.l2Persist.h/2 };
+  if (type === 'bus') return { x: (layout.bus.x1 + layout.bus.x2)/2, y: layout.bus.y };
+  if (type === 'globalMem') return { x: layout.globalMem.x + layout.globalMem.w/2, y: layout.globalMem.y + layout.globalMem.h/2 };
+  if (type === 'hbm') return { x: layout.hbm.x + layout.hbm.w/2, y: layout.hbm.y + layout.hbm.h/2 };
+  // SM sub-block
+  var targetSmIdx = (smIdx !== undefined && smIdx !== null) ? smIdx : 0;
+  for (var si = 0; si < layout.sms.length; si++) {
+    var sm = layout.sms[si];
+    for (var bi = 0; bi < sm.sub.length; bi++) {
+      var b = sm.sub[bi];
+      if (b.type === type && si === targetSmIdx) return { x: b.x + b.w/2, y: b.y + b.h/2 };
+    }
+  }
+  // Any SM with that type
+  for (var si2 = 0; si2 < layout.sms.length; si2++) {
+    for (var bi2 = 0; bi2 < layout.sms[si2].sub.length; bi2++) {
+      if (layout.sms[si2].sub[bi2].type === type) {
+        var bb = layout.sms[si2].sub[bi2];
+        return { x: bb.x + bb.w/2, y: bb.y + bb.h/2 };
+      }
+    }
+  }
+  return null;
+}
+
+function getBlockRect(type, smIdx) {
+  for (var i = 0; i < hitRects.length; i++) {
+    var r = hitRects[i];
+    if (r.type === type && (smIdx === undefined || r.smIdx === smIdx)) return r;
+  }
+  return null;
+}
+
+// ─── Connection line animation ───
+var connLineAnim = 0;
+function buildConnLines(blockType, smIdx) {
+  var info = BLOCK_INFO[blockType];
+  if (!info || !info.connects) return;
+  connLines = [];
+  var from = getBlockCenter(blockType, smIdx);
+  if (!from) return;
+  for (var i = 0; i < info.connects.length; i++) {
+    var conn = info.connects[i];
+    var toCenter = getBlockCenter(conn.to, smIdx);
+    // If "to" type exists in any SM, connect to all matching ones
+    var toTargets = [];
+    if (conn.to === 'l2' || conn.to === 'bus' || conn.to === 'globalMem' || conn.to === 'hbm' || conn.to === 'l2Persist') {
+      if (toCenter) toTargets.push({ pos: toCenter, why: conn.why, arrow: conn.arrow });
+    } else {
+      // SM-local blocks: show all SMs
+      for (var si = 0; si < layout.sms.length; si++) {
+        var tc = getBlockCenter(conn.to, si);
+        if (tc) toTargets.push({ pos: tc, why: conn.why, arrow: conn.arrow, smIdx: si });
+      }
+    }
+    for (var j = 0; j < toTargets.length; j++) {
+      connLines.push({ from: from, to: toTargets[j].pos, why: toTargets[j].why, arrow: toTargets[j].arrow, color: info.color, t: 0 });
+    }
+  }
+  connLineAnim = 0;
+}
+
+// Canvas mouse handlers
+canvas.addEventListener('mousemove', function(e) {
+  var r = canvas.getBoundingClientRect();
+  mouseX = e.clientX - r.left;
+  mouseY = e.clientY - r.top;
+  var hit = hitTest(mouseX, mouseY);
+  hoveredBlock = hit;
+  canvas.style.cursor = hit ? 'pointer' : 'default';
+  updateTooltip(hit, e.clientX, e.clientY);
+});
+
+canvas.addEventListener('mouseleave', function() {
+  hoveredBlock = null;
+  hideTooltip();
+});
+
+canvas.addEventListener('click', function(e) {
+  var r = canvas.getBoundingClientRect();
+  var mx = e.clientX - r.left;
+  var my = e.clientY - r.top;
+  var hit = hitTest(mx, my);
+  if (hit) {
+    if (selectedBlock && selectedBlock.type === hit.type && selectedBlock.smIdx === hit.smIdx) {
+      clearSelection();
+    } else {
+      selectBlock(hit);
+    }
+  } else {
+    clearSelection();
+  }
+});
+
+function selectBlock(hit) {
+  selectedBlock = hit;
+  buildConnLines(hit.type, hit.smIdx);
+  updateSelPanel(hit);
+}
+
+function clearSelection() {
+  selectedBlock = null;
+  connLines = [];
+  document.getElementById('sel-panel').classList.remove('visible');
+}
+
+function updateSelPanel(hit) {
+  var info = BLOCK_INFO[hit.type];
+  if (!info) return;
+  var panel = document.getElementById('sel-panel');
+  panel.classList.add('visible');
+  document.getElementById('sel-name').innerHTML = '<span style="color:' + info.color + '">' + info.name + '</span>';
+  document.getElementById('sel-desc').textContent = info.desc;
+  var connList = document.getElementById('conn-list');
+  connList.innerHTML = '';
+  if (!info.connects || info.connects.length === 0) {
+    connList.innerHTML = '<div style="font-size:.75rem;color:var(--dim);padding:6px 0">No direct connections defined.</div>';
+    return;
+  }
+  for (var i = 0; i < info.connects.length; i++) {
+    var c = info.connects[i];
+    var targetInfo = BLOCK_INFO[c.to] || {};
+    var el = document.createElement('div');
+    el.className = 'conn-item';
+    el.innerHTML = '<span class="ci-arrow" style="color:' + (targetInfo.color||'#6b7094') + '">' + c.arrow + '</span><div class="ci-body"><span class="ci-target" style="color:' + (targetInfo.color||'#aaa') + '">' + (targetInfo.name || c.to) + '</span><span class="ci-why">' + c.why + '</span></div>';
+    // Clicking a connection item highlights that target
+    (function(connTo) {
+      el.addEventListener('click', function(e) {
+        e.stopPropagation();
+        var targetHit = getBlockRect(connTo, hit.smIdx) || getBlockRect(connTo);
+        if (targetHit) selectBlock(targetHit);
+      });
+    })(c.to);
+    connList.appendChild(el);
+  }
+}
+
+var tooltipEl = document.getElementById('block-tooltip');
+var ttName = document.getElementById('tt-name');
+var ttDot = document.getElementById('tt-dot');
+var ttDesc = document.getElementById('tt-desc');
+var ttMeta = document.getElementById('tt-meta');
+var ttHint = document.getElementById('tt-hint');
+
+function updateTooltip(hit, clientX, clientY) {
+  if (!hit) { hideTooltip(); return; }
+  var info = BLOCK_INFO[hit.type];
+  if (!info) { hideTooltip(); return; }
+  ttName.textContent = info.name;
+  ttDot.style.background = info.color;
+  tooltipEl.style.borderColor = info.color + '50';
+  ttDesc.textContent = info.desc;
+  ttMeta.innerHTML = '';
+  if (info.chips) {
+    for (var i = 0; i < info.chips.length; i++) {
+      var chip = info.chips[i];
+      var span = document.createElement('span');
+      span.className = 'tt-chip';
+      span.style.background = chip.c + '20';
+      span.style.color = chip.c;
+      span.textContent = chip.t;
+      ttMeta.appendChild(span);
+    }
+  }
+  ttHint.style.display = (selectedBlock && selectedBlock.type === hit.type) ? 'none' : 'flex';
+
+  // Position tooltip
+  var vizRect = canvas.parentElement.getBoundingClientRect();
+  var tx = clientX - vizRect.left + 12;
+  var ty = clientY - vizRect.top - 10;
+  var tw = 240, th = 120;
+  if (tx + tw > vizRect.width - 10) tx = clientX - vizRect.left - tw - 12;
+  if (ty + th > vizRect.height - 10) ty = clientY - vizRect.top - th - 10;
+  tooltipEl.style.left = tx + 'px';
+  tooltipEl.style.top = ty + 'px';
+  tooltipEl.classList.add('visible');
+}
+
+function hideTooltip() {
+  tooltipEl.classList.remove('visible');
+}
+
 // Floating bubble system
 function bubble(x, y, text, color, opts) {
   var o = opts || {};
-  bubbles.push({
-    x: x, y: y - 8, text: text, color: color,
-    bg: (o.bg || color.slice(0,7)) + '18',
-    age: 0, life: o.life || 1.8, rise: o.rise || 18,
-    wobble: Math.random() * 6
-  });
+  bubbles.push({ x:x, y:y-8, text:text, color:color, bg:(o.bg||color.slice(0,7))+'18', age:0, life:o.life||1.8, rise:o.rise||18, wobble:Math.random()*6 });
 }
 
 function updateDiffBanner() {
@@ -453,7 +720,7 @@ function updateDiffBanner() {
     var v = curr.blocks[k]; if (!v) continue;
     var prevBlock = prev.blocks[k];
     if (!prevBlock && v) parts.push('<span class="new-tag">+ ' + v.label + '</span>');
-    else if (prevBlock && v.changed) parts.push('<span class="changed-tag">\u2191 ' + v.label + '</span>');
+    else if (prevBlock && v.changed) parts.push('<span class="changed-tag">↑ ' + v.label + '</span>');
   }
   for (var k2 in prev.blocks) {
     var v2 = prev.blocks[k2]; if (!v2) continue;
@@ -461,7 +728,7 @@ function updateDiffBanner() {
   }
   if (curr.keyChange) parts.push('<br><span style="color:var(--dim)">Key: ' + curr.keyChange + '</span>');
   if (parts.length) {
-    banner.innerHTML = '<strong style="color:' + curr.color + '">' + prev.name + ' \u2192 ' + curr.name + ':</strong> ' + parts.join(' \u00b7 ');
+    banner.innerHTML = '<strong style="color:' + curr.color + '">' + prev.name + ' → ' + curr.name + ':</strong> ' + parts.join(' · ');
     banner.classList.add('visible');
   } else { banner.classList.remove('visible'); }
 }
@@ -469,29 +736,28 @@ function updateDiffBanner() {
 function updateKeyCard() {
   var arch = ARCHS[currentArch];
   var prev = prevArch ? ARCHS[prevArch] : null;
-  var html = '<h3>Diagram Key \u2014 ' + arch.name + ' <span style="color:' + arch.color + ';font-weight:600">' + arch.example + '</span></h3>';
+  var html = '<h3>Diagram Key — ' + arch.name + ' <span style="color:' + arch.color + ';font-weight:600">' + arch.example + '</span></h3>';
   var items = [
-    { key: 'l1', color: 'var(--l1)', meta: 'per-SM' },
-    { key: 'texCache', color: '#e599f7', meta: 'per-SM' },
-    { key: 'sharedMem', color: 'var(--smem)', meta: 'per-SM' },
-    { key: 'dsmem', color: 'var(--new-block)', meta: 'cluster' },
-    { key: 'tma', color: 'var(--new-block)', meta: 'per-SM' },
-    { key: 'asyncCopy', color: 'var(--new-block)', meta: 'engine' },
-    { key: 'coherencyBus', color: 'var(--coherency)', meta: 'fabric' },
-    { key: 'l2', color: 'var(--l2)', meta: 'unified' },
-    { key: 'l2Persist', color: 'var(--l2)', meta: 'L2 ctrl' },
-    { key: 'globalMem', color: 'var(--global)', meta: 'interface' },
-    { key: 'hbm', color: 'var(--dram)', meta: 'off-chip' },
+    { key:'l1', color:'var(--l1)', meta:'per-SM' },
+    { key:'texCache', color:'#e599f7', meta:'per-SM' },
+    { key:'sharedMem', color:'var(--smem)', meta:'per-SM' },
+    { key:'dsmem', color:'var(--new-block)', meta:'cluster' },
+    { key:'tma', color:'var(--new-block)', meta:'per-SM' },
+    { key:'asyncCopy', color:'var(--new-block)', meta:'engine' },
+    { key:'coherencyBus', color:'var(--coherency)', meta:'fabric' },
+    { key:'l2', color:'var(--l2)', meta:'unified' },
+    { key:'l2Persist', color:'var(--l2)', meta:'L2 ctrl' },
+    { key:'globalMem', color:'var(--global)', meta:'interface' },
+    { key:'hbm', color:'var(--dram)', meta:'off-chip' },
   ];
   for (var i = 0; i < items.length; i++) {
     var item = items[i];
     var block = arch.blocks[item.key];
     if (!block) continue;
-    var prevBlock = prev ? prev.blocks[item.key] : null;
     var badge = '';
     if (block.isNew) badge = '<span class="acc-badge-new">NEW</span>';
     else if (block.changed && prev) badge = '<span class="acc-badge-changed">CHANGED</span>';
-    html += '<div class="acc-item" onclick="this.classList.toggle(\'open\')"><div class="acc-head"><div class="acc-dot" style="background:' + item.color + '"></div><span class="acc-title">' + block.label + badge + '</span><span class="acc-meta">' + item.meta + '</span><span class="acc-chev">\u25b8</span></div><div class="acc-body"><p>' + block.desc + '</p></div></div>';
+    html += '<div class="acc-item" onclick="this.classList.toggle(\'open\')"><div class="acc-head"><div class="acc-dot" style="background:' + item.color + '"></div><span class="acc-title">' + block.label + badge + '</span><span class="acc-meta">' + item.meta + '</span><span class="acc-chev">▸</span></div><div class="acc-body"><p>' + block.desc + '</p></div></div>';
   }
   html += '<div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--border);font-size:.72rem;color:var(--dim)"><strong style="color:var(--text)">Write policy:</strong> ' + arch.writePolicy + '<br><strong style="color:var(--text)">Coherency:</strong> ' + arch.coherency + '</div>';
   document.getElementById('key-card').innerHTML = html;
@@ -503,6 +769,7 @@ function switchArch(arch) {
   currentArch = arch;
   var tabs = document.querySelectorAll('.arch-tab');
   for (var i = 0; i < tabs.length; i++) { tabs[i].classList.toggle('active', tabs[i].dataset.arch === arch); }
+  clearSelection();
   resetAll(true);
   buildLayout();
   updateDiffBanner();
@@ -514,21 +781,21 @@ function switchArch(arch) {
 
 function updateArchIntro() {
   var arch = ARCHS[currentArch];
-  document.getElementById('arch-intro').innerHTML = '<div class="arch-intro-badge" style="background:' + arch.color + '20;color:' + arch.color + '">' + arch.name + ' \u00b7 ' + arch.example + '</div><div class="arch-intro-text">' + arch.intro + '</div>';
+  document.getElementById('arch-intro').innerHTML = '<div class="arch-intro-badge" style="background:' + arch.color + '20;color:' + arch.color + '">' + arch.name + ' · ' + arch.example + '</div><div class="arch-intro-text">' + arch.intro + '</div>';
 }
 
 function updatePerfChart() {
   var metrics = [
-    { key: 'l1Size', label: 'L1/SM', unit: 'KB', maxVal: 256 },
-    { key: 'smemSize', label: 'SMEM', unit: 'KB', maxVal: 228 },
-    { key: 'l2Size', label: 'L2', unit: 'MB', divBy: 1024, maxVal: 50 },
-    { key: 'bw', label: 'BW', unit: 'GB/s', maxVal: 3352 },
-    { key: 'smCount', label: 'SMs', unit: '', maxVal: 132 },
-    { key: 'flops', label: 'TFLOPS', unit: '', maxVal: 67 },
-    { key: 'vram', label: 'VRAM', unit: 'GB', maxVal: 80 }
+    { key:'l1Size', label:'L1/SM', unit:'KB', maxVal:256 },
+    { key:'smemSize', label:'SMEM', unit:'KB', maxVal:228 },
+    { key:'l2Size', label:'L2', unit:'MB', divBy:1024, maxVal:50 },
+    { key:'bw', label:'BW', unit:'GB/s', maxVal:3352 },
+    { key:'smCount', label:'SMs', unit:'', maxVal:132 },
+    { key:'flops', label:'TFLOPS', unit:'', maxVal:67 },
+    { key:'vram', label:'VRAM', unit:'GB', maxVal:80 }
   ];
-  var archKeys = ['pascal', 'volta', 'ampere', 'hopper'];
-  var colors = { pascal: '#51cf66', volta: '#339af0', ampere: '#ffa94d', hopper: '#845ef7' };
+  var archKeys = ['pascal','volta','ampere','hopper'];
+  var colors = { pascal:'#51cf66', volta:'#339af0', ampere:'#ffa94d', hopper:'#845ef7' };
   var html = '';
   for (var m = 0; m < metrics.length; m++) {
     var met = metrics[m];
@@ -536,11 +803,11 @@ function updatePerfChart() {
     for (var a = 0; a < archKeys.length; a++) {
       var ak = archKeys[a];
       var raw = ARCHS[ak].perf[met.key];
-      var display = met.divBy ? Math.round(raw / met.divBy) : (raw % 1 === 0 ? raw : raw.toFixed(1));
-      var effectiveMax = met.divBy ? met.maxVal * met.divBy : met.maxVal;
-      var pct = Math.max(8, (raw / effectiveMax) * 100);
+      var display = met.divBy ? Math.round(raw/met.divBy) : (raw%1===0 ? raw : raw.toFixed(1));
+      var effectiveMax = met.divBy ? met.maxVal*met.divBy : met.maxVal;
+      var pct = Math.max(8, (raw/effectiveMax)*100);
       var isActive = ak === currentArch;
-      html += '<div class="perf-bar' + (isActive ? ' active' : '') + '" style="height:' + pct + '%;background:' + colors[ak] + (isActive ? '' : '50') + '"><span class="perf-bar-val" style="color:' + colors[ak] + (isActive ? '' : '70') + '">' + display + (met.unit || '') + '</span></div>';
+      html += '<div class="perf-bar' + (isActive ? ' active' : '') + '" style="height:' + pct + '%;background:' + colors[ak] + (isActive ? '' : '50') + '"><span class="perf-bar-val" style="color:' + colors[ak] + (isActive ? '' : '70') + '">' + display + (met.unit||'') + '</span></div>';
     }
     html += '</div></div>';
   }
@@ -548,100 +815,177 @@ function updatePerfChart() {
 }
 
 function buildLayout() {
-  var cx = W / 2;
+  var cx = W/2;
   var mob = W < 500;
   var arch = ARCHS[currentArch];
   var smCount = mob ? 2 : (currentArch === 'hopper' ? 4 : (currentArch === 'pascal' ? 3 : 4));
   var margin = mob ? 12 : 30;
-  var usable = W - margin * 2;
+  var usable = W - margin*2;
   var smGap = mob ? 12 : 20;
-  var smW = Math.min(110, (usable - (smCount - 1) * smGap) / smCount);
+  var smW = Math.min(110, (usable - (smCount-1)*smGap)/smCount);
   var smSubBlocks = 2;
   if (arch.blocks.texCache) smSubBlocks++;
   if (arch.blocks.tma) smSubBlocks++;
   if (arch.blocks.dsmem) smSubBlocks++;
   if (arch.blocks.asyncCopy && arch.blocks.asyncCopy.isNew) smSubBlocks++;
-  var smH = mob ? (80 + smSubBlocks * 18) : (90 + smSubBlocks * 22);
-  var totalSmW = smCount * smW + (smCount - 1) * smGap;
-  var smStartX = cx - totalSmW / 2;
+  var smH = mob ? (80+smSubBlocks*18) : (90+smSubBlocks*22);
+  var totalSmW = smCount*smW + (smCount-1)*smGap;
+  var smStartX = cx - totalSmW/2;
   var smY = mob ? 16 : 30;
 
   layout.sms = [];
   for (var i = 0; i < smCount; i++) {
-    var x = smStartX + i * (smW + smGap);
+    var x = smStartX + i*(smW+smGap);
     var subY = smY + (mob ? 32 : 38);
     var subH = mob ? 18 : 22;
     var subPad = mob ? 4 : 5;
     var sub = [];
-    sub.push({ type: 'regs', x: x + 6, y: subY, w: smW - 12, h: 6 });
+    sub.push({ type:'regs', x:x+6, y:subY, w:smW-12, h:6 });
     subY += 10;
     if (arch.blocks.texCache) {
-      sub.push({ type: 'texCache', x: x + 6, y: subY, w: smW - 12, h: subH, label: 'TEX$' });
-      subY += subH + subPad;
+      sub.push({ type:'texCache', x:x+6, y:subY, w:smW-12, h:subH, label:'TEX$' });
+      subY += subH+subPad;
     }
-    sub.push({ type: 'l1', x: x + 6, y: subY, w: smW - 12, h: subH, label: arch.blocks.l1.label.split('(')[0].trim(), state: 'invalid' });
-    var l1Ref = sub[sub.length - 1];
-    subY += subH + subPad;
-    sub.push({ type: 'smem', x: x + 6, y: subY, w: smW - 12, h: subH, label: 'SMEM' });
-    subY += subH + subPad;
+    sub.push({ type:'l1', x:x+6, y:subY, w:smW-12, h:subH, label:arch.blocks.l1.label.split('(')[0].trim(), state:'invalid' });
+    var l1Ref = sub[sub.length-1];
+    subY += subH+subPad;
+    sub.push({ type:'smem', x:x+6, y:subY, w:smW-12, h:subH, label:'SMEM' });
+    subY += subH+subPad;
     if (arch.blocks.tma) {
-      sub.push({ type: 'tma', x: x + 6, y: subY, w: smW - 12, h: subH, label: 'TMA' });
-      subY += subH + subPad;
+      sub.push({ type:'tma', x:x+6, y:subY, w:smW-12, h:subH, label:'TMA' });
+      subY += subH+subPad;
     }
     if (arch.blocks.dsmem) {
-      sub.push({ type: 'dsmem', x: x + 6, y: subY, w: smW - 12, h: subH, label: 'DSMEM' });
-      subY += subH + subPad;
+      sub.push({ type:'dsmem', x:x+6, y:subY, w:smW-12, h:subH, label:'DSMEM' });
+      subY += subH+subPad;
     }
     if (arch.blocks.asyncCopy && (currentArch === 'ampere' || currentArch === 'hopper')) {
-      sub.push({ type: 'async', x: x + 6, y: subY, w: smW - 12, h: 14, label: 'cp.async' });
-      subY += 14 + subPad;
+      sub.push({ type:'async', x:x+6, y:subY, w:smW-12, h:14, label:'cp.async' });
+      subY += 14+subPad;
     }
-    var actualH = Math.max(smH, subY - smY + 8);
-    layout.sms.push({ x:x, y:smY, w:smW, h:actualH, label: arch.smLabel + ' ' + i, sub:sub, l1:l1Ref });
+    var actualH = Math.max(smH, subY-smY+8);
+    layout.sms.push({ x:x, y:smY, w:smW, h:actualH, label:arch.smLabel+' '+i, sub:sub, l1:l1Ref });
   }
 
   var maxSmBottom = 0;
-  for (var j = 0; j < layout.sms.length; j++) { maxSmBottom = Math.max(maxSmBottom, layout.sms[j].y + layout.sms[j].h); }
+  for (var j = 0; j < layout.sms.length; j++) { maxSmBottom = Math.max(maxSmBottom, layout.sms[j].y+layout.sms[j].h); }
 
   if (currentArch === 'hopper' && smCount > 1) {
-    layout.cluster = { x1: smStartX - 6, x2: smStartX + totalSmW + 6, y1: smY - 8, y2: maxSmBottom + 8 };
+    layout.cluster = { x1:smStartX-6, x2:smStartX+totalSmW+6, y1:smY-8, y2:maxSmBottom+8 };
   } else { layout.cluster = null; }
 
   var busY = maxSmBottom + (mob ? 30 : 40);
-  layout.bus = { y: busY, x1: smStartX - 15, x2: smStartX + totalSmW + 15,
-    label: currentArch === 'hopper' ? 'CLUSTER BUS + COHERENCY' : (currentArch === 'pascal' ? 'CROSSBAR' : 'COHERENCY BUS') };
+  layout.bus = { y:busY, x1:smStartX-15, x2:smStartX+totalSmW+15, label:currentArch==='hopper' ? 'CLUSTER BUS + COHERENCY' : (currentArch==='pascal' ? 'CROSSBAR' : 'COHERENCY BUS') };
 
-  var l2W = Math.min(totalSmW * 0.85, usable * 0.78);
+  var l2W = Math.min(totalSmW*0.85, usable*0.78);
   var l2Y = busY + (mob ? 35 : 45);
   var l2H = mob ? 42 : 52;
-  layout.l2 = { x: cx - l2W/2, y: l2Y, w: l2W, h: l2H };
+  layout.l2 = { x:cx-l2W/2, y:l2Y, w:l2W, h:l2H };
+  layout.l2Persist = (currentArch==='ampere'||currentArch==='hopper') ? { x:cx-l2W/2+6, y:l2Y+l2H-12, w:l2W-12, h:8 } : null;
 
-  layout.l2Persist = (currentArch === 'ampere' || currentArch === 'hopper')
-    ? { x: cx - l2W/2 + 6, y: l2Y + l2H - 12, w: l2W - 12, h: 8 } : null;
+  var cbY = l2Y+l2H+(mob ? 22 : 30);
+  layout.crossbar = { y:cbY, x1:cx-l2W/2-8, x2:cx+l2W/2+8 };
 
-  var cbY = l2Y + l2H + (mob ? 22 : 30);
-  layout.crossbar = { y: cbY, x1: cx - l2W/2 - 8, x2: cx + l2W/2 + 8 };
-
-  var gmW = Math.min(totalSmW * 0.85, usable * 0.82);
+  var gmW = Math.min(totalSmW*0.85, usable*0.82);
   var gmY = cbY + (mob ? 28 : 38);
   var gmH = mob ? 42 : 52;
-  layout.globalMem = { x: cx - gmW/2, y: gmY, w: gmW, h: gmH };
+  layout.globalMem = { x:cx-gmW/2, y:gmY, w:gmW, h:gmH };
 
-  var mcCount = mob ? 2 : (currentArch === 'pascal' ? 3 : 4);
+  var mcCount = mob ? 2 : (currentArch==='pascal' ? 3 : 4);
   var mcW = mob ? 36 : 44;
-  var mcGap2 = (gmW - mcCount * mcW) / (mcCount + 1);
+  var mcGap2 = (gmW - mcCount*mcW)/(mcCount+1);
   layout.mcs = [];
   for (var mi = 0; mi < mcCount; mi++) {
-    layout.mcs.push({ x: layout.globalMem.x + mcGap2 + mi * (mcW + mcGap2), y: gmY + 12, w: mcW, h: 14 });
+    layout.mcs.push({ x:layout.globalMem.x+mcGap2+mi*(mcW+mcGap2), y:gmY+12, w:mcW, h:14 });
   }
 
-  var hbmY = gmY + gmH + (mob ? 16 : 22);
-  var hbmW = gmW * 0.88;
-  layout.hbm = { x: cx - hbmW/2, y: hbmY, w: hbmW, h: mob ? 34 : 42, label: arch.blocks.hbm.label };
+  var hbmY = gmY+gmH+(mob ? 16 : 22);
+  var hbmW = gmW*0.88;
+  layout.hbm = { x:cx-hbmW/2, y:hbmY, w:hbmW, h:mob ? 34 : 42, label:ARCHS[currentArch].blocks.hbm.label };
+
+  buildHitRects();
+}
+
+function drawConnLines(time) {
+  if (connLines.length === 0) return;
+  connLineAnim += 0.025;
+  for (var i = 0; i < connLines.length; i++) {
+    var cl = connLines[i];
+    var dx = cl.to.x - cl.from.x;
+    var dy = cl.to.y - cl.from.y;
+    var dist = Math.sqrt(dx*dx + dy*dy);
+    // Draw dashed animated line
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(cl.from.x, cl.from.y);
+    ctx.lineTo(cl.to.x, cl.to.y);
+    var alpha = 0.5 + Math.sin(connLineAnim * 3 + i) * 0.2;
+    ctx.strokeStyle = cl.color + Math.round(alpha * 255).toString(16).padStart(2,'0');
+    ctx.lineWidth = 2;
+    ctx.setLineDash([8, 5]);
+    ctx.lineDashOffset = -connLineAnim * 30;
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Arrowhead at destination
+    var angle = Math.atan2(dy, dx);
+    ctx.translate(cl.to.x, cl.to.y);
+    ctx.rotate(angle);
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(-10, -5);
+    ctx.lineTo(-10, 5);
+    ctx.closePath();
+    ctx.fillStyle = cl.color + 'cc';
+    ctx.fill();
+
+    // Traveling dot
+    var travelT = (connLineAnim * 0.6 + i * 0.3) % 1.0;
+    ctx.restore();
+    var tx2 = cl.from.x + dx * travelT;
+    var ty2 = cl.from.y + dy * travelT;
+    ctx.beginPath(); ctx.arc(tx2, ty2, 4, 0, Math.PI*2);
+    ctx.fillStyle = cl.color;
+    ctx.fill();
+    ctx.beginPath(); ctx.arc(tx2, ty2, 8, 0, Math.PI*2);
+    ctx.fillStyle = cl.color + '30';
+    ctx.fill();
+  }
+}
+
+function drawHoverHighlight() {
+  if (!hoveredBlock) return;
+  var r = hoveredBlock;
+  ctx.save();
+  rrect(r.x-3, r.y-3, r.w+6, r.h+6, 6);
+  var info = BLOCK_INFO[r.type];
+  var hcolor = info ? info.color : '#ffffff';
+  ctx.strokeStyle = hcolor + 'cc';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.fillStyle = hcolor + '10';
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawSelectionHighlight() {
+  if (!selectedBlock) return;
+  var r = selectedBlock;
+  ctx.save();
+  rrect(r.x-4, r.y-4, r.w+8, r.h+8, 7);
+  var info = BLOCK_INFO[r.type];
+  var scolor = info ? info.color : '#ffffff';
+  var pulse = 0.6 + Math.sin(Date.now()/300) * 0.4;
+  ctx.strokeStyle = scolor + Math.round(pulse * 255).toString(16).padStart(2,'0');
+  ctx.lineWidth = 2.5;
+  ctx.stroke();
+  ctx.fillStyle = scolor + '15';
+  ctx.fill();
+  ctx.restore();
 }
 
 function drawFrame(time) {
-  var dt = Math.min((time - lastTime) / 1000, 0.05);
+  var dt = Math.min((time - lastTime)/1000, 0.05);
   lastTime = time;
   ctx.clearRect(0, 0, W, H);
   var arch = ARCHS[currentArch];
@@ -650,213 +994,216 @@ function drawFrame(time) {
 
   if (layout.cluster) {
     var c = layout.cluster;
-    ctx.setLineDash([4, 4]);
-    rrect(c.x1, c.y1, c.x2 - c.x1, c.y2 - c.y1, 10);
-    ctx.strokeStyle = arch.color + '40'; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.setLineDash([4,4]);
+    rrect(c.x1, c.y1, c.x2-c.x1, c.y2-c.y1, 10);
+    ctx.strokeStyle = arch.color+'40'; ctx.lineWidth=1.5; ctx.stroke();
     ctx.setLineDash([]);
-    ctx.font = 'bold ' + (8*fs) + 'px "JetBrains Mono"';
-    ctx.fillStyle = arch.color + '90'; ctx.textAlign = 'center';
-    ctx.fillText('THREAD BLOCK CLUSTER', (c.x1+c.x2)/2, c.y1 - 2);
+    ctx.font='bold '+(8*fs)+'px "JetBrains Mono"';
+    ctx.fillStyle=arch.color+'90'; ctx.textAlign='center';
+    ctx.fillText('THREAD BLOCK CLUSTER', (c.x1+c.x2)/2, c.y1-2);
   }
 
   for (var si = 0; si < layout.sms.length; si++) {
     var sm = layout.sms[si];
     rrect(sm.x, sm.y, sm.w, sm.h, 7);
-    ctx.fillStyle = '#0f1118'; ctx.fill();
-    ctx.strokeStyle = '#2a2d3a'; ctx.lineWidth = 1; ctx.stroke();
-    ctx.font = '700 ' + (10*fs) + 'px "Outfit"';
-    ctx.fillStyle = '#e0e2ec'; ctx.textAlign = 'center';
-    ctx.fillText(sm.label, sm.x + sm.w/2, sm.y + 14*fs);
-    ctx.font = '400 ' + (7*fs) + 'px "JetBrains Mono"';
-    ctx.fillStyle = '#6b7094';
-    ctx.fillText('Warps \u25b8\u25b8\u25b8', sm.x + sm.w/2, sm.y + 24*fs);
+    ctx.fillStyle='#0f1118'; ctx.fill();
+    ctx.strokeStyle='#2a2d3a'; ctx.lineWidth=1; ctx.stroke();
+    ctx.font='700 '+(10*fs)+'px "Outfit"';
+    ctx.fillStyle='#e0e2ec'; ctx.textAlign='center';
+    ctx.fillText(sm.label, sm.x+sm.w/2, sm.y+14*fs);
+    ctx.font='400 '+(7*fs)+'px "JetBrains Mono"';
+    ctx.fillStyle='#6b7094';
+    ctx.fillText('Warps ▸▸▸', sm.x+sm.w/2, sm.y+24*fs);
 
     for (var bi = 0; bi < sm.sub.length; bi++) {
       var b = sm.sub[bi];
       if (b.type === 'regs') {
-        var barC = Math.floor(b.w / 10);
+        var barC = Math.floor(b.w/10);
         for (var rj = 0; rj < barC; rj++) {
-          ctx.fillStyle = 'hsl(220,30%,' + (18 + Math.sin(Date.now()/800+rj+si)*3) + '%)';
-          ctx.fillRect(b.x + rj * (b.w/barC), b.y, b.w/barC - 1.5, b.h);
+          ctx.fillStyle='hsl(220,30%,'+(18+Math.sin(Date.now()/800+rj+si)*3)+'%)';
+          ctx.fillRect(b.x+rj*(b.w/barC), b.y, b.w/barC-1.5, b.h);
         }
         continue;
       }
       rrect(b.x, b.y, b.w, b.h, 3);
       if (b.type === 'l1' && b.state) {
-        var stColors = { modified: '#51cf66', shared: '#339af0', invalid: '#555' };
-        var sc = stColors[b.state] || '#555';
-        ctx.fillStyle = sc + '18'; ctx.fill();
-        ctx.strokeStyle = sc; ctx.lineWidth = 1.2; ctx.stroke();
-        ctx.font = '600 ' + (7.5*fs) + 'px "JetBrains Mono"';
-        ctx.fillStyle = sc; ctx.textAlign = 'center';
-        ctx.fillText(b.label + ' [' + b.state.charAt(0).toUpperCase() + ']', b.x + b.w/2, b.y + b.h/2 + 3);
+        var stColors = { modified:'#51cf66', shared:'#339af0', invalid:'#555' };
+        var sc = stColors[b.state]||'#555';
+        ctx.fillStyle=sc+'18'; ctx.fill();
+        ctx.strokeStyle=sc; ctx.lineWidth=1.2; ctx.stroke();
+        ctx.font='600 '+(7.5*fs)+'px "JetBrains Mono"';
+        ctx.fillStyle=sc; ctx.textAlign='center';
+        ctx.fillText(b.label+' ['+b.state.charAt(0).toUpperCase()+']', b.x+b.w/2, b.y+b.h/2+3);
       } else {
         var cBg, cBr, cLbl;
-        if (b.type === 'texCache') { cBg='#e599f710'; cBr='#e599f750'; cLbl='#e599f7'; }
-        else if (b.type === 'tma' || b.type === 'dsmem') { cBg='#22d3ee10'; cBr='#22d3ee60'; cLbl='#22d3ee'; }
-        else if (b.type === 'async') { cBg='#22d3ee08'; cBr='#22d3ee40'; cLbl='#22d3ee'; }
+        if (b.type==='texCache') { cBg='#e599f710'; cBr='#e599f750'; cLbl='#e599f7'; }
+        else if (b.type==='tma'||b.type==='dsmem') { cBg='#22d3ee10'; cBr='#22d3ee60'; cLbl='#22d3ee'; }
+        else if (b.type==='async') { cBg='#22d3ee08'; cBr='#22d3ee40'; cLbl='#22d3ee'; }
         else { cBg='#51cf6608'; cBr='#51cf6650'; cLbl='#51cf66'; }
-        ctx.fillStyle = cBg; ctx.fill();
-        ctx.strokeStyle = cBr; ctx.lineWidth = 1; ctx.stroke();
-        ctx.font = '600 ' + ((b.type === 'async' ? 6.5 : 7)*fs) + 'px "JetBrains Mono"';
-        ctx.fillStyle = cLbl; ctx.textAlign = 'center';
-        ctx.fillText(b.label, b.x + b.w/2, b.y + b.h/2 + 3);
+        ctx.fillStyle=cBg; ctx.fill();
+        ctx.strokeStyle=cBr; ctx.lineWidth=1; ctx.stroke();
+        ctx.font='600 '+((b.type==='async'?6.5:7)*fs)+'px "JetBrains Mono"';
+        ctx.fillStyle=cLbl; ctx.textAlign='center';
+        ctx.fillText(b.label, b.x+b.w/2, b.y+b.h/2+3);
       }
     }
   }
 
+  // Hover / selection overlays
+  drawHoverHighlight();
+  drawSelectionHighlight();
+
+  // Connection lines (drawn before particles, after blocks)
+  drawConnLines(time);
+
   for (var ci = 0; ci < layout.sms.length; ci++) {
     var csm = layout.sms[ci];
-    ctx.beginPath(); ctx.moveTo(csm.x + csm.w/2, csm.y + csm.h);
-    ctx.lineTo(csm.x + csm.w/2, layout.bus.y);
-    ctx.strokeStyle = '#2a2d3a'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(csm.x+csm.w/2, csm.y+csm.h);
+    ctx.lineTo(csm.x+csm.w/2, layout.bus.y);
+    ctx.strokeStyle='#2a2d3a'; ctx.lineWidth=1; ctx.stroke();
   }
 
-  if (currentArch === 'hopper' && layout.sms.length > 1) {
-    var dsPulse = Math.sin(Date.now()/500) * 0.3 + 0.5;
-    for (var di = 0; di < layout.sms.length - 1; di++) {
-      var dsA = null, dsB = null;
-      for (var ds1 = 0; ds1 < layout.sms[di].sub.length; ds1++) { if (layout.sms[di].sub[ds1].type === 'dsmem') dsA = layout.sms[di].sub[ds1]; }
-      for (var ds2 = 0; ds2 < layout.sms[di+1].sub.length; ds2++) { if (layout.sms[di+1].sub[ds2].type === 'dsmem') dsB = layout.sms[di+1].sub[ds2]; }
-      if (dsA && dsB) {
-        ctx.beginPath(); ctx.moveTo(dsA.x + dsA.w, dsA.y + dsA.h/2);
-        ctx.lineTo(dsB.x, dsB.y + dsB.h/2);
-        ctx.strokeStyle = 'rgba(34,211,238,' + (dsPulse * 0.5) + ')';
-        ctx.lineWidth = 1.5; ctx.setLineDash([3,3]); ctx.stroke(); ctx.setLineDash([]);
+  if (currentArch==='hopper' && layout.sms.length>1) {
+    var dsPulse = Math.sin(Date.now()/500)*0.3+0.5;
+    for (var di = 0; di < layout.sms.length-1; di++) {
+      var dsA=null, dsB=null;
+      for (var ds1=0;ds1<layout.sms[di].sub.length;ds1++) { if(layout.sms[di].sub[ds1].type==='dsmem') dsA=layout.sms[di].sub[ds1]; }
+      for (var ds2=0;ds2<layout.sms[di+1].sub.length;ds2++) { if(layout.sms[di+1].sub[ds2].type==='dsmem') dsB=layout.sms[di+1].sub[ds2]; }
+      if (dsA&&dsB) {
+        ctx.beginPath(); ctx.moveTo(dsA.x+dsA.w, dsA.y+dsA.h/2);
+        ctx.lineTo(dsB.x, dsB.y+dsB.h/2);
+        ctx.strokeStyle='rgba(34,211,238,'+(dsPulse*0.5)+')';
+        ctx.lineWidth=1.5; ctx.setLineDash([3,3]); ctx.stroke(); ctx.setLineDash([]);
       }
     }
   }
 
   var bus = layout.bus;
-  var busPulse = Math.sin(Date.now()/400) * 0.3 + 0.5;
-  ctx.setLineDash([5, 3]);
+  var busPulse = Math.sin(Date.now()/400)*0.3+0.5;
+  ctx.setLineDash([5,3]);
   ctx.beginPath(); ctx.moveTo(bus.x1, bus.y); ctx.lineTo(bus.x2, bus.y);
-  ctx.strokeStyle = '#f0659540'; ctx.lineWidth = 2; ctx.stroke(); ctx.setLineDash([]);
+  ctx.strokeStyle='#f0659540'; ctx.lineWidth=2; ctx.stroke(); ctx.setLineDash([]);
   ctx.beginPath(); ctx.moveTo(bus.x1, bus.y); ctx.lineTo(bus.x2, bus.y);
-  ctx.strokeStyle = 'rgba(240,101,149,' + (busPulse * 0.12) + ')'; ctx.lineWidth = 7; ctx.stroke();
-  ctx.font = '500 ' + (7.5*fs) + 'px "JetBrains Mono"';
-  ctx.fillStyle = '#f06595'; ctx.textAlign = 'center';
-  ctx.fillText(bus.label, (bus.x1+bus.x2)/2, bus.y - 8);
+  ctx.strokeStyle='rgba(240,101,149,'+(busPulse*0.12)+')'; ctx.lineWidth=7; ctx.stroke();
+  ctx.font='500 '+(7.5*fs)+'px "JetBrains Mono"';
+  ctx.fillStyle='#f06595'; ctx.textAlign='center';
+  ctx.fillText(bus.label, (bus.x1+bus.x2)/2, bus.y-8);
 
   ctx.beginPath(); ctx.moveTo(W/2, bus.y); ctx.lineTo(W/2, layout.l2.y);
-  ctx.strokeStyle = '#2a2d3a'; ctx.lineWidth = 1.5; ctx.stroke();
+  ctx.strokeStyle='#2a2d3a'; ctx.lineWidth=1.5; ctx.stroke();
 
   var l2 = layout.l2;
   rrect(l2.x, l2.y, l2.w, l2.h, 7);
-  ctx.fillStyle = '#1a1408'; ctx.fill();
-  ctx.strokeStyle = '#ffa94d50'; ctx.lineWidth = 1.5; ctx.stroke();
-  ctx.font = '700 ' + (11*fs) + 'px "Outfit"';
-  ctx.fillStyle = '#ffa94d'; ctx.textAlign = 'center';
-  ctx.fillText(arch.blocks.l2.label, l2.x + l2.w/2, l2.y + 18*fs);
+  ctx.fillStyle='#1a1408'; ctx.fill();
+  ctx.strokeStyle='#ffa94d50'; ctx.lineWidth=1.5; ctx.stroke();
+  ctx.font='700 '+(11*fs)+'px "Outfit"';
+  ctx.fillStyle='#ffa94d'; ctx.textAlign='center';
+  ctx.fillText(arch.blocks.l2.label, l2.x+l2.w/2, l2.y+18*fs);
   var slices = mob ? 8 : 12;
-  var slW = (l2.w - 20) / slices;
-  for (var sli = 0; sli < slices; sli++) {
-    ctx.fillStyle = 'hsl(32,40%,' + (15 + Math.sin(Date.now()/600+sli*.5)*5) + '%)';
-    ctx.fillRect(l2.x + 10 + sli*slW, l2.y + 24*fs, slW - 2, 10*fs);
+  var slW = (l2.w-20)/slices;
+  for (var sli=0;sli<slices;sli++) {
+    ctx.fillStyle='hsl(32,40%,'+(15+Math.sin(Date.now()/600+sli*.5)*5)+'%)';
+    ctx.fillRect(l2.x+10+sli*slW, l2.y+24*fs, slW-2, 10*fs);
   }
 
   if (layout.l2Persist) {
     var p = layout.l2Persist;
-    rrect(p.x, p.y, p.w, p.h, 2);
-    var grad = ctx.createLinearGradient(p.x, 0, p.x + p.w, 0);
-    grad.addColorStop(0, '#ffa94d30'); grad.addColorStop(0.6, '#ffa94d15'); grad.addColorStop(1, '#ffa94d05');
-    ctx.fillStyle = grad; ctx.fill();
-    ctx.strokeStyle = '#ffa94d30'; ctx.lineWidth = .5; ctx.stroke();
-    ctx.font = '500 ' + (5.5*fs) + 'px "JetBrains Mono"';
-    ctx.fillStyle = '#ffa94d80'; ctx.textAlign = 'center';
-    ctx.fillText('PERSIST WINDOW', p.x + p.w/2, p.y + p.h/2 + 2);
+    rrect(p.x,p.y,p.w,p.h,2);
+    var grad = ctx.createLinearGradient(p.x,0,p.x+p.w,0);
+    grad.addColorStop(0,'#ffa94d30'); grad.addColorStop(0.6,'#ffa94d15'); grad.addColorStop(1,'#ffa94d05');
+    ctx.fillStyle=grad; ctx.fill();
+    ctx.strokeStyle='#ffa94d30'; ctx.lineWidth=.5; ctx.stroke();
+    ctx.font='500 '+(5.5*fs)+'px "JetBrains Mono"';
+    ctx.fillStyle='#ffa94d80'; ctx.textAlign='center';
+    ctx.fillText('PERSIST WINDOW', p.x+p.w/2, p.y+p.h/2+2);
   }
 
-  ctx.beginPath(); ctx.moveTo(W/2, l2.y + l2.h); ctx.lineTo(W/2, layout.crossbar.y);
-  ctx.strokeStyle = '#2a2d3a'; ctx.lineWidth = 1.5; ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(W/2,l2.y+l2.h); ctx.lineTo(W/2,layout.crossbar.y);
+  ctx.strokeStyle='#2a2d3a'; ctx.lineWidth=1.5; ctx.stroke();
 
   var cb = layout.crossbar;
   ctx.setLineDash([3,3]);
-  ctx.beginPath(); ctx.moveTo(cb.x1, cb.y); ctx.lineTo(cb.x2, cb.y);
-  ctx.strokeStyle = '#339af030'; ctx.lineWidth = 1.5; ctx.stroke(); ctx.setLineDash([]);
-  ctx.font = '500 ' + (7*fs) + 'px "JetBrains Mono"';
-  ctx.fillStyle = '#339af0'; ctx.textAlign = 'center';
-  ctx.fillText('MEMORY CROSSBAR / NoC', (cb.x1+cb.x2)/2, cb.y - 6);
+  ctx.beginPath(); ctx.moveTo(cb.x1,cb.y); ctx.lineTo(cb.x2,cb.y);
+  ctx.strokeStyle='#339af030'; ctx.lineWidth=1.5; ctx.stroke(); ctx.setLineDash([]);
+  ctx.font='500 '+(7*fs)+'px "JetBrains Mono"';
+  ctx.fillStyle='#339af0'; ctx.textAlign='center';
+  ctx.fillText('MEMORY CROSSBAR / NoC', (cb.x1+cb.x2)/2, cb.y-6);
 
-  ctx.beginPath(); ctx.moveTo(W/2, cb.y); ctx.lineTo(W/2, layout.globalMem.y);
-  ctx.strokeStyle = '#2a2d3a'; ctx.lineWidth = 1.5; ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(W/2,cb.y); ctx.lineTo(W/2,layout.globalMem.y);
+  ctx.strokeStyle='#2a2d3a'; ctx.lineWidth=1.5; ctx.stroke();
 
   var gm = layout.globalMem;
-  rrect(gm.x, gm.y, gm.w, gm.h, 7);
-  ctx.fillStyle = '#0d1320'; ctx.fill();
-  ctx.strokeStyle = '#339af040'; ctx.lineWidth = 1.5; ctx.stroke();
-  ctx.font = '700 ' + (10*fs) + 'px "Outfit"';
-  ctx.fillStyle = '#339af0'; ctx.textAlign = 'center';
-  ctx.fillText('Global Memory Interface', gm.x + gm.w/2, gm.y + 16*fs);
-  for (var mci = 0; mci < layout.mcs.length; mci++) {
-    var mc = layout.mcs[mci];
-    ctx.fillStyle = 'hsl(210,50%,' + (14+Math.sin(Date.now()/500+mci)*3) + '%)';
-    ctx.fillRect(mc.x, mc.y, mc.w, mc.h);
-    ctx.font = '500 ' + (6*fs) + 'px "JetBrains Mono"';
-    ctx.fillStyle = '#339af070'; ctx.textAlign = 'center';
-    ctx.fillText('MC' + mci, mc.x + mc.w/2, mc.y + mc.h/2 + 2);
+  rrect(gm.x,gm.y,gm.w,gm.h,7);
+  ctx.fillStyle='#0d1320'; ctx.fill();
+  ctx.strokeStyle='#339af040'; ctx.lineWidth=1.5; ctx.stroke();
+  ctx.font='700 '+(10*fs)+'px "Outfit"';
+  ctx.fillStyle='#339af0'; ctx.textAlign='center';
+  ctx.fillText('Global Memory Interface', gm.x+gm.w/2, gm.y+16*fs);
+  for (var mci=0;mci<layout.mcs.length;mci++) {
+    var mc=layout.mcs[mci];
+    ctx.fillStyle='hsl(210,50%,'+(14+Math.sin(Date.now()/500+mci)*3)+'%)';
+    ctx.fillRect(mc.x,mc.y,mc.w,mc.h);
+    ctx.font='500 '+(6*fs)+'px "JetBrains Mono"';
+    ctx.fillStyle='#339af070'; ctx.textAlign='center';
+    ctx.fillText('MC'+mci, mc.x+mc.w/2, mc.y+mc.h/2+2);
   }
-  ctx.font = '400 ' + (6*fs) + 'px "JetBrains Mono"';
-  ctx.fillStyle = '#6b7094';
-  ctx.fillText('MC \u2192 ' + arch.blocks.hbm.label, gm.x + gm.w/2, gm.y + gm.h - 5);
+  ctx.font='400 '+(6*fs)+'px "JetBrains Mono"';
+  ctx.fillStyle='#6b7094';
+  ctx.fillText('MC → '+arch.blocks.hbm.label, gm.x+gm.w/2, gm.y+gm.h-5);
 
-  ctx.beginPath(); ctx.moveTo(W/2, gm.y + gm.h); ctx.lineTo(W/2, layout.hbm.y);
-  ctx.strokeStyle = '#2a2d3a'; ctx.lineWidth = 1.5; ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(W/2,gm.y+gm.h); ctx.lineTo(W/2,layout.hbm.y);
+  ctx.strokeStyle='#2a2d3a'; ctx.lineWidth=1.5; ctx.stroke();
 
   var hbm = layout.hbm;
-  rrect(hbm.x, hbm.y, hbm.w, hbm.h, 7);
-  ctx.fillStyle = '#0d0a18'; ctx.fill();
-  ctx.strokeStyle = '#845ef730'; ctx.lineWidth = 1.5; ctx.stroke();
-  ctx.font = '700 ' + (11*fs) + 'px "Outfit"';
-  ctx.fillStyle = '#845ef7'; ctx.textAlign = 'center';
-  ctx.fillText(hbm.label, hbm.x + hbm.w/2, hbm.y + 16*fs);
+  rrect(hbm.x,hbm.y,hbm.w,hbm.h,7);
+  ctx.fillStyle='#0d0a18'; ctx.fill();
+  ctx.strokeStyle='#845ef730'; ctx.lineWidth=1.5; ctx.stroke();
+  ctx.font='700 '+(11*fs)+'px "Outfit"';
+  ctx.fillStyle='#845ef7'; ctx.textAlign='center';
+  ctx.fillText(hbm.label, hbm.x+hbm.w/2, hbm.y+16*fs);
   var hbmStacks = mob ? 4 : 6;
-  var hstW = (hbm.w - 30) / hbmStacks;
-  for (var hi = 0; hi < hbmStacks; hi++) {
-    for (var hl = 0; hl < 3; hl++) {
-      ctx.fillStyle = 'hsl(260,40%,' + (12+hl*3+Math.sin(Date.now()/700+hi+hl)*2) + '%)';
-      ctx.fillRect(hbm.x + 15 + hi*hstW, hbm.y + 22*fs + hl*3.5, hstW - 4, 3);
+  var hstW = (hbm.w-30)/hbmStacks;
+  for (var hi=0;hi<hbmStacks;hi++) {
+    for (var hl=0;hl<3;hl++) {
+      ctx.fillStyle='hsl(260,40%,'+(12+hl*3+Math.sin(Date.now()/700+hi+hl)*2)+'%)';
+      ctx.fillRect(hbm.x+15+hi*hstW, hbm.y+22*fs+hl*3.5, hstW-4, 3);
     }
   }
 
   flashEffects = flashEffects.filter(function(f) {
-    f.t += 0.02;
-    if (f.t >= f.dur) return false;
-    rrect(f.x-2, f.y-2, f.w+4, f.h+4, 5);
-    ctx.strokeStyle = f.c + Math.round((1-f.t/f.dur)*0.3*255).toString(16).padStart(2,'0');
-    ctx.lineWidth = 2; ctx.stroke();
+    f.t+=0.02;
+    if (f.t>=f.dur) return false;
+    rrect(f.x-2,f.y-2,f.w+4,f.h+4,5);
+    ctx.strokeStyle=f.c+Math.round((1-f.t/f.dur)*0.3*255).toString(16).padStart(2,'0');
+    ctx.lineWidth=2; ctx.stroke();
     return true;
   });
 
-  // Bubbles
   bubbles = bubbles.filter(function(b) {
-    b.age += dt;
-    if (b.age > b.life) return false;
-    var progress = b.age / b.life;
-    var fadeIn = Math.min(b.age / 0.15, 1);
-    var fadeOut = progress > 0.7 ? 1 - (progress - 0.7) / 0.3 : 1;
-    var alpha = fadeIn * fadeOut;
-    var bx = b.x + Math.sin(b.age * 1.5 + b.wobble) * 3;
-    var by = b.y - b.age * b.rise;
-    var scale = 0.8 + fadeIn * 0.2;
+    b.age+=dt;
+    if (b.age>b.life) return false;
+    var progress=b.age/b.life;
+    var fadeIn=Math.min(b.age/0.15,1);
+    var fadeOut=progress>0.7?1-(progress-0.7)/0.3:1;
+    var alpha=fadeIn*fadeOut;
+    var bx=b.x+Math.sin(b.age*1.5+b.wobble)*3;
+    var by=b.y-b.age*b.rise;
+    var scale=0.8+fadeIn*0.2;
     ctx.save();
-    ctx.globalAlpha = alpha;
-    ctx.font = 'bold ' + Math.round(8 * scale * fs) + 'px "JetBrains Mono"';
-    ctx.textAlign = 'center';
-    var tw = ctx.measureText(b.text).width + 10;
-    var bh = 16 * scale;
-    rrect(bx - tw/2, by - bh/2 - 1, tw, bh, 4);
-    ctx.fillStyle = b.bg; ctx.fill();
-    ctx.strokeStyle = b.color + '60'; ctx.lineWidth = 0.8; ctx.stroke();
-    if (progress < 0.3) {
-      ctx.beginPath();
-      ctx.moveTo(bx - 3, by + bh/2 - 1);
-      ctx.lineTo(bx, by + bh/2 + 4);
-      ctx.lineTo(bx + 3, by + bh/2 - 1);
-      ctx.fillStyle = b.bg; ctx.fill();
+    ctx.globalAlpha=alpha;
+    ctx.font='bold '+Math.round(8*scale*fs)+'px "JetBrains Mono"';
+    ctx.textAlign='center';
+    var tw=ctx.measureText(b.text).width+10;
+    var bh=16*scale;
+    rrect(bx-tw/2, by-bh/2-1, tw, bh, 4);
+    ctx.fillStyle=b.bg; ctx.fill();
+    ctx.strokeStyle=b.color+'60'; ctx.lineWidth=0.8; ctx.stroke();
+    if (progress<0.3) {
+      ctx.beginPath(); ctx.moveTo(bx-3,by+bh/2-1); ctx.lineTo(bx,by+bh/2+4); ctx.lineTo(bx+3,by+bh/2-1);
+      ctx.closePath(); ctx.fillStyle=b.bg; ctx.fill();
     }
-    ctx.fillStyle = b.color;
-    ctx.fillText(b.text, bx, by + 3 * scale);
+    ctx.fillStyle=b.color;
+    ctx.fillText(b.text, bx, by+3*scale);
     ctx.restore();
     return true;
   });
@@ -865,29 +1212,29 @@ function drawFrame(time) {
   particles = particles.filter(function(p) { return p.alive; });
 
   if (autoMode) {
-    autoTimer += dt;
-    if (autoTimer > 2.8) {
-      autoTimer = 0;
-      var ops = ['read','write','invalidate','writeback','shared'];
+    autoTimer+=dt;
+    if (autoTimer>2.8) {
+      autoTimer=0;
+      var ops=['read','write','invalidate','writeback','shared'];
       triggerScenario(ops[Math.floor(Math.random()*ops.length)]);
     }
   }
   requestAnimationFrame(drawFrame);
 }
-var lastTime = 0;
+var lastTime=0;
 requestAnimationFrame(drawFrame);
 
 function Particle(from, to, color, label, speed, onDone) {
-  this.from = {x:from.x,y:from.y}; this.to = {x:to.x,y:to.y}; this.color = color; this.label = label||'';
-  this.t = 0; this.speed = speed || 2; this.alive = true; this.onDone = onDone;
-  this.dist = Math.sqrt((to.x-from.x)*(to.x-from.x) + (to.y-from.y)*(to.y-from.y)); this.trail = [];
+  this.from={x:from.x,y:from.y}; this.to={x:to.x,y:to.y}; this.color=color; this.label=label||'';
+  this.t=0; this.speed=speed||2; this.alive=true; this.onDone=onDone;
+  this.dist=Math.sqrt((to.x-from.x)*(to.x-from.x)+(to.y-from.y)*(to.y-from.y)); this.trail=[];
 }
 Particle.prototype.update = function(dt) {
-  this.t += (this.speed * dt * 60) / Math.max(this.dist, 1);
-  if (this.t >= 1) { this.t = 1; this.alive = false; if (this.onDone) this.onDone(); }
-  var cx = this.from.x + (this.to.x-this.from.x)*this.t;
-  var cy = this.from.y + (this.to.y-this.from.y)*this.t;
-  this.trail.push({x:cx,y:cy}); if (this.trail.length > 16) this.trail.shift();
+  this.t+=(this.speed*dt*60)/Math.max(this.dist,1);
+  if (this.t>=1) { this.t=1; this.alive=false; if (this.onDone) this.onDone(); }
+  var cx=this.from.x+(this.to.x-this.from.x)*this.t;
+  var cy=this.from.y+(this.to.y-this.from.y)*this.t;
+  this.trail.push({x:cx,y:cy}); if (this.trail.length>16) this.trail.shift();
 };
 Particle.prototype.draw = function(ctx) {
   for (var i=0;i<this.trail.length;i++) {
@@ -905,178 +1252,172 @@ Particle.prototype.draw = function(ctx) {
   }
 };
 
-function l1Pos(i) { var l1=layout.sms[i].l1; return {x:l1.x+l1.w/2, y:l1.y+l1.h/2}; }
-function busP(i) { var s=layout.sms[i]; return {x:s.x+s.w/2, y:layout.bus.y}; }
-function l2Top() { return {x:layout.l2.x+layout.l2.w/2, y:layout.l2.y}; }
-function l2Bot() { return {x:layout.l2.x+layout.l2.w/2, y:layout.l2.y+layout.l2.h}; }
-function cbP() { return {x:W/2, y:layout.crossbar.y}; }
-function gmTop() { return {x:layout.globalMem.x+layout.globalMem.w/2, y:layout.globalMem.y}; }
-function gmBot() { return {x:layout.globalMem.x+layout.globalMem.w/2, y:layout.globalMem.y+layout.globalMem.h}; }
-function hbmTop() { return {x:layout.hbm.x+layout.hbm.w/2, y:layout.hbm.y}; }
-function flash(b, c) { flashEffects.push({x:b.x,y:b.y,w:b.w,h:b.h,c:c,t:0,dur:.5}); }
+function l1Pos(i) { var l1=layout.sms[i].l1; return {x:l1.x+l1.w/2,y:l1.y+l1.h/2}; }
+function busP(i) { var s=layout.sms[i]; return {x:s.x+s.w/2,y:layout.bus.y}; }
+function l2Top() { return {x:layout.l2.x+layout.l2.w/2,y:layout.l2.y}; }
+function l2Bot() { return {x:layout.l2.x+layout.l2.w/2,y:layout.l2.y+layout.l2.h}; }
+function cbP() { return {x:W/2,y:layout.crossbar.y}; }
+function gmTop() { return {x:layout.globalMem.x+layout.globalMem.w/2,y:layout.globalMem.y}; }
+function gmBot() { return {x:layout.globalMem.x+layout.globalMem.w/2,y:layout.globalMem.y+layout.globalMem.h}; }
+function hbmTop() { return {x:layout.hbm.x+layout.hbm.w/2,y:layout.hbm.y}; }
+function flash(b,c) { flashEffects.push({x:b.x,y:b.y,w:b.w,h:b.h,c:c,t:0,dur:.5}); }
 
 function getExplanation(type) {
   var arch = currentArch;
   var e = {
-    read: { title:'L1 Read Miss \u2192 L2 Fetch', color:'#ff6b6b',
+    read:{ title:'L1 Read Miss → L2 Fetch', color:'#ff6b6b',
       steps:[
-        {text:'<strong>Warp issues load</strong> \u2014 global memory read.', micro:'LD.E Rx, [addr]', delay:0},
-        {text:'<strong>L1 tag lookup: MISS</strong>', micro:'Tag compare \u2192 miss', delay:700},
-        {text:'<strong>Request to L2</strong>', micro:'RdReq \u2192 Bus \u2192 L2', delay:1500},
-        {text:'<strong>L2 hit</strong> \u2014 data read from L2.', micro:'L2 ' + ARCHS[arch].blocks.l2.size + ' slice lookup', delay:2500},
-        {text:'<strong>Data returns</strong> \u2014 cache line fills L1.', micro:'DATA \u2192 SM L1 fill', delay:3300},
-        {text:'<strong>L1 \u2192 Shared</strong>', micro:'State: Invalid \u2192 Shared', delay:4000},
-      ],
-      summary: arch==='pascal' ? 'Pascal L1 is read-only for globals.' : 'Standard read miss path.'
+        {text:'<strong>Warp issues load</strong> — global memory read.', micro:'LD.E Rx, [addr]', delay:0},
+        {text:'<strong>L1 tag lookup: MISS</strong>', micro:'Tag compare → miss', delay:700},
+        {text:'<strong>Request to L2</strong>', micro:'RdReq → Bus → L2', delay:1500},
+        {text:'<strong>L2 hit</strong> — data read from L2.', micro:'L2 '+ARCHS[arch].blocks.l2.size+' slice lookup', delay:2500},
+        {text:'<strong>Data returns</strong> — cache line fills L1.', micro:'DATA → SM L1 fill', delay:3300},
+        {text:'<strong>L1 → Shared</strong>', micro:'State: Invalid → Shared', delay:4000},
+      ], summary: arch==='pascal' ? 'Pascal L1 is read-only for globals.' : 'Standard read miss path.'
     },
-    write: { title: arch==='pascal' ? 'SM Write \u2192 Direct to L2' : 'SM Write \u2192 Invalidate Others', color:'#51cf66',
-      steps: arch === 'pascal' ? [
+    write:{ title: arch==='pascal' ? 'SM Write → Direct to L2' : 'SM Write → Invalidate Others', color:'#51cf66',
+      steps: arch==='pascal' ? [
         {text:'<strong>Warp issues store</strong>', micro:'ST.E [addr], Rx', delay:0},
-        {text:'<strong>L1 bypassed</strong> \u2014 write goes directly to L2.', micro:'Write-through: skip L1', delay:500},
+        {text:'<strong>L1 bypassed</strong> — write goes directly to L2.', micro:'Write-through: skip L1', delay:500},
         {text:'<strong>L2 absorbs write</strong>', micro:'L2 SRAM write', delay:1200},
         {text:'<strong>No invalidation needed</strong>', micro:'No INV broadcast', delay:1800},
       ] : [
         {text:'<strong>Warp issues store</strong>', micro:'ST.E [addr], Rx', delay:0},
-        {text:'<strong>L1 \u2192 Modified</strong> \u2014 write-evict policy.', micro:'Write-evict: L1 drop + L2 write', delay:500},
-        {text:'<strong>Invalidation broadcast</strong>', micro:'INV \u2192 all SMs via bus', delay:1200},
-        {text:'<strong>Remote L1s invalidated</strong>', micro:'Other SMs: * \u2192 Invalid', delay:2000},
+        {text:'<strong>L1 → Modified</strong> — write-evict policy.', micro:'Write-evict: L1 drop + L2 write', delay:500},
+        {text:'<strong>Invalidation broadcast</strong>', micro:'INV → all SMs via bus', delay:1200},
+        {text:'<strong>Remote L1s invalidated</strong>', micro:'Other SMs: * → Invalid', delay:2000},
         {text:'<strong>Coherency restored</strong>', micro:'Single-writer invariant', delay:2800},
-      ],
-      summary: arch==='pascal' ? 'Pascal: L1 read-only, writes go to L2.' : 'Write-evict: L1 line dropped, L2 gets the write.'
+      ], summary: arch==='pascal' ? 'Pascal: L1 read-only, writes go to L2.' : 'Write-evict: L1 line dropped, L2 gets the write.'
     },
-    invalidate: { title:'Broadcast Invalidation', color:'#f06595',
+    invalidate:{ title:'Broadcast Invalidation', color:'#f06595',
       steps:[
         {text:'<strong>Coherency event</strong>', micro:'SM write or host DMA', delay:0},
-        {text:'<strong>Bus broadcasts INV</strong>', micro:'INV(addr) \u2192 all SMs', delay:600},
+        {text:'<strong>Bus broadcasts INV</strong>', micro:'INV(addr) → all SMs', delay:600},
         {text:'<strong>L1 tags probed</strong>', micro:'Parallel tag lookup', delay:1200},
-        {text:'<strong>All copies dropped</strong>', micro:'All: * \u2192 Invalid', delay:2200},
-      ],
-      summary: 'Broadcast invalidation scales linearly with SM count.'
+        {text:'<strong>All copies dropped</strong>', micro:'All: * → Invalid', delay:2200},
+      ], summary:'Broadcast invalidation scales linearly with SM count.'
     },
-    writeback: { title:'Write-Back \u2192 L2 \u2192 ' + ARCHS[currentArch].blocks.hbm.label, color:'#ffa94d',
+    writeback:{ title:'Write-Back → L2 → '+ARCHS[currentArch].blocks.hbm.label, color:'#ffa94d',
       steps:[
-        {text:'<strong>L1 eviction</strong> \u2014 dirty line needs to leave L1.', micro:'Capacity eviction or flush', delay:0},
-        {text:'<strong>Data \u2192 L2</strong>', micro:'WB+DATA \u2192 L2 slice', delay:800},
+        {text:'<strong>L1 eviction</strong> — dirty line needs to leave L1.', micro:'Capacity eviction or flush', delay:0},
+        {text:'<strong>Data → L2</strong>', micro:'WB+DATA → L2 slice', delay:800},
         {text:'<strong>L2 absorbs</strong>', micro:'L2 write', delay:1800},
-        {text:'<strong>L2 eviction</strong> \u2014 if full, victim evicted to DRAM.', micro:'LRU victim \u2192 NoC \u2192 MC', delay:3000},
-        {text:'<strong>' + ARCHS[arch].blocks.hbm.label + ' write</strong>', micro:'MC \u2192 bank write', delay:4000},
-        {text:'<strong>Stored in ' + ARCHS[arch].blocks.hbm.label + '</strong>', micro:'~400+ cycles total', delay:4800},
-      ],
-      summary: 'Full eviction cascade: L1\u2192L2\u2192MC\u2192DRAM.'
+        {text:'<strong>L2 eviction</strong> — if full, victim evicted to DRAM.', micro:'LRU victim → NoC → MC', delay:3000},
+        {text:'<strong>'+ARCHS[arch].blocks.hbm.label+' write</strong>', micro:'MC → bank write', delay:4000},
+        {text:'<strong>Stored in '+ARCHS[arch].blocks.hbm.label+'</strong>', micro:'~400+ cycles total', delay:4800},
+      ], summary:'Full eviction cascade: L1→L2→MC→DRAM.'
     },
-    shared: { title: currentArch==='hopper' ? 'Shared Mem + DSMEM' : 'Shared Memory Access', color:'#51cf66',
-      steps: currentArch === 'hopper' ? [
+    shared:{ title: currentArch==='hopper' ? 'Shared Mem + DSMEM' : 'Shared Memory Access', color:'#51cf66',
+      steps: currentArch==='hopper' ? [
         {text:'<strong>Thread accesses __shared__</strong>', micro:'LDS Rx, [smem_addr]', delay:0},
-        {text:'<strong>Direct SRAM access</strong> \u2014 no coherency. 32 banks.', micro:'~20 cycles', delay:500},
-        {text:'<strong>DSMEM option</strong> \u2014 access other SMs\' shared memory.', micro:'dst_sm.smem[addr]', delay:1200},
-        {text:'<strong>Cluster-local</strong> \u2014 DSMEM at SMEM latency.', micro:'~20 cycles cross-SM', delay:1800},
+        {text:'<strong>Direct SRAM access</strong> — no coherency. 32 banks.', micro:'~20 cycles', delay:500},
+        {text:'<strong>DSMEM option</strong> — access other SMs\' shared memory.', micro:'dst_sm.smem[addr]', delay:1200},
+        {text:'<strong>Cluster-local</strong> — DSMEM at SMEM latency.', micro:'~20 cycles cross-SM', delay:1800},
       ] : [
         {text:'<strong>Thread accesses __shared__</strong>', micro:'LDS Rx, [smem_addr]', delay:0},
-        {text:'<strong>Direct SRAM access</strong> \u2014 no coherency.', micro:'~20 cycles, 32 banks', delay:500},
+        {text:'<strong>Direct SRAM access</strong> — no coherency.', micro:'~20 cycles, 32 banks', delay:500},
         {text:'<strong>Bank conflict check</strong>', micro:'Best: 1 cycle. Worst: 32-way', delay:1100},
-        {text:'<strong>SM-local only</strong> \u2014 no bus traffic.', micro:'Scope: CTA local', delay:1600},
-      ],
-      summary: currentArch==='hopper' ? 'DSMEM enables cross-SM shared memory within a cluster.' : 'Shared memory sidesteps coherency by being SM-private.'
+        {text:'<strong>SM-local only</strong> — no bus traffic.', micro:'Scope: CTA local', delay:1600},
+      ], summary: currentArch==='hopper' ? 'DSMEM enables cross-SM shared memory within a cluster.' : 'Shared memory sidesteps coherency by being SM-private.'
     }
   };
   return e[type];
 }
 
 function showExplanation(type) {
-  var exp = getExplanation(type);
-  if (!exp) return;
-  stepTimers.forEach(function(t) { clearTimeout(t); }); stepTimers = [];
-  var titleEl = document.getElementById('explainer-title');
-  titleEl.innerHTML = '<span class="dot" style="background:' + exp.color + '"></span> ' + exp.title;
-  titleEl.style.color = exp.color;
-  var listEl = document.getElementById('step-list'); listEl.innerHTML = '';
-  var sumEl = document.getElementById('explainer-summary'); sumEl.textContent = ''; sumEl.classList.remove('visible');
-  exp.steps.forEach(function(s, i) {
-    var li = document.createElement('li');
-    li.innerHTML = '<span class="step-num" style="background:' + exp.color + '20;color:' + exp.color + '">' + (i+1) + '</span><span class="step-text">' + s.text + '<span class="micro">' + s.micro + '</span></span>';
+  var exp = getExplanation(type); if (!exp) return;
+  stepTimers.forEach(function(t){clearTimeout(t);}); stepTimers=[];
+  var titleEl=document.getElementById('explainer-title');
+  titleEl.innerHTML='<span class="dot" style="background:'+exp.color+'"></span> '+exp.title;
+  titleEl.style.color=exp.color;
+  var listEl=document.getElementById('step-list'); listEl.innerHTML='';
+  var sumEl=document.getElementById('explainer-summary'); sumEl.textContent=''; sumEl.classList.remove('visible');
+  exp.steps.forEach(function(s,i) {
+    var li=document.createElement('li');
+    li.innerHTML='<span class="step-num" style="background:'+exp.color+'20;color:'+exp.color+'">'+(i+1)+'</span><span class="step-text">'+s.text+'<span class="micro">'+s.micro+'</span></span>';
     listEl.appendChild(li);
     stepTimers.push(setTimeout(function() {
-      var actives = listEl.querySelectorAll('li.active');
-      for (var k = 0; k < actives.length; k++) { actives[k].classList.remove('active'); actives[k].classList.add('past'); }
-      li.classList.add('visible', 'active');
+      var actives=listEl.querySelectorAll('li.active');
+      for(var k=0;k<actives.length;k++){actives[k].classList.remove('active');actives[k].classList.add('past');}
+      li.classList.add('visible','active');
     }, s.delay));
   });
   stepTimers.push(setTimeout(function() {
-    sumEl.textContent = exp.summary; sumEl.classList.add('visible');
-    var actives = listEl.querySelectorAll('li.active');
-    for (var k = 0; k < actives.length; k++) { actives[k].classList.remove('active'); actives[k].classList.add('past'); }
-  }, exp.steps[exp.steps.length-1].delay + 1000));
+    sumEl.textContent=exp.summary; sumEl.classList.add('visible');
+    var actives=listEl.querySelectorAll('li.active');
+    for(var k=0;k<actives.length;k++){actives[k].classList.remove('active');actives[k].classList.add('past');}
+  }, exp.steps[exp.steps.length-1].delay+1000));
 }
 
 function logEvent(msg, color) {
-  var log = document.getElementById('event-log');
-  var e = document.createElement('div'); e.className = 'log-entry';
-  e.innerHTML = '<span class="tag" style="background:' + color + '30;color:' + color + '">' + new Date().toLocaleTimeString().slice(0,8) + '</span> ' + msg;
-  log.prepend(e); if (log.children.length > 40) log.lastChild.remove();
+  var log=document.getElementById('event-log');
+  var e=document.createElement('div'); e.className='log-entry';
+  e.innerHTML='<span class="tag" style="background:'+color+'30;color:'+color+'">'+new Date().toLocaleTimeString().slice(0,8)+'</span> '+msg;
+  log.prepend(e); if(log.children.length>40) log.lastChild.remove();
 }
 
 function updateStats() {
-  document.getElementById('stat-hits').textContent = stats.hits;
-  document.getElementById('stat-misses').textContent = stats.misses;
-  document.getElementById('stat-inv').textContent = stats.inv;
-  document.getElementById('stat-wb').textContent = stats.wb;
+  document.getElementById('stat-hits').textContent=stats.hits;
+  document.getElementById('stat-misses').textContent=stats.misses;
+  document.getElementById('stat-inv').textContent=stats.inv;
+  document.getElementById('stat-wb').textContent=stats.wb;
 }
 
 function triggerScenario(type) {
-  var si = Math.floor(Math.random() * layout.sms.length);
+  var si=Math.floor(Math.random()*layout.sms.length);
   showExplanation(type);
-  var sm = layout.sms[si];
+  var sm=layout.sms[si];
 
-  switch (type) {
+  switch(type) {
     case 'read':
-      sm.l1.state = 'invalid'; stats.misses++;
-      logEvent('SM' + si + ': L1 read miss \u2192 L2', '#ff6b6b');
-      bubble(l1Pos(si).x, l1Pos(si).y, 'LD.E issued', '#ff6b6b');
-      particles.push(new Particle(l1Pos(si), busP(si), '#ff6b6b', 'RdReq', 2, function() {
-        bubble(busP(si).x, busP(si).y, 'L1 MISS!', '#ff6b6b', {life:1.4});
-        particles.push(new Particle(busP(si), l2Top(), '#ff6b6b', 'RdReq', 2.5, function() {
-          stats.hits++; logEvent('L2: Hit \u2192 data returning', '#ffa94d');
-          bubble(l2Top().x, l2Top().y, 'L2 HIT \u2713', '#51cf66', {life:1.5});
-          particles.push(new Particle(l2Top(), busP(si), '#ffa94d', 'DATA', 2, function() {
-            particles.push(new Particle(busP(si), l1Pos(si), '#ffa94d', 'DATA', 2, function() {
-              sm.l1.state = 'shared'; flash(sm.l1, '#339af0');
-              bubble(l1Pos(si).x, l1Pos(si).y, '\u2192 Shared', '#339af0', {life:1.6});
-              logEvent('SM' + si + ': L1 \u2192 Shared', '#339af0');
+      sm.l1.state='invalid'; stats.misses++;
+      logEvent('SM'+si+': L1 read miss → L2','#ff6b6b');
+      bubble(l1Pos(si).x,l1Pos(si).y,'LD.E issued','#ff6b6b');
+      particles.push(new Particle(l1Pos(si),busP(si),'#ff6b6b','RdReq',2,function(){
+        bubble(busP(si).x,busP(si).y,'L1 MISS!','#ff6b6b',{life:1.4});
+        particles.push(new Particle(busP(si),l2Top(),'#ff6b6b','RdReq',2.5,function(){
+          stats.hits++; logEvent('L2: Hit → data returning','#ffa94d');
+          bubble(l2Top().x,l2Top().y,'L2 HIT ✓','#51cf66',{life:1.5});
+          particles.push(new Particle(l2Top(),busP(si),'#ffa94d','DATA',2,function(){
+            particles.push(new Particle(busP(si),l1Pos(si),'#ffa94d','DATA',2,function(){
+              sm.l1.state='shared'; flash(sm.l1,'#339af0');
+              bubble(l1Pos(si).x,l1Pos(si).y,'→ Shared','#339af0',{life:1.6});
+              logEvent('SM'+si+': L1 → Shared','#339af0');
             }));
           }));
         }));
       }));
       break;
     case 'write':
-      if (currentArch === 'pascal') {
-        logEvent('SM' + si + ': Write \u2192 L2 (L1 bypassed)', '#51cf66');
+      if (currentArch==='pascal') {
+        logEvent('SM'+si+': Write → L2 (L1 bypassed)','#51cf66');
         stats.hits++;
-        bubble(l1Pos(si).x, l1Pos(si).y, 'ST.E issued', '#51cf66');
-        particles.push(new Particle(l1Pos(si), busP(si), '#51cf66', 'WR', 2, function() {
-          bubble(busP(si).x, busP(si).y, 'L1 bypass', '#6b7094', {life:1.2});
-          particles.push(new Particle(busP(si), l2Top(), '#51cf66', 'WR', 2.5, function() {
-            flash(layout.l2, '#ffa94d');
-            bubble(l2Top().x, l2Top().y, 'absorbed \u2713', '#ffa94d', {life:1.5});
-            logEvent('L2: Write absorbed', '#ffa94d');
+        bubble(l1Pos(si).x,l1Pos(si).y,'ST.E issued','#51cf66');
+        particles.push(new Particle(l1Pos(si),busP(si),'#51cf66','WR',2,function(){
+          bubble(busP(si).x,busP(si).y,'L1 bypass','#6b7094',{life:1.2});
+          particles.push(new Particle(busP(si),l2Top(),'#51cf66','WR',2.5,function(){
+            flash(layout.l2,'#ffa94d');
+            bubble(l2Top().x,l2Top().y,'absorbed ✓','#ffa94d',{life:1.5});
+            logEvent('L2: Write absorbed','#ffa94d');
           }));
         }));
       } else {
-        sm.l1.state = 'modified'; stats.hits++;
-        logEvent('SM' + si + ': Write \u2192 Modified + invalidate', '#51cf66');
-        flash(sm.l1, '#51cf66');
-        bubble(l1Pos(si).x, l1Pos(si).y, 'ST.E \u2192 Modified', '#51cf66');
-        for (var wi = 0; wi < layout.sms.length; wi++) {
-          if (wi !== si && layout.sms[wi].l1.state !== 'invalid') {
-            (function(idx) {
-              setTimeout(function() {
-                particles.push(new Particle(busP(si), busP(idx), '#f06595', 'INV', 3, function() {
-                  layout.sms[idx].l1.state = 'invalid'; stats.inv++;
-                  flash(layout.sms[idx].l1, '#f06595');
-                  bubble(l1Pos(idx).x, l1Pos(idx).y, 'invalidated!', '#f06595', {life:1.3});
-                  logEvent('SM' + idx + ': Invalidated', '#f06595');
+        sm.l1.state='modified'; stats.hits++;
+        logEvent('SM'+si+': Write → Modified + invalidate','#51cf66');
+        flash(sm.l1,'#51cf66');
+        bubble(l1Pos(si).x,l1Pos(si).y,'ST.E → Modified','#51cf66');
+        for (var wi=0;wi<layout.sms.length;wi++) {
+          if (wi!==si && layout.sms[wi].l1.state!=='invalid') {
+            (function(idx){
+              setTimeout(function(){
+                particles.push(new Particle(busP(si),busP(idx),'#f06595','INV',3,function(){
+                  layout.sms[idx].l1.state='invalid'; stats.inv++;
+                  flash(layout.sms[idx].l1,'#f06595');
+                  bubble(l1Pos(idx).x,l1Pos(idx).y,'invalidated!','#f06595',{life:1.3});
+                  logEvent('SM'+idx+': Invalidated','#f06595');
                   updateStats();
                 }));
-              }, idx * 150);
+              }, idx*150);
             })(wi);
           }
         }
@@ -1084,79 +1425,79 @@ function triggerScenario(type) {
       break;
     case 'invalidate':
       stats.inv++;
-      logEvent('Broadcast INV', '#f06595');
-      bubble((layout.bus.x1+layout.bus.x2)/2, layout.bus.y, 'INV broadcast!', '#f06595');
-      for (var ii = 0; ii < layout.sms.length; ii++) {
-        (function(idx) {
-          setTimeout(function() {
-            var from = {x:(layout.bus.x1+layout.bus.x2)/2, y:layout.bus.y};
-            particles.push(new Particle(from, busP(idx), '#f06595', 'INV', 3, function() {
-              particles.push(new Particle(busP(idx), l1Pos(idx), '#f06595', 'INV', 2, function() {
-                layout.sms[idx].l1.state = 'invalid'; flash(layout.sms[idx].l1, '#f06595');
-                bubble(l1Pos(idx).x, l1Pos(idx).y, 'stale!', '#f06595', {life:1.2});
+      logEvent('Broadcast INV','#f06595');
+      bubble((layout.bus.x1+layout.bus.x2)/2,layout.bus.y,'INV broadcast!','#f06595');
+      for (var ii=0;ii<layout.sms.length;ii++) {
+        (function(idx){
+          setTimeout(function(){
+            var from={x:(layout.bus.x1+layout.bus.x2)/2,y:layout.bus.y};
+            particles.push(new Particle(from,busP(idx),'#f06595','INV',3,function(){
+              particles.push(new Particle(busP(idx),l1Pos(idx),'#f06595','INV',2,function(){
+                layout.sms[idx].l1.state='invalid'; flash(layout.sms[idx].l1,'#f06595');
+                bubble(l1Pos(idx).x,l1Pos(idx).y,'stale!','#f06595',{life:1.2});
               }));
             }));
-          }, idx * 180);
+          }, idx*180);
         })(ii);
       }
       break;
     case 'writeback':
-      sm.l1.state = 'modified'; stats.wb++;
-      logEvent('SM' + si + ': Write-back \u2192 L2', '#ffa94d');
-      bubble(l1Pos(si).x, l1Pos(si).y, 'dirty evict!', '#ffa94d');
-      particles.push(new Particle(l1Pos(si), busP(si), '#ffa94d', 'WB', 2, function() {
-        particles.push(new Particle(busP(si), l2Top(), '#ffa94d', 'WB', 2.5, function() {
-          flash(layout.l2, '#ffa94d'); sm.l1.state = 'shared';
-          bubble(l2Top().x, l2Top().y, 'L2 absorbed \u2713', '#ffa94d', {life:1.4});
-          logEvent('L2: Write-back received', '#ffa94d');
-          setTimeout(function() {
-            bubble(l2Bot().x, l2Bot().y, 'L2 full \u2192 evict', '#339af0', {life:1.3});
-            particles.push(new Particle(l2Bot(), cbP(), '#339af0', 'EVICT', 2, function() {
-              particles.push(new Particle(cbP(), gmTop(), '#339af0', 'WR', 2, function() {
-                flash(layout.globalMem, '#339af0');
-                bubble(gmTop().x, gmTop().y, 'MC queued', '#339af0', {life:1.2});
-                particles.push(new Particle(gmBot(), hbmTop(), '#845ef7', 'STORE', 1.5, function() {
-                  flash(layout.hbm, '#845ef7');
-                  bubble(hbmTop().x, hbmTop().y, 'stored \u2713', '#845ef7', {life:1.5});
-                  logEvent(ARCHS[currentArch].blocks.hbm.label + ': Stored', '#845ef7');
+      sm.l1.state='modified'; stats.wb++;
+      logEvent('SM'+si+': Write-back → L2','#ffa94d');
+      bubble(l1Pos(si).x,l1Pos(si).y,'dirty evict!','#ffa94d');
+      particles.push(new Particle(l1Pos(si),busP(si),'#ffa94d','WB',2,function(){
+        particles.push(new Particle(busP(si),l2Top(),'#ffa94d','WB',2.5,function(){
+          flash(layout.l2,'#ffa94d'); sm.l1.state='shared';
+          bubble(l2Top().x,l2Top().y,'L2 absorbed ✓','#ffa94d',{life:1.4});
+          logEvent('L2: Write-back received','#ffa94d');
+          setTimeout(function(){
+            bubble(l2Bot().x,l2Bot().y,'L2 full → evict','#339af0',{life:1.3});
+            particles.push(new Particle(l2Bot(),cbP(),'#339af0','EVICT',2,function(){
+              particles.push(new Particle(cbP(),gmTop(),'#339af0','WR',2,function(){
+                flash(layout.globalMem,'#339af0');
+                bubble(gmTop().x,gmTop().y,'MC queued','#339af0',{life:1.2});
+                particles.push(new Particle(gmBot(),hbmTop(),'#845ef7','STORE',1.5,function(){
+                  flash(layout.hbm,'#845ef7');
+                  bubble(hbmTop().x,hbmTop().y,'stored ✓','#845ef7',{life:1.5});
+                  logEvent(ARCHS[currentArch].blocks.hbm.label+': Stored','#845ef7');
                 }));
               }));
             }));
-          }, 500);
+          },500);
         }));
       }));
       break;
     case 'shared':
-      var smemBlock = null;
-      for (var sbi = 0; sbi < sm.sub.length; sbi++) { if (sm.sub[sbi].type === 'smem') smemBlock = sm.sub[sbi]; }
-      if (!smemBlock) break;
-      logEvent('SM' + si + ': SMEM access', '#51cf66');
-      flash(smemBlock, '#51cf66'); stats.hits++;
-      bubble(sm.x + sm.w/2, sm.y + 14, 'LDS issued', '#51cf66');
-      var regsBlock = null;
-      for (var ri = 0; ri < sm.sub.length; ri++) { if (sm.sub[ri].type === 'regs') regsBlock = sm.sub[ri]; }
-      var sfrom = {x:sm.x+sm.w/2, y:regsBlock ? regsBlock.y+3 : sm.y+40};
-      particles.push(new Particle(sfrom, {x:smemBlock.x+smemBlock.w/2,y:smemBlock.y+smemBlock.h/2}, '#51cf66', 'ST.S', 1.5, function() {
-        bubble(smemBlock.x+smemBlock.w/2, smemBlock.y, '~20 cycles \u2713', '#51cf66', {life:1.4});
+      var smemBlock=null;
+      for(var sbi=0;sbi<sm.sub.length;sbi++){if(sm.sub[sbi].type==='smem')smemBlock=sm.sub[sbi];}
+      if(!smemBlock) break;
+      logEvent('SM'+si+': SMEM access','#51cf66');
+      flash(smemBlock,'#51cf66'); stats.hits++;
+      bubble(sm.x+sm.w/2,sm.y+14,'LDS issued','#51cf66');
+      var regsBlock=null;
+      for(var ri=0;ri<sm.sub.length;ri++){if(sm.sub[ri].type==='regs')regsBlock=sm.sub[ri];}
+      var sfrom={x:sm.x+sm.w/2,y:regsBlock?regsBlock.y+3:sm.y+40};
+      particles.push(new Particle(sfrom,{x:smemBlock.x+smemBlock.w/2,y:smemBlock.y+smemBlock.h/2},'#51cf66','ST.S',1.5,function(){
+        bubble(smemBlock.x+smemBlock.w/2,smemBlock.y,'~20 cycles ✓','#51cf66',{life:1.4});
       }));
-      if (currentArch === 'hopper' && layout.sms.length > 1) {
-        var other = (si + 1) % layout.sms.length;
-        var otherDsmem = null, myDsmem = null;
-        for (var od = 0; od < layout.sms[other].sub.length; od++) { if (layout.sms[other].sub[od].type === 'dsmem') otherDsmem = layout.sms[other].sub[od]; }
-        for (var md = 0; md < sm.sub.length; md++) { if (sm.sub[md].type === 'dsmem') myDsmem = sm.sub[md]; }
-        if (otherDsmem && myDsmem) {
-          setTimeout(function() {
-            logEvent('SM' + si + ' \u2192 SM' + other + ': DSMEM read', '#22d3ee');
-            bubble(myDsmem.x+myDsmem.w/2, myDsmem.y, 'cross-SM!', '#22d3ee');
+      if (currentArch==='hopper'&&layout.sms.length>1) {
+        var other=(si+1)%layout.sms.length;
+        var otherDsmem=null, myDsmem=null;
+        for(var od=0;od<layout.sms[other].sub.length;od++){if(layout.sms[other].sub[od].type==='dsmem')otherDsmem=layout.sms[other].sub[od];}
+        for(var md=0;md<sm.sub.length;md++){if(sm.sub[md].type==='dsmem')myDsmem=sm.sub[md];}
+        if(otherDsmem&&myDsmem){
+          setTimeout(function(){
+            logEvent('SM'+si+' → SM'+other+': DSMEM read','#22d3ee');
+            bubble(myDsmem.x+myDsmem.w/2,myDsmem.y,'cross-SM!','#22d3ee');
             particles.push(new Particle(
-              {x:myDsmem.x+myDsmem.w/2, y:myDsmem.y+myDsmem.h/2},
-              {x:otherDsmem.x+otherDsmem.w/2, y:otherDsmem.y+otherDsmem.h/2},
-              '#22d3ee', 'DSMEM', 2, function() {
-                flash(otherDsmem, '#22d3ee');
-                bubble(otherDsmem.x+otherDsmem.w/2, otherDsmem.y, 'DSMEM hit \u2713', '#22d3ee', {life:1.4});
+              {x:myDsmem.x+myDsmem.w/2,y:myDsmem.y+myDsmem.h/2},
+              {x:otherDsmem.x+otherDsmem.w/2,y:otherDsmem.y+otherDsmem.h/2},
+              '#22d3ee','DSMEM',2,function(){
+                flash(otherDsmem,'#22d3ee');
+                bubble(otherDsmem.x+otherDsmem.w/2,otherDsmem.y,'DSMEM hit ✓','#22d3ee',{life:1.4});
               }
             ));
-          }, 800);
+          },800);
         }
       }
       break;
@@ -1165,30 +1506,29 @@ function triggerScenario(type) {
 }
 
 function toggleAuto() {
-  autoMode = !autoMode;
-  document.getElementById('btn-auto').classList.toggle('active', autoMode);
+  autoMode=!autoMode;
+  document.getElementById('btn-auto').classList.toggle('active',autoMode);
 }
 
 function resetAll(silent) {
-  particles = []; flashEffects = []; bubbles = [];
-  stats = {hits:0, misses:0, inv:0, wb:0}; updateStats();
-  for (var ri = 0; ri < layout.sms.length; ri++) { layout.sms[ri].l1.state = 'invalid'; }
-  document.getElementById('event-log').innerHTML = '';
-  stepTimers.forEach(function(t) { clearTimeout(t); }); stepTimers = [];
-  document.getElementById('explainer-title').innerHTML = '<span class="dot" style="background:#6b7094"></span> Click a scenario or wait for auto...';
-  document.getElementById('explainer-title').style.color = '#6b7094';
-  document.getElementById('step-list').innerHTML = '';
-  var s = document.getElementById('explainer-summary'); s.textContent = ''; s.classList.remove('visible');
-  autoTimer = 0;
-  if (!silent) logEvent('Reset \u2014 all caches invalidated', '#6b7094');
+  particles=[]; flashEffects=[]; bubbles=[];
+  stats={hits:0,misses:0,inv:0,wb:0}; updateStats();
+  for(var ri=0;ri<layout.sms.length;ri++){layout.sms[ri].l1.state='invalid';}
+  document.getElementById('event-log').innerHTML='';
+  stepTimers.forEach(function(t){clearTimeout(t);}); stepTimers=[];
+  document.getElementById('explainer-title').innerHTML='<span class="dot" style="background:#6b7094"></span> Click a scenario or wait for auto...';
+  document.getElementById('explainer-title').style.color='#6b7094';
+  document.getElementById('step-list').innerHTML='';
+  var s=document.getElementById('explainer-summary'); s.textContent=''; s.classList.remove('visible');
+  autoTimer=0;
+  if(!silent) logEvent('Reset — all caches invalidated','#6b7094');
 }
 
 buildLayout();
-initialized = true;
+initialized=true;
 updateKeyCard();
 updateArchIntro();
 updatePerfChart();
 </script>
-
 </body>
 </html>
