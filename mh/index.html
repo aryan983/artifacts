@@ -54,11 +54,63 @@ font-size:.75rem; line-height:1.5; display:none; text-align:center;
 background:var(--surface2); border:1px solid var(--border); color:var(--text);
 font-family:'JetBrains Mono',monospace; font-size:.75rem; padding:8px 16px;
 border-radius:6px; cursor:pointer; transition:all .2s; letter-spacing:.5px;
+position:relative;
 }
 .controls button:hover { border-color:var(--coherency); color:#fff; }
 .controls button.active { background:var(--coherency); border-color:var(--coherency); color:#fff; }
 .controls button.reset-btn { background:transparent; border-color:#ff6b6b50; color:#ff6b6b; }
 .controls button.reset-btn:hover { background:#ff6b6b20; border-color:#ff6b6b; }
+
+/* ── Pause button ── */
+.controls button.pause-btn {
+  background:transparent; border-color:#845ef760; color:#845ef7;
+}
+.controls button.pause-btn:hover { background:#845ef720; border-color:#845ef7; color:#c0a8ff; }
+.controls button.pause-btn.active { background:#845ef7; border-color:#845ef7; color:#fff; }
+
+/* ── Scenario buttons — add data-tooltip support ── */
+.controls button.scenario-btn {
+  position: relative;
+}
+
+/* Paused overlay badge */
+.paused-badge {
+  position:absolute; top:10px; left:50%; transform:translateX(-50%);
+  background:#845ef7dd; color:#fff; font-family:'JetBrains Mono',monospace;
+  font-size:.7rem; font-weight:700; padding:6px 16px; border-radius:6px;
+  letter-spacing:1.5px; pointer-events:none; z-index:50;
+  display:none; text-transform:uppercase;
+  border: 1px solid #845ef7;
+  box-shadow: 0 4px 20px rgba(132,94,247,.4);
+}
+.paused-badge.visible { display:block; }
+
+/* ── Scenario tooltip ── */
+#scenario-tooltip {
+  position:fixed; pointer-events:none; z-index:300;
+  background:#090b12; border:1px solid var(--border);
+  border-radius:12px; padding:14px 16px; max-width:290px; min-width:220px;
+  box-shadow:0 14px 44px rgba(0,0,0,.9);
+  opacity:0; transition:opacity .15s, transform .15s;
+  transform:translateY(6px);
+  font-size:.75rem; line-height:1.6;
+}
+#scenario-tooltip.visible { opacity:1; transform:translateY(0); }
+#scenario-tooltip .st-title {
+  font-family:'JetBrains Mono',monospace; font-weight:700; font-size:.82rem;
+  margin-bottom:8px; display:flex; align-items:center; gap:8px;
+}
+#scenario-tooltip .st-dot { width:8px; height:8px; border-radius:2px; flex-shrink:0; }
+#scenario-tooltip .st-desc { color:#c8cce0; font-size:.75rem; line-height:1.55; margin-bottom:8px; }
+#scenario-tooltip .st-detail {
+  background:#0f1520; border:1px solid #339af020; border-radius:7px;
+  padding:8px 10px;
+}
+#scenario-tooltip .st-detail-label {
+  font-family:'JetBrains Mono',monospace; font-size:.55rem; font-weight:700;
+  text-transform:uppercase; letter-spacing:1.5px; color:#339af099; margin-bottom:3px;
+}
+#scenario-tooltip .st-detail-text { color:#90c8f0; font-size:.72rem; line-height:1.5; }
 
 .main-container { display:flex; gap:24px; padding:12px 20px; max-width:1200px; margin:0 auto; align-items:flex-start; }
 .viz-area { flex:1; min-width:0; max-width:700px; position:relative; }
@@ -290,11 +342,12 @@ position:absolute; top:-12px; width:100%; text-align:center; white-space:nowrap;
 <div class="arch-intro"><div class="arch-intro-inner" id="arch-intro"></div></div>
 
 <div class="controls">
-  <button onclick="triggerScenario('read')">SM Read</button>
-  <button onclick="triggerScenario('write')">SM Write</button>
-  <button onclick="triggerScenario('invalidate')">Invalidate</button>
-  <button onclick="triggerScenario('writeback')">Write-Back</button>
-  <button onclick="triggerScenario('shared')">Shared Mem</button>
+  <button class="scenario-btn" data-scenario="read"   onclick="triggerScenario('read')">SM Read</button>
+  <button class="scenario-btn" data-scenario="write"  onclick="triggerScenario('write')">SM Write</button>
+  <button class="scenario-btn" data-scenario="invalidate" onclick="triggerScenario('invalidate')">Invalidate</button>
+  <button class="scenario-btn" data-scenario="writeback"  onclick="triggerScenario('writeback')">Write-Back</button>
+  <button class="scenario-btn" data-scenario="shared"     onclick="triggerScenario('shared')">Shared Mem</button>
+  <button id="btn-pause" class="pause-btn" onclick="togglePause()">⏸ Pause</button>
   <button id="btn-auto" class="active" onclick="toggleAuto()">Auto</button>
   <button class="reset-btn" onclick="resetAll()">Reset</button>
 </div>
@@ -302,6 +355,7 @@ position:absolute; top:-12px; width:100%; text-align:center; white-space:nowrap;
 <div class="main-container">
   <div class="viz-area">
     <canvas id="canvas"></canvas>
+    <div class="paused-badge" id="paused-badge">⏸ PAUSED — hover tooltips freely</div>
     <!-- Block tooltip -->
     <div id="block-tooltip">
       <div class="tt-title"><div class="tt-dot" id="tt-dot"></div><span id="tt-name"></span></div>
@@ -391,18 +445,146 @@ position:absolute; top:-12px; width:100%; text-align:center; white-space:nowrap;
     </div>
   </div>
 </div>
+
+<!-- Scenario tooltip at body level -->
+<div id="scenario-tooltip">
+  <div class="st-title"><div class="st-dot" id="st-dot"></div><span id="st-title-text"></span></div>
+  <div class="st-desc" id="st-desc-text"></div>
+  <div class="st-detail">
+    <div class="st-detail-label">What to watch for</div>
+    <div class="st-detail-text" id="st-watch-text"></div>
+  </div>
+</div>
+
+<!-- Instruction tooltip at body level so fixed positioning works correctly -->
+<div id="instr-tooltip">
+  <div class="it-name"><div class="it-dot" id="it-dot"></div><span id="it-name"></span></div>
+  <div class="it-section">
+    <div class="it-label">What it does</div>
+    <div class="it-text" id="it-what"></div>
+  </div>
+  <div class="it-why-box">
+    <div class="it-label">Why you need this op</div>
+    <div class="it-text" id="it-why"></div>
+  </div>
+</div>
+
 <script>
 var canvas = document.getElementById('canvas');
 var ctx = canvas.getContext('2d');
 var W, H, dpr;
 var initialized = false;
 
+// ── Pause state ──────────────────────────────────────────────────────────────
+var paused = false;
+
+function togglePause() {
+  paused = !paused;
+  var btn = document.getElementById('btn-pause');
+  var badge = document.getElementById('paused-badge');
+  if (paused) {
+    btn.classList.add('active');
+    btn.textContent = '▶ Resume';
+    badge.classList.add('visible');
+    // Also stop auto when pausing
+    if (autoMode) { autoMode = false; document.getElementById('btn-auto').classList.remove('active'); }
+    logEvent('Paused — animation frozen', '#845ef7');
+  } else {
+    btn.classList.remove('active');
+    btn.textContent = '⏸ Pause';
+    badge.classList.remove('visible');
+    lastTime = performance.now(); // reset dt so we don't get a big jump
+    logEvent('Resumed', '#845ef7');
+  }
+}
+
+// ── Scenario button tooltip data ─────────────────────────────────────────────
+var SCENARIO_INFO = {
+  read: {
+    title: 'SM Read  (L1 Miss → L2 Fetch)',
+    color: '#ff6b6b',
+    desc: 'A warp issues a global load (LD.E). The SM checks its L1 — on a miss, it sends a read request down to L2. The cache line travels back and fills L1.',
+    watch: 'Watch the RdReq particle travel SM→Bus→L2, then DATA come back and fill the L1 line. L1 state transitions: Invalid → Shared.'
+  },
+  write: {
+    title: 'SM Write  (write-evict + INV)',
+    color: '#51cf66',
+    desc: 'Pascal: writes bypass L1 and go straight to L2 (write-through). Volta+: SM writes to L1 (Modified), then evicts to L2 and broadcasts INV to invalidate other SMs\' copies.',
+    watch: 'On Volta+: see the INV packets fan out to all other SMs, turning their L1 lines grey (Invalid). On Pascal: just a direct WR to L2, no INV needed.'
+  },
+  invalidate: {
+    title: 'Broadcast Invalidation',
+    color: '#f06595',
+    desc: 'A global coherency event — a write happened somewhere and all cached copies of that address must be dropped. The coherency bus broadcasts INV to every SM simultaneously.',
+    watch: 'INV packets fire from the bus center to all SMs in parallel. Each SM\'s L1 transitions to Invalid (grey). Cost scales linearly with SM count — this is why write-heavy kernels are expensive.'
+  },
+  writeback: {
+    title: 'Write-Back Cascade (L1→L2→DRAM)',
+    color: '#ffa94d',
+    desc: 'A dirty L1 line is being evicted (capacity pressure). It writes to L2. If L2 is also full, the victim cascades all the way to DRAM through the memory controller.',
+    watch: 'The full eviction chain: WB particle L1→Bus→L2, then EVICT particle L2→Crossbar→Global Mem→HBM. The HBM block flashes purple at the end — data is now only in DRAM.'
+  },
+  shared: {
+    title: 'Shared Memory Access (+ DSMEM on Hopper)',
+    color: '#51cf66',
+    desc: 'Threads access __shared__ SRAM via LDS/STS — no coherency protocol, no bus traffic, no L2 involvement. Pure on-chip speed. Hopper adds DSMEM: cross-SM shared memory within a cluster.',
+    watch: 'Notice: no bus or L2 activity at all. The particles stay entirely inside the SM. On Hopper, a second DSMEM particle crosses to the adjacent SM — still on-chip, ~20 cycle latency.'
+  }
+};
+
+var scenarioTooltipEl = document.getElementById('scenario-tooltip');
+var scenarioVisible = false;
+
+function showScenarioTooltip(key, clientX, clientY) {
+  var info = SCENARIO_INFO[key];
+  if (!info) return;
+  document.getElementById('st-dot').style.background = info.color;
+  scenarioTooltipEl.style.borderColor = info.color + '50';
+  document.getElementById('st-title-text').textContent = info.title;
+  document.getElementById('st-desc-text').textContent = info.desc;
+  document.getElementById('st-watch-text').textContent = info.watch;
+  positionScenarioTooltip(clientX, clientY);
+  scenarioTooltipEl.classList.add('visible');
+  scenarioVisible = true;
+}
+
+function hideScenarioTooltip() {
+  scenarioTooltipEl.classList.remove('visible');
+  scenarioVisible = false;
+}
+
+function positionScenarioTooltip(clientX, clientY) {
+  var tw = 300, th = 200;
+  var vw = window.innerWidth, vh = window.innerHeight;
+  var tx = clientX - tw / 2;
+  var ty = clientY - th - 14; // above the button
+  if (tx + tw > vw - 10) tx = vw - tw - 10;
+  if (tx < 8) tx = 8;
+  if (ty < 8) ty = clientY + 40; // flip below if no room above
+  scenarioTooltipEl.style.left = tx + 'px';
+  scenarioTooltipEl.style.top  = ty + 'px';
+}
+
+// Attach hover listeners to scenario buttons
+document.querySelectorAll('.scenario-btn').forEach(function(btn) {
+  var key = btn.getAttribute('data-scenario');
+  btn.addEventListener('mouseenter', function(e) {
+    showScenarioTooltip(key, e.clientX, e.clientY);
+  });
+  btn.addEventListener('mousemove', function(e) {
+    positionScenarioTooltip(e.clientX, e.clientY);
+  });
+  btn.addEventListener('mouseleave', function() {
+    hideScenarioTooltip();
+  });
+});
+
 function resize() {
   dpr = window.devicePixelRatio || 1;
   var r = canvas.getBoundingClientRect();
   var newW = r.width || canvas.offsetWidth || 640;
   var newH = r.height || canvas.offsetHeight || 520;
-  if (newW === W && newH === H) return; // nothing changed
+  if (newW === W && newH === H) return;
   W = newW; H = newH;
   canvas.width  = Math.round(W * dpr);
   canvas.height = Math.round(H * dpr);
@@ -410,7 +592,6 @@ function resize() {
   if (initialized) buildLayout();
 }
 
-// Resize will be called by the deferred init block below
 window.addEventListener('resize', resize);
 
 function rrect(x, y, w, h, r) {
@@ -422,7 +603,6 @@ function rrect(x, y, w, h, r) {
   ctx.arcTo(x,y,x+r,y,r); ctx.closePath();
 }
 
-// ─── Block metadata: purpose, latency, size, connections ───
 var BLOCK_INFO = {
   regs:      { name:'Register File', color:'#a8b0d0', desc:'Fastest storage on the chip. Each thread gets its own private registers — no sharing, no coherency needed. 32-bit per lane, ~255 per thread.', chips:[{t:'~1 cycle',c:'#51cf66'},{t:'private',c:'#339af0'}], connects:[{to:'l1',arrow:'→',why:'Spill registers to L1 when exhausted (register spilling)'},{to:'smem',arrow:'↔',why:'Threads read/write shared mem via LDS/STS instructions'}] },
   l1:        { name:'L1 Cache (unified)', color:'#ff6b6b', desc:'Per-SM cache. Pascal: read-only for global data — zero coherency overhead. Volta+: caches writes too, requires invalidation protocol when another SM writes to the same address.', chips:[{t:'~28 cycles',c:'#ffa94d'},{t:'per-SM',c:'#339af0'}], connects:[{to:'bus',arrow:'→',why:'Miss → sends RdReq or INV across coherency bus'},{to:'smem',arrow:'↔',why:'Shares physical SRAM pool (Volta+); split is software-configurable'},{to:'regs',arrow:'←',why:'Fills data into thread registers on cache hit/fill'}] },
@@ -438,8 +618,6 @@ var BLOCK_INFO = {
   hbm:       { name:'HBM / GDDR (DRAM)', color:'#845ef7', desc:'Off-chip high-bandwidth memory. HBM stacks dies vertically connected via micro-bumps. Hopper HBM3 = 3.35 TB/s. Slowest in the hierarchy but largest — all GPU memory ultimately lives here.', chips:[{t:'~400 cycles',c:'#ff6b6b'},{t:'off-chip',c:'#845ef7'},{t:'largest',c:'#6b7094'}], connects:[{to:'globalMem',arrow:'↔',why:'Memory controllers read/write HBM banks via wide parallel buses'}] },
 };
 
-// ── Instruction tooltips ─────────────────────────────────────────────────────
-// Shown when hovering a flying particle label OR the micro-code chips in the explainer
 var INSTRUCTION_INFO = {
   'LD.E':   { name:'LD.E  (global load)', color:'#ff6b6b',
     what:'Load from global memory into registers. The .E suffix = "extended addressing" (64-bit). Each thread in the warp loads from its own address — if addresses are contiguous the hardware coalesces them into one wide transaction.',
@@ -573,11 +751,8 @@ var autoMode = true, autoTimer = 0;
 var particles = [], flashEffects = [], stepTimers = [], bubbles = [];
 var layout = {};
 
-// ── Cache line state per SM ──────────────────────────────────────────────────
-// Each SM has: l1Lines[16] and smemLines[16]
-// Each slot: 0=empty, 1=valid/clean, 2=dirty/modified
 var NUM_LINES = 16;
-var cacheState = [];  // indexed by smIdx: { l1: [], smem: [] }
+var cacheState = [];
 
 function initCacheState() {
   cacheState = [];
@@ -590,16 +765,13 @@ function initCacheState() {
   }
 }
 
-// Randomise a realistic partial fill for an SM's L1 (after a read)
 function fillL1Random(smIdx, dirty) {
   if (!cacheState[smIdx]) return;
   var lines = cacheState[smIdx].l1;
-  // Fill 6-13 random lines
   var count = 6 + Math.floor(Math.random() * 8);
   for (var i = 0; i < NUM_LINES; i++) {
     lines[i] = i < count ? (dirty ? 2 : 1) : 0;
   }
-  // Shuffle
   for (var j = NUM_LINES - 1; j > 0; j--) {
     var k = Math.floor(Math.random() * (j + 1));
     var tmp = lines[j]; lines[j] = lines[k]; lines[k] = tmp;
@@ -611,7 +783,6 @@ function setL1Dirty(smIdx) {
   var lines = cacheState[smIdx].l1;
   var filled = lines.filter(function(v){ return v > 0; }).length;
   if (filled < 4) { fillL1Random(smIdx, false); }
-  // Mark 1-3 random clean lines as dirty
   var dirtied = 0;
   for (var i = 0; i < NUM_LINES && dirtied < 3; i++) {
     if (lines[i] === 1 && Math.random() > 0.5) { lines[i] = 2; dirtied++; }
@@ -626,7 +797,6 @@ function invalidateL1(smIdx) {
 
 function writebackL1(smIdx) {
   if (!cacheState[smIdx]) return;
-  // Dirty → clean on writeback
   var lines = cacheState[smIdx].l1;
   for (var i = 0; i < NUM_LINES; i++) { if (lines[i] === 2) lines[i] = 1; }
 }
@@ -653,19 +823,15 @@ function getCacheStats(smIdx, kind) {
   return { filled: filled, dirty: dirty, empty: NUM_LINES - filled };
 }
 
-// ─── Hover / selection state ───
 var hoveredBlock = null;
 var selectedBlock = null;
 var connLines = [];
 var mouseX = 0, mouseY = 0;
-var lastClientX = 0, lastClientY = 0;  // for live tooltip refresh from drawFrame
-
-// ─── All "hit" rectangles (rebuilt each buildLayout) ───
-var hitRects = []; // [{type, x, y, w, h, smIdx}]
+var lastClientX = 0, lastClientY = 0;
+var hitRects = [];
 
 function buildHitRects() {
   hitRects = [];
-  // SM sub-blocks
   for (var si = 0; si < layout.sms.length; si++) {
     var sm = layout.sms[si];
     for (var bi = 0; bi < sm.sub.length; bi++) {
@@ -673,15 +839,10 @@ function buildHitRects() {
       hitRects.push({ type: b.type, x: b.x, y: b.y, w: b.w, h: b.h, smIdx: si, label: b.label });
     }
   }
-  // L2
   if (layout.l2) hitRects.push({ type: 'l2', x: layout.l2.x, y: layout.l2.y, w: layout.l2.w, h: layout.l2.h });
-  // L2 persist
   if (layout.l2Persist) hitRects.push({ type: 'l2Persist', x: layout.l2Persist.x, y: layout.l2Persist.y, w: layout.l2Persist.w, h: layout.l2Persist.h });
-  // Bus (thin strip)
   if (layout.bus) hitRects.push({ type: 'bus', x: layout.bus.x1, y: layout.bus.y - 12, w: layout.bus.x2 - layout.bus.x1, h: 24 });
-  // Global mem
   if (layout.globalMem) hitRects.push({ type: 'globalMem', x: layout.globalMem.x, y: layout.globalMem.y, w: layout.globalMem.w, h: layout.globalMem.h });
-  // HBM
   if (layout.hbm) hitRects.push({ type: 'hbm', x: layout.hbm.x, y: layout.hbm.y, w: layout.hbm.w, h: layout.hbm.h });
 }
 
@@ -699,7 +860,6 @@ function getBlockCenter(type, smIdx) {
   if (type === 'bus') return { x: (layout.bus.x1 + layout.bus.x2)/2, y: layout.bus.y };
   if (type === 'globalMem') return { x: layout.globalMem.x + layout.globalMem.w/2, y: layout.globalMem.y + layout.globalMem.h/2 };
   if (type === 'hbm') return { x: layout.hbm.x + layout.hbm.w/2, y: layout.hbm.y + layout.hbm.h/2 };
-  // SM sub-block
   var targetSmIdx = (smIdx !== undefined && smIdx !== null) ? smIdx : 0;
   for (var si = 0; si < layout.sms.length; si++) {
     var sm = layout.sms[si];
@@ -708,7 +868,6 @@ function getBlockCenter(type, smIdx) {
       if (b.type === type && si === targetSmIdx) return { x: b.x + b.w/2, y: b.y + b.h/2 };
     }
   }
-  // Any SM with that type
   for (var si2 = 0; si2 < layout.sms.length; si2++) {
     for (var bi2 = 0; bi2 < layout.sms[si2].sub.length; bi2++) {
       if (layout.sms[si2].sub[bi2].type === type) {
@@ -728,7 +887,6 @@ function getBlockRect(type, smIdx) {
   return null;
 }
 
-// ─── Connection line animation ───
 var connLineAnim = 0;
 var SM_LOCAL_TYPES = { regs:1, l1:1, texCache:1, smem:1, tma:1, dsmem:1, async:1 };
 
@@ -742,11 +900,9 @@ function buildConnLines(blockType, smIdx) {
     var conn = info.connects[i];
     var isGlobal = !SM_LOCAL_TYPES[conn.to];
     if (isGlobal) {
-      // Global target (l2, bus, globalMem, hbm, l2Persist) — single line
       var tc = getBlockCenter(conn.to, smIdx);
       if (tc) connLines.push({ from: from, to: tc, why: conn.why, arrow: conn.arrow, color: info.color });
     } else {
-      // SM-local target — only connect to the SAME SM, not all SMs
       var tc2 = getBlockCenter(conn.to, smIdx);
       if (tc2) connLines.push({ from: from, to: tc2, why: conn.why, arrow: conn.arrow, color: info.color });
     }
@@ -754,7 +910,6 @@ function buildConnLines(blockType, smIdx) {
   connLineAnim = 0;
 }
 
-// Canvas mouse handlers
 canvas.addEventListener('mousemove', function(e) {
   var r = canvas.getBoundingClientRect();
   mouseX = e.clientX - r.left;
@@ -762,7 +917,6 @@ canvas.addEventListener('mousemove', function(e) {
   lastClientX = e.clientX;
   lastClientY = e.clientY;
 
-  // Check particle label hover first (higher priority when labels are near)
   var pHit = hitTestParticleLabels(mouseX, mouseY);
   if (pHit && INSTRUCTION_INFO[pHit.key]) {
     showInstrTooltip(pHit.key, pHit.clientX, pHit.clientY - 20);
@@ -832,7 +986,6 @@ function updateSelPanel(hit) {
     var el = document.createElement('div');
     el.className = 'conn-item';
     el.innerHTML = '<span class="ci-arrow" style="color:' + (targetInfo.color||'#6b7094') + '">' + c.arrow + '</span><div class="ci-body"><span class="ci-target" style="color:' + (targetInfo.color||'#aaa') + '">' + (targetInfo.name || c.to) + '</span><span class="ci-why">' + c.why + '</span></div>';
-    // Clicking a connection item highlights that target
     (function(connTo) {
       el.addEventListener('click', function(e) {
         e.stopPropagation();
@@ -851,7 +1004,6 @@ var ttDesc = document.getElementById('tt-desc');
 var ttMeta = document.getElementById('tt-meta');
 var ttHint = document.getElementById('tt-hint');
 
-// ── Instruction tooltip ──────────────────────────────────────────────────────
 var instrTooltipEl = null;
 var instrHovered = null;
 
@@ -897,7 +1049,6 @@ function positionInstrTooltip(clientX, clientY) {
   el.style.top  = ty + 'px';
 }
 
-// Particle label hit-rects rebuilt each frame for hover detection
 var particleLabelRects = [];
 
 function buildParticleLabelRects() {
@@ -908,32 +1059,28 @@ function buildParticleLabelRects() {
     if (!p.label || !p.alive) continue;
     var cx2 = p.from.x + (p.to.x - p.from.x) * p.t;
     var cy2 = p.from.y + (p.to.y - p.from.y) * p.t;
-    // Also store absolute client coords for tooltip positioning
     var clientX = cr.left + cx2;
     var clientY = cr.top  + cy2;
     particleLabelRects.push({ key: p.label, cx: cx2, cy: cy2, clientX: clientX, clientY: clientY });
   }
 }
 
-// mx/my in canvas CSS-pixel coords
 function hitTestParticleLabels(mx, my) {
-  var HIT_R = 36; // large radius — particles move fast
+  var HIT_R = 36;
   for (var i = 0; i < particleLabelRects.length; i++) {
     var r = particleLabelRects[i];
     var dx = mx - r.cx;
-    var dy = my - (r.cy - 12); // label drawn 12px above dot
+    var dy = my - (r.cy - 12);
     if (dx*dx + dy*dy < HIT_R*HIT_R) return r;
   }
   return null;
 }
-// ─────────────────────────────────────────────────────────────────────────────
 
 function updateTooltip(hit, clientX, clientY) {
   if (!hit) { hideTooltip(); return; }
   var info = BLOCK_INFO[hit.type];
   if (!info) { hideTooltip(); return; }
 
-  // Static content (only set on block change, not every frame)
   ttName.textContent = info.name;
   ttDot.style.background = info.color;
   tooltipEl.style.borderColor = info.color + '50';
@@ -942,7 +1089,6 @@ function updateTooltip(hit, clientX, clientY) {
   var isCacheBlock = (hit.type === 'l1' || hit.type === 'smem') && hit.smIdx !== undefined;
 
   if (isCacheBlock) {
-    // Build stable DOM structure with IDs for per-frame refresh
     ttMeta.innerHTML =
       '<div style="margin-bottom:2px">' +
         '<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">' +
@@ -974,7 +1120,6 @@ function updateTooltip(hit, clientX, clientY) {
   tooltipEl.classList.add('visible');
 }
 
-// Called every frame while hovering a cache block — updates just the live data
 function refreshTooltipCacheData(hit, info) {
   if (!hit) return;
   var inf = info || BLOCK_INFO[hit.type];
@@ -985,18 +1130,14 @@ function refreshTooltipCacheData(hit, info) {
   var cs = getCacheStats(hit.smIdx, kind);
   var arr = cacheState[hit.smIdx] ? cacheState[hit.smIdx][kind] : [];
 
-  // Update fill label
   var fillLbl = document.getElementById('tt-fill-label');
   if (fillLbl) fillLbl.textContent = cs.filled + '/' + NUM_LINES + ' filled';
 
-  // Update dirty label
   var dirtyLbl = document.getElementById('tt-dirty-label');
   if (dirtyLbl) dirtyLbl.textContent = cs.dirty > 0 ? cs.dirty + ' dirty' : '';
 
-  // Rebuild line grid squares (fast — just fill colors)
   var grid = document.getElementById('tt-line-grid');
   if (grid) {
-    // Only rebuild if child count changed or on first pass
     if (grid.children.length !== NUM_LINES) {
       grid.innerHTML = '';
       for (var li = 0; li < NUM_LINES; li++) {
@@ -1015,7 +1156,6 @@ function refreshTooltipCacheData(hit, info) {
     }
   }
 
-  // Update state label (L1 only)
   var stateLbl = document.getElementById('tt-state-label');
   if (stateLbl && hit.type === 'l1') {
     var l1b = null;
@@ -1054,7 +1194,6 @@ function hideTooltip() {
   tooltipEl.classList.remove('visible');
 }
 
-// Floating bubble system
 function bubble(x, y, text, color, opts) {
   var o = opts || {};
   bubbles.push({ x:x, y:y-8, text:text, sub:o.sub||null, color:color, bg:(o.bg||color.slice(0,7))+'18', age:0, life:o.life||1.9, rise:o.rise||18, wobble:Math.random()*6 });
@@ -1124,7 +1263,6 @@ function switchArch(arch) {
   updateDiffBanner();
   updateKeyCard();
   updateArchIntro();
-  
   logEvent('Switched to ' + ARCHS[arch].name + ' (' + ARCHS[arch].gen + ')', ARCHS[arch].color);
 }
 
@@ -1132,8 +1270,6 @@ function updateArchIntro() {
   var arch = ARCHS[currentArch];
   document.getElementById('arch-intro').innerHTML = '<div class="arch-intro-badge" style="background:' + arch.color + '20;color:' + arch.color + '">' + arch.name + ' · ' + arch.example + '</div><div class="arch-intro-text">' + arch.intro + '</div>';
 }
-
-
 
 function buildLayout() {
   if (!W || !H) return;
@@ -1246,8 +1382,6 @@ function drawConnLines(time) {
     var dy = cl.to.y - cl.from.y;
     var dist = Math.sqrt(dx*dx + dy*dy);
 
-    // Build smooth bezier control points
-    // For vertical-dominant paths: slight horizontal bow; for horizontal: slight vertical bow
     var isVertical = Math.abs(dy) > Math.abs(dx);
     var bow = Math.min(dist * 0.35, 60) * (i % 2 === 0 ? 1 : -1);
     var cp1, cp2;
@@ -1263,7 +1397,6 @@ function drawConnLines(time) {
     var colorHex = cl.color + Math.round(alpha * 255).toString(16).padStart(2,'0');
 
     ctx.save();
-    // Glow pass
     ctx.beginPath();
     ctx.moveTo(cl.from.x, cl.from.y);
     ctx.bezierCurveTo(cp1.x, cp1.y, cp2.x, cp2.y, cl.to.x, cl.to.y);
@@ -1272,7 +1405,6 @@ function drawConnLines(time) {
     ctx.setLineDash([]);
     ctx.stroke();
 
-    // Main dashed line
     ctx.beginPath();
     ctx.moveTo(cl.from.x, cl.from.y);
     ctx.bezierCurveTo(cp1.x, cp1.y, cp2.x, cp2.y, cl.to.x, cl.to.y);
@@ -1283,13 +1415,11 @@ function drawConnLines(time) {
     ctx.stroke();
     ctx.setLineDash([]);
 
-    // Source dot
     ctx.beginPath(); ctx.arc(cl.from.x, cl.from.y, 3.5, 0, Math.PI*2);
     ctx.fillStyle = cl.color; ctx.fill();
     ctx.beginPath(); ctx.arc(cl.from.x, cl.from.y, 6, 0, Math.PI*2);
     ctx.fillStyle = cl.color + '30'; ctx.fill();
 
-    // Arrowhead at destination — compute bezier tangent at t=0.97
     var tip  = bezierPoint({x:cl.from.x,y:cl.from.y}, cp1, cp2, {x:cl.to.x,y:cl.to.y}, 0.98);
     var tang = bezierPoint({x:cl.from.x,y:cl.from.y}, cp1, cp2, {x:cl.to.x,y:cl.to.y}, 0.93);
     var angle = Math.atan2(cl.to.y - tang.y, cl.to.x - tang.x);
@@ -1303,7 +1433,6 @@ function drawConnLines(time) {
     ctx.fillStyle = cl.color + 'dd';
     ctx.fill();
 
-    // Traveling dot along bezier
     var travelT = (connLineAnim * 0.55 + i * 0.28) % 1.0;
     ctx.restore();
     var tp = bezierPoint({x:cl.from.x,y:cl.from.y}, cp1, cp2, {x:cl.to.x,y:cl.to.y}, travelT);
@@ -1347,19 +1476,59 @@ function drawSelectionHighlight() {
 
 function drawFrame(time) {
   if (!initialized || !layout.sms) { requestAnimationFrame(drawFrame); return; }
+  
+  // ── Pause: freeze animation but keep RAF running for tooltip responsiveness ──
+  if (paused) {
+    // Still draw the static frame so hovering works, but don't advance time
+    // Just redraw without updating dt-dependent state
+    drawStaticFrame();
+    requestAnimationFrame(drawFrame);
+    return;
+  }
+
   var dt = Math.min((time - lastTime)/1000, 0.05);
   lastTime = time;
+  drawAnimatedFrame(dt, time);
+  requestAnimationFrame(drawFrame);
+}
+
+function drawStaticFrame() {
   ctx.clearRect(0, 0, W, H);
+  drawSceneContent(0, performance.now());
+  // Still update tooltip for hovered block
+  if (hoveredBlock && (hoveredBlock.type === 'l1' || hoveredBlock.type === 'smem')) {
+    refreshTooltipCacheData(hoveredBlock, BLOCK_INFO[hoveredBlock.type]);
+  }
+}
+
+function drawAnimatedFrame(dt, time) {
+  ctx.clearRect(0, 0, W, H);
+  drawSceneContent(dt, time);
+
+  // Live tooltip refresh for cache blocks
+  if (hoveredBlock && (hoveredBlock.type === 'l1' || hoveredBlock.type === 'smem')) {
+    refreshTooltipCacheData(hoveredBlock, BLOCK_INFO[hoveredBlock.type]);
+  }
+
+  if (autoMode) {
+    autoTimer+=dt;
+    if (autoTimer>2.8) {
+      autoTimer=0;
+      var ops=['read','write','invalidate','writeback','shared'];
+      triggerScenario(ops[Math.floor(Math.random()*ops.length)]);
+    }
+  }
+}
+
+function drawSceneContent(dt, time) {
   var arch = ARCHS[currentArch];
   var mob = W < 500;
-  // fs scales fonts but with a firm minimum so text stays legible at small widths
   var fs = mob ? 0.88 : 1;
-  // Minimum font sizes (px) for key labels
   var FONT_SM_LABEL  = Math.max(10, 10*fs);
   var FONT_SM_WARP   = Math.max(7,  7*fs);
-  var FONT_BLOCK_LG  = Math.max(8,  8*fs);   // L1 label with state
-  var FONT_BLOCK_SM  = Math.max(7.5, 7.5*fs); // Other sub-block labels
-  var FONT_BLOCK_XS  = Math.max(7,  7*fs);    // cp.async etc
+  var FONT_BLOCK_LG  = Math.max(8,  8*fs);
+  var FONT_BLOCK_SM  = Math.max(7.5, 7.5*fs);
+  var FONT_BLOCK_XS  = Math.max(7,  7*fs);
   var FONT_L2        = Math.max(11, 11*fs);
   var FONT_LABEL_MED = Math.max(10, 10*fs);
   var FONT_LABEL_SM  = Math.max(7,  7*fs);
@@ -1402,11 +1571,9 @@ function drawFrame(time) {
       if (b.type === 'l1' && b.state) {
         var stColors = { modified:'#51cf66', shared:'#339af0', invalid:'#6b7090' };
         var sc = stColors[b.state]||'#6b7090';
-        // For invalid, use a slightly lighter fill so text pops
         ctx.fillStyle = b.state === 'invalid' ? '#6b709018' : sc+'22'; ctx.fill();
         ctx.strokeStyle = b.state === 'invalid' ? '#5a5e78' : sc; ctx.lineWidth=1.5; ctx.stroke();
 
-        // ── Cache line grid ──────────────────────────────────
         var csm2 = cacheState[si];
         if (csm2) {
           var lines2 = csm2.l1;
@@ -1420,7 +1587,6 @@ function drawFrame(time) {
             ctx.fillRect(gx + li*slotW + 0.5, gy, slotW - 1, 4);
           }
         }
-        // ─────────────────────────────────────────────────────
 
         ctx.font='600 '+FONT_BLOCK_LG+'px "JetBrains Mono"';
         ctx.fillStyle = b.state === 'invalid' ? '#9095b0' : sc;
@@ -1436,7 +1602,6 @@ function drawFrame(time) {
         ctx.fillStyle=cBg; ctx.fill();
         ctx.strokeStyle=cBr; ctx.lineWidth=1; ctx.stroke();
 
-        // ── SMEM line grid ───────────────────────────────────
         if (b.type === 'smem') {
           var csm3 = cacheState[si];
           if (csm3) {
@@ -1450,7 +1615,6 @@ function drawFrame(time) {
             }
           }
         }
-        // ─────────────────────────────────────────────────────
 
         var lblFs = (b.type==='async') ? FONT_BLOCK_XS : FONT_BLOCK_SM;
         ctx.font='600 '+lblFs+'px "JetBrains Mono"';
@@ -1460,11 +1624,8 @@ function drawFrame(time) {
     }
   }
 
-  // Hover / selection overlays
   drawHoverHighlight();
   drawSelectionHighlight();
-
-  // Connection lines (drawn before particles, after blocks)
   drawConnLines(time);
 
   for (var ci = 0; ci < layout.sms.length; ci++) {
@@ -1547,11 +1708,9 @@ function drawFrame(time) {
   rrect(gm.x,gm.y,gm.w,gm.h,7);
   ctx.fillStyle='#0d1320'; ctx.fill();
   ctx.strokeStyle='#339af050'; ctx.lineWidth=1.5; ctx.stroke();
-  // Title — top of box, clear of MCs
   ctx.font='700 '+Math.max(10,10*fs)+'px "Outfit"';
   ctx.fillStyle='#5ab0f8'; ctx.textAlign='center';
   ctx.fillText('Global Memory Interface', gm.x+gm.w/2, gm.y+14);
-  // MC blocks — pushed to middle row (y+26 set in layout)
   for (var mci=0;mci<layout.mcs.length;mci++) {
     var mc=layout.mcs[mci];
     ctx.fillStyle='hsl(210,50%,'+(14+Math.sin(Date.now()/500+mci)*3)+'%)';
@@ -1560,7 +1719,6 @@ function drawFrame(time) {
     ctx.fillStyle='#339af090'; ctx.textAlign='center';
     ctx.fillText('MC'+mci, mc.x+mc.w/2, mc.y+mc.h/2+2.5);
   }
-  // Footer label — bottom of box
   ctx.font='500 '+Math.max(6.5,6.5*fs)+'px "JetBrains Mono"';
   ctx.fillStyle='#8890a8'; ctx.textAlign='center';
   ctx.fillText('MC → '+arch.blocks.hbm.label, gm.x+gm.w/2, gm.y+gm.h-5);
@@ -1584,8 +1742,9 @@ function drawFrame(time) {
     }
   }
 
+  // Flash effects (skip advancement if paused)
   flashEffects = flashEffects.filter(function(f) {
-    f.t+=0.02;
+    if (!paused) f.t+=0.02;
     if (f.t>=f.dur) return false;
     rrect(f.x-2,f.y-2,f.w+4,f.h+4,5);
     ctx.strokeStyle=f.c+Math.round((1-f.t/f.dur)*0.3*255).toString(16).padStart(2,'0');
@@ -1593,8 +1752,9 @@ function drawFrame(time) {
     return true;
   });
 
+  // Bubbles (skip advancement if paused)
   bubbles = bubbles.filter(function(b) {
-    b.age+=dt;
+    if (!paused) b.age+=dt;
     if (b.age>b.life) return false;
     var progress=b.age/b.life;
     var fadeIn=Math.min(b.age/0.15,1);
@@ -1604,11 +1764,9 @@ function drawFrame(time) {
     var by=b.y-b.age*b.rise;
     var scale=0.8+fadeIn*0.2;
 
-    // ── Hover boost: if this bubble is over the currently hovered block, make it bigger ──
     var isHovered = false;
     if (hoveredBlock) {
       var hr = hoveredBlock;
-      // Check if bubble origin is inside or close to the hovered block
       if (b.x >= hr.x - 10 && b.x <= hr.x + hr.w + 10 &&
           b.y >= hr.y - 20 && b.y <= hr.y + hr.h + 20) {
         isHovered = true;
@@ -1616,12 +1774,10 @@ function drawFrame(time) {
     }
     var boostScale = isHovered ? 1.45 : 1.0;
     var boostAlpha = isHovered ? Math.min(alpha * 1.25, 1) : alpha;
-    // ─────────────────────────────────────────────────────────────────────
 
     ctx.save();
     ctx.globalAlpha=boostAlpha;
 
-    // Measure both lines
     var fs2 = Math.max(8, 8*scale*boostScale);
     var subFs = Math.max(6.5, 6.5*scale*boostScale);
     ctx.font='700 '+fs2+'px "JetBrains Mono"';
@@ -1636,19 +1792,16 @@ function drawFrame(time) {
     var bh = b.sub ? (lineH + subFs + 7) : (lineH + 4);
 
     rrect(bx-boxW/2, by-bh/2-1, boxW, bh, 5);
-    // Boosted background and border when hovered
     ctx.fillStyle = isHovered ? b.color + '28' : b.bg; ctx.fill();
     ctx.strokeStyle = isHovered ? b.color + 'cc' : b.color + '70';
     ctx.lineWidth = isHovered ? 1.8 : 1; ctx.stroke();
 
-    // Extra outer glow ring when hovered
     if (isHovered) {
       rrect(bx-boxW/2-3, by-bh/2-4, boxW+6, bh+6, 7);
       ctx.strokeStyle = b.color + '30';
       ctx.lineWidth = 4; ctx.stroke();
     }
 
-    // Pointer tail
     if (progress<0.35) {
       ctx.beginPath();
       ctx.moveTo(bx-3, by+bh/2-1);
@@ -1657,14 +1810,12 @@ function drawFrame(time) {
       ctx.closePath(); ctx.fillStyle = isHovered ? b.color + '28' : b.bg; ctx.fill();
     }
 
-    // Main label
     ctx.font='700 '+fs2+'px "JetBrains Mono"';
     ctx.fillStyle=b.color;
     ctx.textAlign='center';
     var textY = b.sub ? (by - bh/2 + fs2 + 3) : (by + fs2/2 - 1);
     ctx.fillText(b.text, bx, textY);
 
-    // Subtitle
     if (b.sub) {
       ctx.font='500 '+subFs+'px "JetBrains Mono"';
       ctx.fillStyle = isHovered ? b.color + 'cc' : b.color + '99';
@@ -1674,30 +1825,29 @@ function drawFrame(time) {
     return true;
   });
 
-  particles.forEach(function(p) { p.update(dt); p.draw(ctx); });
-  particles = particles.filter(function(p) { return p.alive; });
+  // Particles (skip advancement if paused)
+  if (!paused) {
+    particles.forEach(function(p) { p.update(dt); p.draw(ctx); });
+    particles = particles.filter(function(p) { return p.alive; });
+  } else {
+    // Still draw particles frozen in place
+    particles.forEach(function(p) { p.draw(ctx); });
+  }
 
-  // Rebuild particle label hit zones for mouse hover
   buildParticleLabelRects();
 
-  // ── Live tooltip refresh for cache blocks ──────────────────────────────
-  if (hoveredBlock && (hoveredBlock.type === 'l1' || hoveredBlock.type === 'smem')) {
-    refreshTooltipCacheData(hoveredBlock, BLOCK_INFO[hoveredBlock.type]);
+  // Paused overlay indicator on canvas
+  if (paused) {
+    ctx.save();
+    ctx.font = '700 11px "JetBrains Mono"';
+    ctx.fillStyle = '#845ef760';
+    ctx.textAlign = 'right';
+    ctx.fillText('⏸ PAUSED', W - 10, H - 10);
+    ctx.restore();
   }
-  // ───────────────────────────────────────────────────────────────────────
-
-  if (autoMode) {
-    autoTimer+=dt;
-    if (autoTimer>2.8) {
-      autoTimer=0;
-      var ops=['read','write','invalidate','writeback','shared'];
-      triggerScenario(ops[Math.floor(Math.random()*ops.length)]);
-    }
-  }
-  requestAnimationFrame(drawFrame);
 }
+
 var lastTime=0;
-// animation loop started after init below
 
 function Particle(from, to, color, label, speed, onDone) {
   this.from={x:from.x,y:from.y}; this.to={x:to.x,y:to.y}; this.color=color; this.label=label||'';
@@ -1729,7 +1879,6 @@ Particle.prototype.draw = function(ctx) {
     var lx = cx, ly = cy - 12;
 
     if (hasInfo) {
-      // Draw pill background so label is obviously hoverable
       var pw = lw + 10, ph = 13;
       rrect(lx - pw/2, ly - ph + 3, pw, ph, 3);
       ctx.fillStyle = this.color + '28'; ctx.fill();
@@ -1825,7 +1974,6 @@ function showExplanation(type) {
   var sumEl=document.getElementById('explainer-summary'); sumEl.textContent=''; sumEl.classList.remove('visible');
   exp.steps.forEach(function(s,i) {
     var li=document.createElement('li');
-    // Parse micro text to find instruction keywords and make them hoverable
     var microText = s.micro;
     var microHtml = microText.replace(/\b(LD\.E|ST\.E|LDS|STS|ST\.S|RdReq|INV|DATA|WR|WB|EVICT|STORE|DSMEM|cp\.async)\b/g, function(m) {
       return '<span class="micro-instr" data-instr="'+m+'" style="cursor:help;text-decoration:underline dotted;text-decoration-color:rgba(255,255,255,0.3)">'+m+'</span>';
@@ -1860,6 +2008,11 @@ function updateStats() {
 }
 
 function triggerScenario(type) {
+  // If paused, unpause first so the animation plays
+  if (paused) {
+    togglePause();
+  }
+
   var si=Math.floor(Math.random()*layout.sms.length);
   showExplanation(type);
   var sm=layout.sms[si];
@@ -2020,10 +2173,11 @@ function resetAll(silent) {
   document.getElementById('step-list').innerHTML='';
   var s=document.getElementById('explainer-summary'); s.textContent=''; s.classList.remove('visible');
   autoTimer=0;
+  // Also unpause on reset
+  if (paused) togglePause();
   if(!silent) logEvent('Reset — all caches invalidated','#6b7094');
 }
 
-// ── Build instruction reference chips ────────────────────────────────────────
 function buildInstrChips() {
   var container = document.getElementById('instr-chips');
   if (!container) return;
@@ -2050,23 +2204,19 @@ function buildInstrChips() {
   });
 }
 
-// ── Single entry point ────────────────────────────────────────────────────────
 function startApp() {
   resize();
-  // If canvas still has no size (e.g. hidden tab), retry next frame
   if (!W || !H) { requestAnimationFrame(startApp); return; }
   buildLayout();
   initialized = true;
   updateKeyCard();
   updateArchIntro();
   buildInstrChips();
-  
   lastTime = performance.now();
   requestAnimationFrame(drawFrame);
 }
 requestAnimationFrame(startApp);
 
-// ── Micro-instruction hover in explainer panel ───────────────────────────────
 var explainerEl = document.getElementById('step-list');
 explainerEl.addEventListener('mousemove', function(e) {
   var target = e.target.closest('.micro-instr');
@@ -2079,18 +2229,5 @@ explainerEl.addEventListener('mousemove', function(e) {
 });
 explainerEl.addEventListener('mouseleave', function() { hideInstrTooltip(); });
 </script>
-<!-- Instruction tooltip at body level so fixed positioning works correctly -->
-<div id="instr-tooltip">
-  <div class="it-name"><div class="it-dot" id="it-dot"></div><span id="it-name"></span></div>
-  <div class="it-section">
-    <div class="it-label">What it does</div>
-    <div class="it-text" id="it-what"></div>
-  </div>
-  <div class="it-why-box">
-    <div class="it-label">Why you need this op</div>
-    <div class="it-text" id="it-why"></div>
-  </div>
-</div>
-
 </body>
 </html>
