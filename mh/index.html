@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>GPU Cache Coherency — Architecture Explorer</title>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Outfit:wght@300;400;600;700;800&display=swap');
+/* System font stack — no external requests, works in preview */
 :root {
   --bg: #0a0b0f; --surface: #12141a; --surface2: #1a1d26;
   --border: #2a2d3a; --text: #e0e2ec; --dim: #6b7094;
@@ -14,7 +14,7 @@
   --new-block: #22d3ee; --changed: #facc15;
 }
 * { margin:0; padding:0; box-sizing:border-box; }
-body { background:var(--bg); color:var(--text); font-family:'Outfit',sans-serif; min-height:100vh; overflow-x:hidden; }
+body { background:var(--bg); color:var(--text); font-family:'Outfit','Inter','Segoe UI',system-ui,sans-serif; min-height:100vh; overflow-x:hidden; }
 .grain { position:fixed; inset:0; pointer-events:none; z-index:999; opacity:.03;
   background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
 
@@ -22,12 +22,12 @@ header { text-align:center; padding:20px 16px 10px; }
 header h1 { font-size:clamp(1.6rem,3.5vw,2.6rem); font-weight:800; letter-spacing:-1px;
 background:linear-gradient(135deg,#ff6b6b,#ffa94d,#51cf66,#339af0,#845ef7);
 -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
-header p { color:var(--dim); font-family:'JetBrains Mono',monospace; font-size:.75rem; margin-top:4px; letter-spacing:2px; text-transform:uppercase; }
+header p { color:var(--dim); font-family:'JetBrains Mono','Fira Code','Cascadia Code','Consolas',monospace; font-size:.75rem; margin-top:4px; letter-spacing:2px; text-transform:uppercase; }
 
 .arch-tabs { display:flex; justify-content:center; gap:0; padding:10px 16px 6px; flex-wrap:wrap; }
 .arch-tab {
 background:var(--surface); border:1px solid var(--border); color:var(--dim);
-font-family:'JetBrains Mono',monospace; font-size:.7rem; padding:8px 14px;
+font-family:'JetBrains Mono','Fira Code','Cascadia Code','Consolas',monospace; font-size:.7rem; padding:8px 14px;
 cursor:pointer; transition:all .2s; letter-spacing:.3px; position:relative;
 border-right:none;
 }
@@ -52,7 +52,7 @@ font-size:.75rem; line-height:1.5; display:none; text-align:center;
 .controls { display:flex; justify-content:center; gap:12px; padding:12px 20px; flex-wrap:wrap; }
 .controls button {
 background:var(--surface2); border:1px solid var(--border); color:var(--text);
-font-family:'JetBrains Mono',monospace; font-size:.75rem; padding:8px 16px;
+font-family:'JetBrains Mono','Fira Code','Cascadia Code','Consolas',monospace; font-size:.75rem; padding:8px 16px;
 border-radius:6px; cursor:pointer; transition:all .2s; letter-spacing:.5px;
 position:relative;
 }
@@ -224,7 +224,7 @@ position:relative;
 }
 #scenario-tooltip.visible { opacity:1; transform:translateY(0); }
 #scenario-tooltip .st-title {
-  font-family:'JetBrains Mono',monospace; font-weight:700; font-size:.82rem;
+  font-family:'JetBrains Mono','Fira Code','Cascadia Code','Consolas',monospace; font-weight:700; font-size:.82rem;
   margin-bottom:8px; display:flex; align-items:center; gap:8px;
 }
 #scenario-tooltip .st-dot { width:8px; height:8px; border-radius:2px; flex-shrink:0; }
@@ -234,7 +234,7 @@ position:relative;
   padding:8px 10px;
 }
 #scenario-tooltip .st-detail-label {
-  font-family:'JetBrains Mono',monospace; font-size:.55rem; font-weight:700;
+  font-family:'JetBrains Mono','Fira Code','Cascadia Code','Consolas',monospace; font-size:.55rem; font-weight:700;
   text-transform:uppercase; letter-spacing:1.5px; color:#339af099; margin-bottom:3px;
 }
 #scenario-tooltip .st-detail-text { color:#90c8f0; font-size:.72rem; line-height:1.5; }
@@ -259,12 +259,12 @@ canvas { width:100%; height:640px; background:var(--surface); border-radius:12px
 #block-tooltip .tt-desc { color:var(--dim); margin-bottom:7px; }
 #block-tooltip .tt-meta { display:flex; flex-wrap:wrap; gap:5px; }
 #block-tooltip .tt-chip {
-  font-family:'JetBrains Mono',monospace; font-size:.6rem; font-weight:600;
+  font-family:'JetBrains Mono','Fira Code','Cascadia Code','Consolas',monospace; font-size:.6rem; font-weight:600;
   padding:2px 7px; border-radius:4px;
 }
 #block-tooltip .tt-hint {
   margin-top:8px; padding-top:6px; border-top:1px solid var(--border);
-  font-size:.65rem; color:#6b7094; font-family:'JetBrains Mono',monospace;
+  font-size:.65rem; color:#6b7094; font-family:'JetBrains Mono','Fira Code','Cascadia Code','Consolas',monospace;
   display:flex; align-items:center; gap:5px;
 }
 #block-tooltip .tt-hint::before { content:'◉'; font-size:.7rem; }
@@ -281,13 +281,13 @@ canvas { width:100%; height:640px; background:var(--surface); border-radius:12px
 }
 #instr-tooltip.visible { opacity:1; transform:translateY(0); }
 #instr-tooltip .it-name {
-  font-family:'JetBrains Mono',monospace; font-weight:700; font-size:.82rem;
+  font-family:'JetBrains Mono','Fira Code','Cascadia Code','Consolas',monospace; font-weight:700; font-size:.82rem;
   margin-bottom:8px; display:flex; align-items:center; gap:8px;
 }
 #instr-tooltip .it-dot { width:8px; height:8px; border-radius:2px; flex-shrink:0; }
 #instr-tooltip .it-section { margin-bottom:8px; }
 #instr-tooltip .it-label {
-  font-family:'JetBrains Mono',monospace; font-size:.55rem; font-weight:700;
+  font-family:'JetBrains Mono','Fira Code','Cascadia Code','Consolas',monospace; font-size:.55rem; font-weight:700;
   text-transform:uppercase; letter-spacing:1.5px; color:#6b7094; margin-bottom:3px;
 }
 #instr-tooltip .it-text { color:#c8cce0; font-size:.74rem; line-height:1.55; }
@@ -305,11 +305,11 @@ canvas { width:100%; height:640px; background:var(--surface); border-radius:12px
 }
 #sel-panel { max-height: 70vh; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #2a2d3a transparent; }
 #sel-panel.visible { display:block; }
-#sel-panel h4 { font-size:.65rem; font-family:'JetBrains Mono',monospace; text-transform:uppercase; letter-spacing:2px; color:var(--dim); margin-bottom:10px; }
+#sel-panel h4 { font-size:.65rem; font-family:'JetBrains Mono','Fira Code','Cascadia Code','Consolas',monospace; text-transform:uppercase; letter-spacing:2px; color:var(--dim); margin-bottom:10px; }
 #sel-panel .sel-name { font-weight:700; font-size:.95rem; margin-bottom:6px; }
 #sel-panel .sel-desc { font-size:.78rem; color:var(--dim); line-height:1.55; margin-bottom:10px; }
 #sel-panel .sel-connections { }
-#sel-panel .sel-connections h5 { font-size:.6rem; font-family:'JetBrains Mono',monospace; text-transform:uppercase; letter-spacing:1.5px; color:var(--dim); margin-bottom:7px; }
+#sel-panel .sel-connections h5 { font-size:.6rem; font-family:'JetBrains Mono','Fira Code','Cascadia Code','Consolas',monospace; text-transform:uppercase; letter-spacing:1.5px; color:var(--dim); margin-bottom:7px; }
 #sel-panel .conn-list { display:flex; flex-direction:column; gap:5px; }
 #sel-panel .conn-item {
   display:flex; align-items:flex-start; gap:8px; padding:7px 10px;
@@ -317,22 +317,22 @@ canvas { width:100%; height:640px; background:var(--surface); border-radius:12px
   font-size:.75rem; line-height:1.45; cursor:pointer; transition:border-color .15s;
 }
 #sel-panel .conn-item:hover { border-color: #4a4d5a; }
-#sel-panel .conn-item .ci-arrow { font-family:'JetBrains Mono',monospace; font-size:.7rem; flex-shrink:0; margin-top:1px; }
+#sel-panel .conn-item .ci-arrow { font-family:'JetBrains Mono','Fira Code','Cascadia Code','Consolas',monospace; font-size:.7rem; flex-shrink:0; margin-top:1px; }
 #sel-panel .conn-item .ci-body { flex:1; }
 #sel-panel .conn-item .ci-target { font-weight:600; }
 #sel-panel .conn-item .ci-why { color:var(--dim); font-size:.7rem; display:block; }
-#sel-panel .close-btn { float:right; font-size:.7rem; color:var(--dim); cursor:pointer; font-family:'JetBrains Mono',monospace; padding:2px 6px; border:1px solid var(--border); border-radius:4px; }
+#sel-panel .close-btn { float:right; font-size:.7rem; color:var(--dim); cursor:pointer; font-family:'JetBrains Mono','Fira Code','Cascadia Code','Consolas',monospace; padding:2px 6px; border:1px solid var(--border); border-radius:4px; }
 #sel-panel .close-btn:hover { color:var(--text); }
 
 .info-panel { width:360px; flex-shrink:0; display:flex; flex-direction:column; gap:12px; }
 .info-card { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:14px; }
-.info-card h3 { font-size:.65rem; font-family:'JetBrains Mono',monospace; text-transform:uppercase; letter-spacing:2px; color:var(--dim); margin-bottom:10px; }
+.info-card h3 { font-size:.65rem; font-family:'JetBrains Mono','Fira Code','Cascadia Code','Consolas',monospace; text-transform:uppercase; letter-spacing:2px; color:var(--dim); margin-bottom:10px; }
 
 /* Instruction reference chips */
 .instr-section { margin-top:0; }
 .instr-chips { display:flex; flex-wrap:wrap; gap:8px; }
 .instr-chip {
-  font-family:'JetBrains Mono',monospace; font-size:.72rem; font-weight:700;
+  font-family:'JetBrains Mono','Fira Code','Cascadia Code','Consolas',monospace; font-size:.72rem; font-weight:700;
   padding:5px 11px; border-radius:6px; cursor:pointer;
   border:1px solid transparent; transition:all .15s;
   user-select:none;
@@ -354,7 +354,7 @@ canvas { width:100%; height:640px; background:var(--surface); border-radius:12px
 .acc-head:active { opacity:.7; }
 .acc-dot { width:8px; height:8px; border-radius:3px; flex-shrink:0; }
 .acc-title { flex:1; font-weight:600; font-size:.8rem; }
-.acc-meta { font-family:'JetBrains Mono',monospace; font-size:.6rem; color:var(--dim); }
+.acc-meta { font-family:'JetBrains Mono','Fira Code','Cascadia Code','Consolas',monospace; font-size:.6rem; color:var(--dim); }
 .acc-chev { font-size:.65rem; color:var(--dim); transition:transform .25s; }
 .acc-item.open .acc-chev { transform:rotate(90deg); }
 .acc-body { max-height:0; overflow:hidden; transition:max-height .3s,padding .3s; padding:0 0 0 16px; }
@@ -366,7 +366,7 @@ canvas { width:100%; height:640px; background:var(--surface); border-radius:12px
 
 .stats-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
 .stat-item { background:var(--bg); border-radius:6px; padding:8px; text-align:center; }
-.stat-value { font-size:1.3rem; font-weight:700; font-family:'JetBrains Mono',monospace; }
+.stat-value { font-size:1.3rem; font-weight:700; font-family:'JetBrains Mono','Fira Code','Cascadia Code','Consolas',monospace; }
 .stat-label { font-size:.6rem; color:var(--dim); text-transform:uppercase; letter-spacing:1px; margin-top:1px; }
 
 .state-row { display:flex; align-items:center; gap:8px; margin-bottom:6px; font-size:.8rem; }
@@ -386,15 +386,15 @@ background:linear-gradient(90deg,var(--l1),var(--l2),var(--smem),var(--global),v
 .step-list li.visible { opacity:1; transform:translateX(0); }
 .step-list li.active { opacity:1; transform:translateX(0); }
 .step-list li.past { opacity:.4; }
-.step-num { font-family:'JetBrains Mono',monospace; font-size:.65rem; font-weight:600; min-width:18px; height:18px; display:flex; align-items:center; justify-content:center; border-radius:4px; flex-shrink:0; }
+.step-num { font-family:'JetBrains Mono','Fira Code','Cascadia Code','Consolas',monospace; font-size:.65rem; font-weight:600; min-width:18px; height:18px; display:flex; align-items:center; justify-content:center; border-radius:4px; flex-shrink:0; }
 .step-text { flex:1; }
-.step-text .micro { display:block; font-size:.68rem; color:var(--dim); font-family:'JetBrains Mono',monospace; margin-top:1px; }
+.step-text .micro { display:block; font-size:.68rem; color:var(--dim); font-family:'JetBrains Mono','Fira Code','Cascadia Code','Consolas',monospace; margin-top:1px; }
 .explainer-summary { margin-top:8px; padding-top:8px; border-top:1px solid var(--border); font-size:.73rem; color:var(--dim); font-style:italic; opacity:0; transition:opacity .5s; }
 .explainer-summary.visible { opacity:1; }
 
 .event-log { max-height:160px; overflow-y:auto; overscroll-behavior:contain; scrollbar-width:thin; scrollbar-color:var(--border) transparent; }
 .event-log::-webkit-scrollbar{width:4px} .event-log::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
-.log-entry { font-family:'JetBrains Mono',monospace; font-size:.65rem; padding:3px 0; border-bottom:1px solid rgba(42,45,58,.5); color:var(--dim); animation:fadeIn .3s; }
+.log-entry { font-family:'JetBrains Mono','Fira Code','Cascadia Code','Consolas',monospace; font-size:.65rem; padding:3px 0; border-bottom:1px solid rgba(42,45,58,.5); color:var(--dim); animation:fadeIn .3s; }
 .log-entry .tag { display:inline-block; padding:1px 5px; border-radius:3px; font-size:.6rem; margin-right:3px; }
 @keyframes fadeIn { from{opacity:0;transform:translateY(-4px)} to{opacity:1;transform:translateY(0)} }
 
@@ -404,11 +404,13 @@ background:var(--surface); border:1px solid var(--border); border-radius:10px;
 padding:14px 16px; display:flex; gap:14px; align-items:flex-start;
 }
 .arch-intro-badge {
-font-family:'JetBrains Mono',monospace; font-size:.6rem; font-weight:700;
+font-family:'JetBrains Mono','Fira Code','Cascadia Code','Consolas',monospace; font-size:.6rem; font-weight:700;
 padding:4px 10px; border-radius:5px; white-space:nowrap; flex-shrink:0; margin-top:2px;
 }
 .arch-intro-text { font-size:.8rem; line-height:1.55; color:var(--dim); }
 .arch-intro-text strong { color:var(--text); }
+.arch-intro-delta { font-size:.78rem; line-height:1.5; color:var(--dim); margin-top:5px; padding:5px 10px; border-left:2px solid #f59e0b40; background:#f59e0b08; border-radius:0 4px 4px 0; }
+.arch-intro-delta strong { color:var(--text); }
 
 .easy-card { border-left:3px solid var(--smem); }
 .easy-card h3 span { color:var(--smem); font-size:.6rem; margin-left:6px; font-weight:400; }
@@ -428,19 +430,19 @@ padding:4px 10px; border-radius:5px; white-space:nowrap; flex-shrink:0; margin-t
 
 .perf-card h3 { margin-bottom:12px; }
 .perf-row { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
-.perf-label { font-size:.7rem; font-family:'JetBrains Mono',monospace; color:var(--dim); min-width:65px; flex-shrink:0; }
+.perf-label { font-size:.7rem; font-family:'JetBrains Mono','Fira Code','Cascadia Code','Consolas',monospace; color:var(--dim); min-width:65px; flex-shrink:0; }
 .perf-bars { flex:1; display:flex; gap:2px; height:28px; align-items:flex-end; }
 .perf-bar {
 flex:1; border-radius:2px 2px 0 0; position:relative; min-height:2px;
 transition:height .4s ease; display:flex; align-items:flex-end; justify-content:center;
 }
 .perf-bar-val {
-font-family:'JetBrains Mono',monospace; font-size:.5rem; font-weight:600;
+font-family:'JetBrains Mono','Fira Code','Cascadia Code','Consolas',monospace; font-size:.5rem; font-weight:600;
 position:absolute; top:-12px; width:100%; text-align:center; white-space:nowrap;
 }
 .perf-bar.active { outline:1px solid #fff3; outline-offset:1px; }
 .perf-legend { display:flex; gap:10px; margin-top:10px; flex-wrap:wrap; justify-content:center; }
-.perf-legend-item { display:flex; align-items:center; gap:4px; font-size:.6rem; font-family:'JetBrains Mono',monospace; color:var(--dim); }
+.perf-legend-item { display:flex; align-items:center; gap:4px; font-size:.6rem; font-family:'JetBrains Mono','Fira Code','Cascadia Code','Consolas',monospace; color:var(--dim); }
 .perf-legend-dot { width:8px; height:8px; border-radius:2px; }
 
 @media(max-width:1100px) {
@@ -484,7 +486,7 @@ position:absolute; top:-12px; width:100%; text-align:center; white-space:nowrap;
 
 <div class="main-container">
   <div class="viz-area">
-    <canvas id="canvas"></canvas>
+    <canvas id="canvas" width="900" height="640"></canvas>
     <!-- paused badge removed -->
     <!-- Block tooltip -->
     <div id="block-tooltip">
@@ -598,8 +600,12 @@ position:absolute; top:-12px; width:100%; text-align:center; white-space:nowrap;
     <div class="it-text" id="it-why"></div>
   </div>
 </div>
+  <script>
+// globals.js — GPU Cache Coherency Demo
 
-<script>
+// Global state, constants, pause toggle, scenario tooltip data
+
+
 var canvas = document.getElementById('canvas');
 var ctx = canvas.getContext('2d');
 var W, H, dpr;
@@ -608,6 +614,7 @@ var initialized = false;
 // ── Pause state ──────────────────────────────────────────────────────────────
 var paused = false;
 
+
 function togglePause() {
   paused = !paused;
   var btn = document.getElementById('btn-pause');
@@ -615,18 +622,19 @@ function togglePause() {
   if (paused) {
     btn.classList.add('active');
     btn.textContent = '▶ Resume';
-    badge.classList.add('visible');
+    if (badge) badge.classList.add('visible');
     // Also stop auto when pausing
     if (autoMode) { autoMode = false; document.getElementById('btn-auto').classList.remove('active'); }
     logEvent('Paused — animation frozen', '#845ef7');
   } else {
     btn.classList.remove('active');
     btn.textContent = '⏸ Pause';
-    badge.classList.remove('visible');
+    if (badge) badge.classList.remove('visible');
     lastTime = performance.now(); // reset dt so we don't get a big jump
     logEvent('Resumed', '#845ef7');
   }
 }
+
 
 // ── Scenario button tooltip data ─────────────────────────────────────────────
 var SCENARIO_INFO = {
@@ -670,6 +678,7 @@ var SCENARIO_INFO = {
 
 var scenarioTooltipEl = document.getElementById('scenario-tooltip');
 var scenarioVisible = false;
+
 
 function showScenarioTooltip(key, clientX, clientY) {
   var info = SCENARIO_INFO[key];
@@ -715,29 +724,10 @@ document.querySelectorAll('.scenario-btn').forEach(function(btn) {
   });
 });
 
-function resize() {
-  dpr = window.devicePixelRatio || 1;
-  var r = canvas.getBoundingClientRect();
-  var newW = r.width || canvas.offsetWidth || 640;
-  var newH = r.height || canvas.offsetHeight || 520;
-  if (newW === W && newH === H) return;
-  W = newW; H = newH;
-  canvas.width  = Math.round(W * dpr);
-  canvas.height = Math.round(H * dpr);
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  if (initialized) buildLayout();
-}
 
-window.addEventListener('resize', resize);
+// data.js — GPU Cache Coherency Demo
 
-function rrect(x, y, w, h, r) {
-  r = Math.min(r, w/2, h/2);
-  ctx.beginPath(); ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y);
-  ctx.arcTo(x+w,y,x+w,y+r,r); ctx.lineTo(x+w,y+h-r);
-  ctx.arcTo(x+w,y+h,x+w-r,y+h,r); ctx.lineTo(x+r,y+h);
-  ctx.arcTo(x,y+h,x,y+h-r,r); ctx.lineTo(x,y+r);
-  ctx.arcTo(x,y,x+r,y,r); ctx.closePath();
-}
+// Architecture definitions, block metadata, instruction reference
 
 var BLOCK_INFO = {
   regs:      { name:'Register File', color:'#a8b0d0', desc:'Fastest storage on the chip. Each thread gets its own private registers — no sharing, no coherency needed. 32-bit per lane, ~255 per thread.', chips:[{t:'~1 cycle',c:'#51cf66'},{t:'private',c:'#339af0'}], connects:[{to:'l1',arrow:'→',why:'Spill registers to L1 when exhausted (register spilling)'},{to:'smem',arrow:'↔',why:'Threads read/write shared mem via LDS/STS instructions'}] },
@@ -942,6 +932,7 @@ var ARCHS = {
     name:'Pascal', gen:'SM 6.1', year:2016, color:'#51cf66', example:'GTX 1080 Ti',
     smLabel:'SM',
     intro:"The last generation before unified L1. Pascal keeps things simple — L1 is read-only for global memory, so there's zero coherency overhead at L1. Writes go straight to L2. Great for understanding the baseline before things got complex.",
+      delta:"🆚 <strong>vs baseline:</strong> This is the reference point — read-only L1, no coherency, writes bypass L1 entirely.",
     perf:{ smCount:28, l1Size:24, smemSize:96, l2Size:4096, bw:484, flops:11.3, memType:'GDDR5X', vram:11, tdp:250, l1Latency:28, l2Latency:200, dramLatency:400 },
     blocks:{
       l1:{ label:'L1 (24KB)', desc:'Read-only texture/data cache. NOT coherent with global stores.', state:true },
@@ -960,6 +951,7 @@ var ARCHS = {
     name:'Volta', gen:'SM 7.0', year:2017, color:'#339af0', example:'V100',
     smLabel:'SM',
     intro:"The big unification. Volta merged L1 and texture cache into a single 128KB SRAM that's also shared with SMEM. L1 now caches global writes too, which means coherency actually matters — enter write-evict and invalidation.",
+      delta:"🆕 <strong>vs Pascal:</strong> L1 now caches writes. That means a dirty line in SM0 must be invalidated in SM1 — the first time GPUs needed a real coherency protocol. Cost: every write triggers an INV broadcast to all SMs.",
     perf:{ smCount:80, l1Size:128, smemSize:96, l2Size:6144, bw:900, flops:15.7, memType:'HBM2', vram:32, tdp:300, l1Latency:28, l2Latency:193, dramLatency:370 },
     blocks:{
       l1:{ label:'L1 + TEX (unified, 128KB)', desc:'L1 and texture cache merged.', state:true, changed:true },
@@ -977,7 +969,8 @@ var ARCHS = {
   ampere: {
     name:'Ampere', gen:'SM 8.0', year:2020, color:'#ffa94d', example:'A100',
     smLabel:'SM',
-    intro:"Ampere's headline: 10x larger L2 (40MB!) with software-controlled persistence, and async copy (cp.async) that moves data from global to shared memory without burning registers.",
+    intro:"Ampere's headline: 10× larger L2 (40MB!) with software-controlled persistence, and async copy (cp.async) that moves data from global to shared memory without burning registers.",
+      delta:"🆕 <strong>vs Volta:</strong> L2 grew 10× to 40MB and you can now pin data to stay resident (persistence window). cp.async decouples memory loads from register pressure — overlapping compute and memory without stalling warps.",
     perf:{ smCount:108, l1Size:192, smemSize:164, l2Size:40960, bw:2039, flops:19.5, memType:'HBM2e', vram:80, tdp:400, l1Latency:33, l2Latency:200, dramLatency:400 },
     blocks:{
       l1:{ label:'L1 + TEX (192KB)', desc:'Larger unified L1/TEX cache.', state:true, changed:true },
@@ -998,6 +991,7 @@ var ARCHS = {
     name:'Hopper', gen:'SM 9.0', year:2022, color:'#845ef7', example:'H100',
     smLabel:'SM',
     intro:"Hopper introduces TMA (Tensor Memory Accelerator) — a hardware DMA engine for complex tensor addressing — and DSMEM, where SMs in a cluster can directly read each other's shared memory.",
+      delta:"🆕 <strong>vs Ampere:</strong> TMA offloads tensor address math from threads to hardware — freeing warps entirely during data movement. DSMEM lets SMs in a cluster share memory at SMEM latency (~20 cycles) rather than going through L2 (~200 cycles).",
     perf:{ smCount:132, l1Size:256, smemSize:228, l2Size:51200, bw:3352, flops:66.9, memType:'HBM3', vram:80, tdp:700, l1Latency:33, l2Latency:200, dramLatency:380 },
     blocks:{
       l1:{ label:'L1 + TEX (256KB)', desc:'Even larger unified cache with TMA support.', state:true, changed:true },
@@ -1020,6 +1014,7 @@ var ARCHS = {
     name:'Apex', gen:'SM 10.0', year:2026, color:'#f59e0b', example:'Concept',
     smLabel:'SM',
     intro:"A forward-looking architecture exploring three unsolved problems in GPU memory design. The headline addition: a hardware <strong>Atomic Arbiter</strong> with a visible request queue, sequence-numbered transactions, and a Reorder Buffer (ROB) to handle out-of-order returns. Also features a Coherency Directory replacing broadcast INV with targeted per-SM invalidation. None of these exist in shipping silicon yet — but the problems they solve are very real.",
+      delta:"🆕 <strong>vs Hopper:</strong> Atomics were always a black box — requests raced into L2 and serialised invisibly. The Arbiter makes that visible: you see the queue fill, grants issue, RMWs fly, and the ROB reorder returns. The Coherency Directory eliminates the O(n) INV broadcast — only SMs that actually hold a copy get notified. Both ideas exist in CPU design but not yet in shipping GPU silicon.",
     perf:{ smCount:144, l1Size:320, smemSize:256, l2Size:65536, bw:5000, flops:120, memType:'HBM4', vram:192, tdp:1000, l1Latency:25, l2Latency:160, dramLatency:350 },
     blocks:{
       l1:{ label:'L1 + TEX (320KB)', desc:'Enlarged unified L1 with lower latency predictor logic.', state:true, changed:true },
@@ -1044,13 +1039,96 @@ var prevArch = null;
 var stats = { hits:0, misses:0, inv:0, wb:0 };
 var autoMode = true, autoTimer = 0;
 var particles = [], flashEffects = [], stepTimers = [], bubbles = [];
+var SPEED_SCALE = 0.55;  // global multiplier — all particle speeds divided by this; <1 = slower
 var layout = {};
 
 var NUM_LINES = 16;
 var cacheState = [];
+// L2 line state: 0=empty, 1=clean, 2=dirty (mirroring L1 convention)
+// Shared across all SMs — L2 is unified. NUM_L2_LINES shown as occupancy bars.
+var NUM_L2_LINES = 24;
+var l2Lines = new Array(NUM_L2_LINES).fill(0);
+
+
+// cache.js — GPU Cache Coherency Demo
+
+// Cache line state, L2 state helpers, resize, drawing utilities
+
+function resize() {
+  dpr = window.devicePixelRatio || 1;
+  var r = canvas.getBoundingClientRect();
+  // In sandboxed iframes getBCR and offsetWidth can both be 0 during first paint.
+  // Fall back to the canvas's CSS-declared height (640px) and parent width, or
+  // hardcoded safe defaults — we'd rather draw at wrong size than not draw at all.
+  var newW = (r.width  > 10 ? r.width  : null) ||
+             (canvas.offsetWidth  > 10 ? canvas.offsetWidth  : null) ||
+             (canvas.parentElement ? canvas.parentElement.offsetWidth : 0) ||
+             800;
+  var newH = (r.height > 10 ? r.height : null) ||
+             (canvas.offsetHeight > 10 ? canvas.offsetHeight : null) ||
+             640;
+  if (newW === W && newH === H) return;
+  W = newW; H = newH;
+  canvas.width  = Math.round(W * dpr);
+  canvas.height = Math.round(H * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  if (initialized) buildLayout();
+}
+
+window.addEventListener('resize', resize);
+
+function rrect(x, y, w, h, r) {
+  r = Math.min(r, w/2, h/2);
+  ctx.beginPath(); ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y);
+  ctx.arcTo(x+w,y,x+w,y+r,r); ctx.lineTo(x+w,y+h-r);
+  ctx.arcTo(x+w,y+h,x+w-r,y+h,r); ctx.lineTo(x+r,y+h);
+  ctx.arcTo(x,y+h,x,y+h-r,r); ctx.lineTo(x,y+r);
+  ctx.arcTo(x,y,x+r,y,r); ctx.closePath();
+}
+
+function l2Fill(dirty) {
+  var count = 10 + Math.floor(Math.random() * 10);
+  for (var i = 0; i < NUM_L2_LINES; i++) l2Lines[i] = i < count ? (dirty ? 2 : 1) : 0;
+  // shuffle
+  for (var j = NUM_L2_LINES-1; j > 0; j--) {
+    var k = Math.floor(Math.random()*(j+1));
+    var t = l2Lines[j]; l2Lines[j]=l2Lines[k]; l2Lines[k]=t;
+  }
+}
+// Add exactly one clean slot — used on a single cache line read hit
+function l2AbsorbOne() {
+  for (var i = 0; i < NUM_L2_LINES; i++) {
+    if (l2Lines[i] === 0) { l2Lines[i] = 1; return; }
+  }
+  // L2 full: already populated, no change needed
+}
+function l2Absorb() {
+  // Mark some empty slots as clean — data written to L2
+  var filled = 0;
+  for (var i = 0; i < NUM_L2_LINES; i++) if (l2Lines[i] > 0) filled++;
+  var empty = NUM_L2_LINES - filled;
+  var toFill = Math.min(empty, 2 + Math.floor(Math.random()*3));
+  var added = 0;
+  for (var i2 = 0; i2 < NUM_L2_LINES && added < toFill; i2++) {
+    if (l2Lines[i2] === 0) { l2Lines[i2] = 1; added++; }
+  }
+}
+function l2Dirty() {
+  // Mark a clean line dirty — happens on write-back
+  for (var i = 0; i < NUM_L2_LINES; i++) {
+    if (l2Lines[i] === 1 && Math.random() > 0.6) { l2Lines[i] = 2; return; }
+  }
+}
+function l2Evict() {
+  // Remove a dirty line — evicted to DRAM
+  for (var i = 0; i < NUM_L2_LINES; i++) {
+    if (l2Lines[i] === 2 && Math.random() > 0.5) { l2Lines[i] = 0; return; }
+  }
+}
 
 function initCacheState() {
   cacheState = [];
+  l2Lines = new Array(NUM_L2_LINES).fill(0);
   var n = layout.sms ? layout.sms.length : 4;
   for (var i = 0; i < n; i++) {
     cacheState.push({
@@ -1133,6 +1211,11 @@ var ARB_PHASES = {
   retiring:  { label: 'RETIRING',  color: '#a78bfa', desc: 'ROB retiring — data routing to SM' },
 };
 var hitRects = [];
+
+
+// tooltip.js — GPU Cache Coherency Demo
+
+// Hit testing, block selection, tooltip rendering
 
 function buildHitRects() {
   hitRects = [];
@@ -1400,8 +1483,76 @@ function updateTooltip(hit, clientX, clientY) {
   ttDesc.textContent = info.desc;
 
   var isCacheBlock = (hit.type === 'l1' || hit.type === 'smem') && hit.smIdx !== undefined;
+  var isL2Block = hit.type === 'l2';
   var isArbiterBlock = hit.type === 'arbiter';
   var isCohDirBlock = hit.type === 'cohDir';
+
+  if (isL2Block) {
+    tooltipEl.classList.remove('tt-wide');
+    var l2Filled = 0, l2Dirty = 0;
+    for (var l2ti = 0; l2ti < NUM_L2_LINES; l2ti++) {
+      if (l2Lines[l2ti] === 1) l2Filled++;
+      else if (l2Lines[l2ti] === 2) { l2Filled++; l2Dirty++; }
+    }
+    var l2Empty = NUM_L2_LINES - l2Filled;
+    var l2OccPct = Math.round(l2Filled / NUM_L2_LINES * 100);
+    var arch = ARCHS[currentArch];
+    // Build line grid (same visual as L1)
+    var l2GridHtml = '';
+    for (var l2gi = 0; l2gi < NUM_L2_LINES; l2gi++) {
+      var lv = l2Lines[l2gi];
+      var lc = lv === 2 ? '#ffa94d' : lv === 1 ? '#339af060' : '#1e2030';
+      l2GridHtml += '<div style="flex:1;border-radius:2px;background:' + lc + ';transition:background .15s"></div>';
+    }
+    // Per-SM L1 state summary
+    var smStateHtml = '';
+    for (var l2si = 0; l2si < layout.sms.length; l2si++) {
+      var st = layout.sms[l2si].l1.state;
+      var sc = st === 'modified' ? '#51cf66' : st === 'shared' ? '#339af0' : '#4a5080';
+      var sl = st === 'modified' ? 'M' : st === 'shared' ? 'S' : 'I';
+      smStateHtml +=
+        '<div style="display:flex;align-items:center;gap:4px;padding:2px 0">' +
+          '<span style="font-family:JetBrains Mono,monospace;font-size:.58rem;color:#6b7090;min-width:28px">SM' + l2si + '</span>' +
+          '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' + sc + '"></span>' +
+          '<span style="font-family:JetBrains Mono,monospace;font-size:.6rem;color:' + sc + '">' + st + '</span>' +
+          '<span style="font-family:JetBrains Mono,monospace;font-size:.56rem;color:#3a3d55;margin-left:auto">[' + sl + ']</span>' +
+        '</div>';
+    }
+    ttMeta.innerHTML =
+      '<div style="margin-bottom:6px">' +
+        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">' +
+          '<span style="font-family:JetBrains Mono,monospace;font-size:.6rem;color:#9095b0;text-transform:uppercase;letter-spacing:1px">L2 Lines (' + arch.blocks.l2.size + ')</span>' +
+          '<span style="font-family:JetBrains Mono,monospace;font-size:.68rem;font-weight:700;color:#ffa94d">' + l2Filled + '/' + NUM_L2_LINES + ' filled</span>' +
+          (l2Dirty > 0 ? '<span style="font-family:JetBrains Mono,monospace;font-size:.62rem;color:#ffa94d">' + l2Dirty + ' dirty</span>' : '') +
+        '</div>' +
+        '<div style="display:flex;gap:2px;height:10px;margin-bottom:4px">' + l2GridHtml + '</div>' +
+        '<div style="display:flex;gap:10px;font-family:JetBrains Mono,monospace;font-size:.56rem;margin-bottom:6px">' +
+          '<span style="color:#339af0">■ clean (' + (l2Filled - l2Dirty) + ')</span>' +
+          '<span style="color:#ffa94d">■ dirty (' + l2Dirty + ')</span>' +
+          '<span style="color:#4a5080">■ empty (' + l2Empty + ')</span>' +
+        '</div>' +
+        // Occupancy bar
+        '<div style="height:3px;background:#1e2030;border-radius:2px;margin-bottom:8px">' +
+          '<div style="height:3px;border-radius:2px;background:' + (l2OccPct > 80 ? '#ff6b6b' : '#ffa94d') + ';width:' + l2OccPct + '%"></div>' +
+        '</div>' +
+        // Write policy & latency
+        '<div style="display:flex;gap:8px;margin-bottom:6px;font-family:JetBrains Mono,monospace;font-size:.56rem">' +
+          '<span style="color:#6b7090">Write policy:</span>' +
+          '<span style="color:#ffa94d">' + (currentArch === 'pascal' ? 'write-through' : 'write-evict / write-back') + '</span>' +
+        '</div>' +
+        '<div style="display:flex;gap:8px;margin-bottom:8px;font-family:JetBrains Mono,monospace;font-size:.56rem">' +
+          '<span style="color:#6b7090">Latency:</span>' +
+          '<span style="color:#aaa">~' + (currentArch === 'pascal' ? '80' : currentArch === 'ampere' || currentArch === 'hopper' ? '50' : '60') + ' cycles (hit)</span>' +
+        '</div>' +
+        // SM L1 state summary
+        '<div style="font-family:JetBrains Mono,monospace;font-size:.58rem;color:#9095b0;letter-spacing:.5px;margin-bottom:3px">COHERENCY STATE (L1 per SM)</div>' +
+        smStateHtml +
+      '</div>';
+    ttHint.style.display = (selectedBlock && selectedBlock.type === 'l2') ? 'none' : 'flex';
+    positionTooltip(clientX, clientY);
+    tooltipEl.classList.add('visible');
+    return;
+  }
 
   if (isArbiterBlock) {
     tooltipEl.classList.add('tt-wide');
@@ -1626,9 +1777,13 @@ function hideTooltip() {
   tooltipEl.classList.remove('visible');
 }
 
+// draw.js — GPU Cache Coherency Demo
+
+// Layout building, arch switching, all canvas rendering
+
 function bubble(x, y, text, color, opts) {
   var o = opts || {};
-  bubbles.push({ x:x, y:y-8, text:text, sub:o.sub||null, color:color, bg:(o.bg||color.slice(0,7))+'18', age:0, life:o.life||1.9, rise:o.rise||18, wobble:Math.random()*6 });
+  bubbles.push({ x:x, y:y-8, text:text, sub:o.sub||null, color:color, bg:(o.bg||color.slice(0,7))+'18', age:0, life:o.life||2.8, rise:o.rise||18, wobble:Math.random()*6, vx:0, vy:0 });
 }
 
 function updateDiffBanner() {
@@ -1703,7 +1858,11 @@ function switchArch(arch) {
 
 function updateArchIntro() {
   var arch = ARCHS[currentArch];
-  document.getElementById('arch-intro').innerHTML = '<div class="arch-intro-badge" style="background:' + arch.color + '20;color:' + arch.color + '">' + arch.name + ' · ' + arch.example + '</div><div class="arch-intro-text">' + arch.intro + '</div>';
+  var delta = arch.delta ? '<div class="arch-intro-delta">' + arch.delta + '</div>' : '';
+  document.getElementById('arch-intro').innerHTML =
+    '<div class="arch-intro-badge" style="background:' + arch.color + '20;color:' + arch.color + '">' + arch.name + ' · ' + arch.example + '</div>' +
+    '<div class="arch-intro-text">' + arch.intro + '</div>' +
+    delta;
 }
 
 function buildLayout() {
@@ -1953,20 +2112,24 @@ function drawSelectionHighlight() {
 
 function drawFrame(time) {
   if (!initialized || !layout.sms) { requestAnimationFrame(drawFrame); return; }
-  
-  // ── Pause: freeze animation but keep RAF running for tooltip responsiveness ──
-  if (paused) {
-    // Still draw the static frame so hovering works, but don't advance time
-    // Just redraw without updating dt-dependent state
-    drawStaticFrame();
+  try {
+    if (paused) {
+      drawStaticFrame();
+      requestAnimationFrame(drawFrame);
+      return;
+    }
+    var dt = Math.min((time - lastTime)/1000, 0.05);
+    lastTime = time;
+    drawAnimatedFrame(dt, time);
     requestAnimationFrame(drawFrame);
-    return;
+  } catch(e) {
+    // Surface any silent crash to the canvas so we can see it
+    ctx.fillStyle = '#ff6b6b';
+    ctx.font = '13px monospace';
+    ctx.fillText('JS error: ' + e.message, 20, 40);
+    ctx.fillText(e.stack ? e.stack.split('\n')[1] : '', 20, 60);
+    requestAnimationFrame(drawFrame);
   }
-
-  var dt = Math.min((time - lastTime)/1000, 0.05);
-  lastTime = time;
-  drawAnimatedFrame(dt, time);
-  requestAnimationFrame(drawFrame);
 }
 
 function drawStaticFrame() {
@@ -1985,6 +2148,10 @@ function drawAnimatedFrame(dt, time) {
   if (hoveredBlock && (hoveredBlock.type === 'l1' || hoveredBlock.type === 'smem')) {
     refreshTooltipCacheData(hoveredBlock, BLOCK_INFO[hoveredBlock.type]);
   }
+  // Live tooltip refresh for L2 — line state changes during scenarios
+  if (hoveredBlock && hoveredBlock.type === 'l2' && tooltipEl.classList.contains('visible')) {
+    updateTooltip(hoveredBlock, lastClientX, lastClientY);
+  }
   // Live tooltip refresh for arbiter (state changes while hovered)
   if (hoveredBlock && hoveredBlock.type === 'arbiter' && tooltipEl.classList.contains('visible')) {
     updateTooltip(hoveredBlock, lastClientX, lastClientY);
@@ -1992,14 +2159,30 @@ function drawAnimatedFrame(dt, time) {
 
   if (autoMode) {
     autoTimer+=dt;
-    // Atomic scenario takes 4-6s end-to-end — use a longer interval and skip if still active
-    var autoInterval = (currentArch === 'apex' && arbiterState.active) ? 99 : 5.0;
+    var autoInterval = (currentArch === 'apex' && arbiterState.active) ? 99 : 6.5;
     if (autoTimer > autoInterval) {
       autoTimer=0;
-      var ops = currentArch === 'apex'
-        ? ['read','write','invalidate','writeback','shared','atomic']
-        : ['read','write','invalidate','writeback','shared'];
-      triggerScenario(ops[Math.floor(Math.random()*ops.length)]);
+      // State-aware op selection: weight ops based on current cache state
+      // so the sequence makes sense (read before write, write before invalidate, etc.)
+      var anyValid    = layout.sms.some(function(s){ return s.l1.state !== 'invalid'; });
+      var anyModified = layout.sms.some(function(s){ return s.l1.state === 'modified'; });
+      var apex = currentArch === 'apex';
+      var pool;
+      if (!anyValid) {
+        // All invalid — only sensible ops are read or (apex) atomic
+        pool = apex ? ['read','read','read','atomic'] : ['read'];
+      } else if (anyModified) {
+        // Someone has dirty data — writeback, invalidate, or atomic make sense
+        pool = apex
+          ? ['writeback','writeback','invalidate','atomic','atomic']
+          : ['writeback','invalidate','write'];
+      } else {
+        // Some shared lines exist — write, invalidate, or shared make sense; read still ok
+        pool = apex
+          ? ['write','invalidate','writeback','shared','read','atomic']
+          : ['write','invalidate','writeback','shared','read'];
+      }
+      triggerScenario(pool[Math.floor(Math.random()*pool.length)]);
     }
   }
 }
@@ -2024,7 +2207,7 @@ function drawSceneContent(dt, time) {
     rrect(c.x1, c.y1, c.x2-c.x1, c.y2-c.y1, 10);
     ctx.strokeStyle = arch.color+'40'; ctx.lineWidth=1.5; ctx.stroke();
     ctx.setLineDash([]);
-    ctx.font='bold '+Math.max(8,8*fs)+'px "JetBrains Mono"';
+    ctx.font='bold '+Math.max(8,8*fs)+'px monospace';
     ctx.fillStyle=arch.color+'90'; ctx.textAlign='center';
     ctx.fillText('THREAD BLOCK CLUSTER', (c.x1+c.x2)/2, c.y1-2);
   }
@@ -2034,10 +2217,10 @@ function drawSceneContent(dt, time) {
     rrect(sm.x, sm.y, sm.w, sm.h, 7);
     ctx.fillStyle='#0f1118'; ctx.fill();
     ctx.strokeStyle='#2a2d3a'; ctx.lineWidth=1; ctx.stroke();
-    ctx.font='700 '+FONT_SM_LABEL+'px "Outfit"';
+    ctx.font='700 '+FONT_SM_LABEL+'px system-ui,sans-serif';
     ctx.fillStyle='#e8eaf6'; ctx.textAlign='center';
     ctx.fillText(sm.label, sm.x+sm.w/2, sm.y+14*fs);
-    ctx.font='400 '+FONT_SM_WARP+'px "JetBrains Mono"';
+    ctx.font='400 '+FONT_SM_WARP+'px monospace';
     ctx.fillStyle='#8890b0';
     ctx.fillText('Warps ▸▸▸', sm.x+sm.w/2, sm.y+24*fs);
 
@@ -2072,7 +2255,7 @@ function drawSceneContent(dt, time) {
           }
         }
 
-        ctx.font='600 '+FONT_BLOCK_LG+'px "JetBrains Mono"';
+        ctx.font='600 '+FONT_BLOCK_LG+'px monospace';
         ctx.fillStyle = b.state === 'invalid' ? '#9095b0' : sc;
         ctx.textAlign='center';
         ctx.fillText(b.label+' ['+b.state.charAt(0).toUpperCase()+']', b.x+b.w/2, b.y+b.h/2+1);
@@ -2102,7 +2285,7 @@ function drawSceneContent(dt, time) {
         }
 
         var lblFs = (b.type==='async') ? FONT_BLOCK_XS : FONT_BLOCK_SM;
-        ctx.font='600 '+lblFs+'px "JetBrains Mono"';
+        ctx.font='600 '+lblFs+'px monospace';
         ctx.fillStyle=cLbl; ctx.textAlign='center';
         ctx.fillText(b.label, b.x+b.w/2, b.y+b.h/2+1);
       }
@@ -2134,7 +2317,7 @@ function drawSceneContent(dt, time) {
     ctx.beginPath(); ctx.moveTo(ifaceX - tickW, ifaceY0 + 2); ctx.lineTo(ifaceX + tickW, ifaceY0 + 2); ctx.stroke();
     ctx.restore();
     // Interface label
-    ctx.font = '500 5px "JetBrains Mono"'; ctx.textAlign = 'left';
+    ctx.font = '500 5px monospace'; ctx.textAlign = 'left';
     ctx.fillStyle = qFull ? '#ff6b6b90' : '#f59e0b35';
     ctx.fillText(qFull ? '⚠ STALL' : 'interface', ifaceX + tickW + 3, ifaceY0 + 5);
 
@@ -2161,11 +2344,11 @@ function drawSceneContent(dt, time) {
     ctx.fillStyle = '#f59e0b16';
     rrect(arb.x+1, arb.y+1, arb.w-2, 17, 7); ctx.fill();
 
-    ctx.font = '700 8.5px "JetBrains Mono"'; ctx.fillStyle = '#f59e0b'; ctx.textAlign = 'left';
+    ctx.font = '700 8.5px monospace'; ctx.fillStyle = '#f59e0b'; ctx.textAlign = 'left';
     ctx.fillText('⚖ ATOMIC ARBITER', arb.x + 12, arb.y + 13);
     var statusText = arbiterState.queue.length >= QUEUE_CAPACITY - 2 ? 'SATURATED' : arbiterState.active ? 'ACTIVE' : 'IDLE';
     var statusColor = arbiterState.queue.length >= QUEUE_CAPACITY - 2 ? '#ff6b6b' : arbiterState.active ? '#fbbf24' : '#4a5080';
-    ctx.font = '600 7px "JetBrains Mono"'; ctx.fillStyle = statusColor; ctx.textAlign = 'right';
+    ctx.font = '600 7px monospace'; ctx.fillStyle = statusColor; ctx.textAlign = 'right';
     ctx.fillText('● ' + statusText, arb.x + arb.w - 12, arb.y + 13);
 
     // ── Layout: divide arbiter into left (QUEUE) and right (HOLD BUFFER / ROB) ──
@@ -2181,7 +2364,7 @@ function drawSceneContent(dt, time) {
 
     // ── LEFT: INCOMING QUEUE ──
     var qLabelX = arb.x + 12;
-    ctx.font = '600 6px "JetBrains Mono"'; ctx.fillStyle = '#f59e0b60'; ctx.textAlign = 'left';
+    ctx.font = '600 6px monospace'; ctx.fillStyle = '#f59e0b60'; ctx.textAlign = 'left';
     ctx.fillText('INCOMING QUEUE', qLabelX, innerY + 7);
     var qSlotW2 = 24;
     var qSlotStartX = qLabelX;
@@ -2198,24 +2381,24 @@ function drawSceneContent(dt, time) {
       ctx.strokeStyle = qGranted ? '#51cf6680' : (qe2 ? '#f59e0baa' : '#252840');
       ctx.lineWidth = qe2 ? 1.1 : 0.7;
       rrect(sx2, qSlotY, qSlotW2, slotH2, 3); ctx.fill(); ctx.stroke();
-      ctx.font = '700 6px "JetBrains Mono"'; ctx.textAlign = 'center';
+      ctx.font = '700 6px monospace'; ctx.textAlign = 'center';
       ctx.fillStyle = qGranted ? '#51cf66' : (qe2 ? '#fbbf24' : '#2a2d45');
       ctx.fillText(qe2 ? '#'+qe2.seq : '—', sx2 + qSlotW2/2, qSlotY + 10);
       // SM label below slot
       if (qe2) {
-        ctx.font = '500 5px "JetBrains Mono"'; ctx.fillStyle = qGranted ? '#51cf6660' : '#f59e0b60';
+        ctx.font = '500 5px monospace'; ctx.fillStyle = qGranted ? '#51cf6660' : '#f59e0b60';
         ctx.fillText('SM'+qe2.smIdx, sx2 + qSlotW2/2, qSlotY + slotH2 + 6);
       }
     }
 
     // Queue depth indicator
     var qBotY = qSlotY + slotH2 + 11;
-    ctx.font = '500 6px "JetBrains Mono"'; ctx.fillStyle = '#f59e0b50'; ctx.textAlign = 'left';
+    ctx.font = '500 6px monospace'; ctx.fillStyle = '#f59e0b50'; ctx.textAlign = 'left';
     ctx.fillText('SEQ#' + String(arbiterState.seqCounter).padStart(3,'0'), qLabelX, qBotY);
 
     // ── RIGHT: HOLD BUFFER (ROB) ──
     var robLabelX = divX + 18;  // offset right so label clears the dashed divider
-    ctx.font = '600 6px "JetBrains Mono"'; ctx.fillStyle = '#a78bfa90'; ctx.textAlign = 'left';
+    ctx.font = '600 6px monospace'; ctx.fillStyle = '#a78bfa90'; ctx.textAlign = 'left';
     ctx.fillText('HOLD BUFFER  (ROB)', robLabelX, innerY + 7);
     var robSlotW2 = Math.floor((arb.x + arb.w - robLabelX - 12) / 6) - slotGap2;
     robSlotW2 = Math.max(robSlotW2, 18);
@@ -2234,18 +2417,18 @@ function drawSceneContent(dt, time) {
       }
       ctx.fillStyle = rBg2; ctx.strokeStyle = rBr2; ctx.lineWidth = robE2 ? 1.1 : 0.7;
       rrect(rx3, robSlotY, robSlotW2, slotH2, 3); ctx.fill(); ctx.stroke();
-      ctx.font = '700 5.5px "JetBrains Mono"'; ctx.textAlign = 'center';
+      ctx.font = '700 5.5px monospace'; ctx.textAlign = 'center';
       ctx.fillStyle = rTxt2;
       ctx.fillText(robE2 ? '#'+robE2.seq : '—', rx3 + robSlotW2/2, robSlotY + 7);
       if (robE2) {
-        ctx.font = '500 5px "JetBrains Mono"'; ctx.fillStyle = rTxt2 + '90';
+        ctx.font = '500 5px monospace'; ctx.fillStyle = rTxt2 + '90';
         ctx.fillText(rIcon, rx3 + robSlotW2/2, robSlotY + 13);
       }
     }
 
     // ROB state legend
     var robBotY = robSlotY + slotH2 + 11;
-    ctx.font = '500 5.5px "JetBrains Mono"'; ctx.textAlign = 'left';
+    ctx.font = '500 5.5px monospace'; ctx.textAlign = 'left';
     ctx.fillStyle = '#f59e0b60'; ctx.fillText('⏳ pending', robLabelX, robBotY);
     ctx.fillStyle = '#339af060'; ctx.fillText('✦ complete', robLabelX + 52, robBotY);
     ctx.fillStyle = '#a78bfa60'; ctx.fillText('↩ retiring', robLabelX + 110, robBotY);
@@ -2257,7 +2440,7 @@ function drawSceneContent(dt, time) {
     if (gutterW > 40) {
       var gx = 8, gw = gutterX - 12;
       var gArbY = arb.y + 4;
-      ctx.font = '500 5.5px "JetBrains Mono"'; ctx.fillStyle = '#f59e0b40'; ctx.textAlign = 'right';
+      ctx.font = '500 5.5px monospace'; ctx.fillStyle = '#f59e0b40'; ctx.textAlign = 'right';
       ctx.fillText('SERIALIZES', gx + gw, gArbY + 8);
       ctx.fillText('ATOMICS', gx + gw, gArbY + 16);
       ctx.fillStyle = '#f59e0b25'; ctx.textAlign = 'right';
@@ -2265,7 +2448,7 @@ function drawSceneContent(dt, time) {
       ctx.fillText('ROB order', gx + gw, gArbY + 34);
       // Contention bar
       var gbY = gArbY + 42;
-      ctx.font = '500 5px "JetBrains Mono"'; ctx.fillStyle = '#f59e0b40'; ctx.textAlign = 'right';
+      ctx.font = '500 5px monospace'; ctx.fillStyle = '#f59e0b40'; ctx.textAlign = 'right';
       ctx.fillText('contention', gx + gw, gbY);
       ctx.fillStyle = '#141620';
       ctx.fillRect(gx + gw - 36, gbY + 2, 36, 4);
@@ -2275,7 +2458,7 @@ function drawSceneContent(dt, time) {
         ctx.fillStyle = gGrad;
         ctx.fillRect(gx + gw - 36, gbY + 2, 36 * latFrac, 4);
       }
-      ctx.font = '600 5.5px "JetBrains Mono"'; ctx.fillStyle = '#f59e0b'; ctx.textAlign = 'right';
+      ctx.font = '600 5.5px monospace'; ctx.fillStyle = '#f59e0b'; ctx.textAlign = 'right';
       var cycEst3 = Math.round(2 + latFrac * 30);
       ctx.fillText('~'+cycEst3+'cyc', gx + gw, gbY + 14);
     }
@@ -2286,12 +2469,12 @@ function drawSceneContent(dt, time) {
     if (rGutterW > 40) {
       var rgx = rGutterX + 4;
       var rgArbY = arb.y + 4;
-      ctx.font = '500 5.5px "JetBrains Mono"'; ctx.fillStyle = '#f59e0b40'; ctx.textAlign = 'left';
+      ctx.font = '500 5.5px monospace'; ctx.fillStyle = '#f59e0b40'; ctx.textAlign = 'left';
       ctx.fillText('GRANT policy:', rgx, rgArbY + 8);
       ctx.fillStyle = '#f59e0b25';
       ctx.fillText('FIFO arrival', rgx, rgArbY + 17);
       ctx.fillText('1 at a time', rgx, rgArbY + 26);
-      ctx.font = '500 5px "JetBrains Mono"';
+      ctx.font = '500 5px monospace';
       ctx.fillStyle = '#f59e0b20';
       ctx.fillText('Granted: '+arbiterState.grantCount, rgx, rgArbY + 37);
     }
@@ -2306,7 +2489,7 @@ function drawSceneContent(dt, time) {
     ctx.fillStyle = isHovCd ? '#22d3ee18' : '#22d3ee0a'; ctx.fill();
     ctx.strokeStyle = '#22d3ee' + Math.round(cdPulse * (isHovCd ? 200 : 100)).toString(16).padStart(2,'0');
     ctx.lineWidth = isHovCd ? 1.5 : 0.8; ctx.stroke();
-    ctx.font = '700 6.5px "JetBrains Mono"'; ctx.fillStyle = '#22d3ee'; ctx.textAlign = 'center';
+    ctx.font = '700 6.5px monospace'; ctx.fillStyle = '#22d3ee'; ctx.textAlign = 'center';
     ctx.fillText('COH. DIR', cd.x + cd.w/2, cd.y + 10);
     var cdRowH = 5, cdRowGap = 2, cdRows = 3, cdBitCount = 4;
     for (var dr2 = 0; dr2 < cdRows; dr2++) {
@@ -2319,7 +2502,7 @@ function drawSceneContent(dt, time) {
         ctx.fillRect(cd.x + 7 + db2*cdBitW, ry2, cdBitW-1, cdRowH);
       }
     }
-    ctx.font = '500 5.5px "JetBrains Mono"'; ctx.fillStyle = '#22d3ee50'; ctx.textAlign = 'center';
+    ctx.font = '500 5.5px monospace'; ctx.fillStyle = '#22d3ee50'; ctx.textAlign = 'center';
     ctx.fillText('targeted', cd.x + cd.w/2, cd.y + cd.h - 3);
 
     // ── L2 RIGHT GUTTER: bandwidth and state info ──
@@ -2329,7 +2512,7 @@ function drawSceneContent(dt, time) {
     if (l2RGutW > 40) {
       var l2gx = l2RGutX + 4;
       var l2gY = l2.y + 4;
-      ctx.font = '500 5.5px "JetBrains Mono"'; ctx.fillStyle = '#ffa94d40'; ctx.textAlign = 'left';
+      ctx.font = '500 5.5px monospace'; ctx.fillStyle = '#ffa94d40'; ctx.textAlign = 'left';
       ctx.fillText('L2: 64MB', l2gx, l2gY + 8);
       ctx.fillText('unified', l2gx, l2gY + 17);
       ctx.fillStyle = '#22d3ee30';
@@ -2338,7 +2521,7 @@ function drawSceneContent(dt, time) {
     // ── L2 LEFT GUTTER: RMW annotation ──
     var l2LGutW2 = l2.x - 12;
     if (l2LGutW2 > 40) {
-      ctx.font = '500 5.5px "JetBrains Mono"'; ctx.fillStyle = '#ffa94d40'; ctx.textAlign = 'right';
+      ctx.font = '500 5.5px monospace'; ctx.fillStyle = '#ffa94d40'; ctx.textAlign = 'right';
       ctx.fillText('RMW here', l2.x - 8, l2.y + 10);
       ctx.fillStyle = '#ffa94d20';
       ctx.fillText('~200 cyc', l2.x - 8, l2.y + 20);
@@ -2374,7 +2557,7 @@ function drawSceneContent(dt, time) {
   ctx.strokeStyle='#f0659550'; ctx.lineWidth=2; ctx.stroke(); ctx.setLineDash([]);
   ctx.beginPath(); ctx.moveTo(bus.x1, bus.y); ctx.lineTo(bus.x2, bus.y);
   ctx.strokeStyle='rgba(240,101,149,'+(busPulse*0.15)+')'; ctx.lineWidth=8; ctx.stroke();
-  ctx.font='600 '+Math.max(8,8*fs)+'px "JetBrains Mono"';
+  ctx.font='600 '+Math.max(8,8*fs)+'px monospace';
   ctx.fillStyle='#f06595e0'; ctx.textAlign='center';
   ctx.fillText(bus.label, (bus.x1+bus.x2)/2, bus.y-9);
 
@@ -2385,14 +2568,20 @@ function drawSceneContent(dt, time) {
   rrect(l2.x, l2.y, l2.w, l2.h, 7);
   ctx.fillStyle='#1a1408'; ctx.fill();
   ctx.strokeStyle='#ffa94d60'; ctx.lineWidth=1.5; ctx.stroke();
-  ctx.font='700 '+Math.max(11,11*fs)+'px "Outfit"';
+  ctx.font='700 '+Math.max(11,11*fs)+'px system-ui,sans-serif';
   ctx.fillStyle='#ffb55a'; ctx.textAlign='center';
   ctx.fillText(arch.blocks.l2.label, l2.x+l2.w/2, l2.y+18*fs);
-  var slices = mob ? 8 : 12;
-  var slW = (l2.w-20)/slices;
-  for (var sli=0;sli<slices;sli++) {
-    ctx.fillStyle='hsl(32,40%,'+(15+Math.sin(Date.now()/600+sli*.5)*5)+'%)';
-    ctx.fillRect(l2.x+10+sli*slW, l2.y+24*fs, slW-2, 10*fs);
+  // L2 line state bars — same visual language as L1 but wider (unified across all SMs)
+  var l2BarY = l2.y + 24*fs;
+  var l2BarH = 8*fs;
+  var l2BarGutter = 10;
+  var l2BarW = (l2.w - l2BarGutter*2) / NUM_L2_LINES;
+  for (var l2i = 0; l2i < NUM_L2_LINES; l2i++) {
+    var lv2 = l2Lines[l2i];
+    if (lv2 === 2)      ctx.fillStyle = '#ffa94d';   // dirty
+    else if (lv2 === 1) ctx.fillStyle = '#339af060';  // clean
+    else                ctx.fillStyle = '#1e2030';     // empty
+    ctx.fillRect(l2.x + l2BarGutter + l2i*l2BarW, l2BarY, l2BarW - 1, l2BarH);
   }
 
   if (layout.l2Persist) {
@@ -2402,7 +2591,7 @@ function drawSceneContent(dt, time) {
     grad.addColorStop(0,'#ffa94d35'); grad.addColorStop(0.6,'#ffa94d18'); grad.addColorStop(1,'#ffa94d05');
     ctx.fillStyle=grad; ctx.fill();
     ctx.strokeStyle='#ffa94d35'; ctx.lineWidth=.5; ctx.stroke();
-    ctx.font='600 '+Math.max(6,6*fs)+'px "JetBrains Mono"';
+    ctx.font='600 '+Math.max(6,6*fs)+'px monospace';
     ctx.fillStyle='#ffa94da0'; ctx.textAlign='center';
     ctx.fillText('PERSIST WINDOW', p.x+p.w/2, p.y+p.h/2+2);
   }
@@ -2414,7 +2603,7 @@ function drawSceneContent(dt, time) {
   ctx.setLineDash([3,3]);
   ctx.beginPath(); ctx.moveTo(cb.x1,cb.y); ctx.lineTo(cb.x2,cb.y);
   ctx.strokeStyle='#339af038'; ctx.lineWidth=1.5; ctx.stroke(); ctx.setLineDash([]);
-  ctx.font='600 '+Math.max(7.5,7.5*fs)+'px "JetBrains Mono"';
+  ctx.font='600 '+Math.max(7.5,7.5*fs)+'px monospace';
   ctx.fillStyle='#339af0c0'; ctx.textAlign='center';
   ctx.fillText('MEMORY CROSSBAR / NoC', (cb.x1+cb.x2)/2, cb.y-6);
 
@@ -2425,18 +2614,18 @@ function drawSceneContent(dt, time) {
   rrect(gm.x,gm.y,gm.w,gm.h,7);
   ctx.fillStyle='#0d1320'; ctx.fill();
   ctx.strokeStyle='#339af050'; ctx.lineWidth=1.5; ctx.stroke();
-  ctx.font='700 '+Math.max(10,10*fs)+'px "Outfit"';
+  ctx.font='700 '+Math.max(10,10*fs)+'px system-ui,sans-serif';
   ctx.fillStyle='#5ab0f8'; ctx.textAlign='center';
   ctx.fillText('Global Memory Interface', gm.x+gm.w/2, gm.y+14);
   for (var mci=0;mci<layout.mcs.length;mci++) {
     var mc=layout.mcs[mci];
     ctx.fillStyle='hsl(210,50%,'+(14+Math.sin(Date.now()/500+mci)*3)+'%)';
     ctx.fillRect(mc.x,mc.y,mc.w,mc.h);
-    ctx.font='600 '+Math.max(6.5,6.5*fs)+'px "JetBrains Mono"';
+    ctx.font='600 '+Math.max(6.5,6.5*fs)+'px monospace';
     ctx.fillStyle='#339af090'; ctx.textAlign='center';
     ctx.fillText('MC'+mci, mc.x+mc.w/2, mc.y+mc.h/2+2.5);
   }
-  ctx.font='500 '+Math.max(6.5,6.5*fs)+'px "JetBrains Mono"';
+  ctx.font='500 '+Math.max(6.5,6.5*fs)+'px monospace';
   ctx.fillStyle='#8890a8'; ctx.textAlign='center';
   ctx.fillText('MC → '+arch.blocks.hbm.label, gm.x+gm.w/2, gm.y+gm.h-5);
 
@@ -2447,7 +2636,7 @@ function drawSceneContent(dt, time) {
   rrect(hbm.x,hbm.y,hbm.w,hbm.h,7);
   ctx.fillStyle='#0d0a18'; ctx.fill();
   ctx.strokeStyle='#845ef740'; ctx.lineWidth=1.5; ctx.stroke();
-  ctx.font='700 '+Math.max(11,11*fs)+'px "Outfit"';
+  ctx.font='700 '+Math.max(11,11*fs)+'px system-ui,sans-serif';
   ctx.fillStyle='#a07af8'; ctx.textAlign='center';
   ctx.fillText(hbm.label, hbm.x+hbm.w/2, hbm.y+16*fs);
   var hbmStacks = mob ? 4 : 6;
@@ -2468,6 +2657,30 @@ function drawSceneContent(dt, time) {
     ctx.lineWidth=2; ctx.stroke();
     return true;
   });
+
+  // Bubble repulsion: pairs within 52px push each other apart gently
+  if (!paused && bubbles.length > 1) {
+    var REPEL_DIST = 52, REPEL_FORCE = 0.18, DAMP = 0.82;
+    for (var ri = 0; ri < bubbles.length; ri++) {
+      var ba = bubbles[ri];
+      ba.vx *= DAMP; ba.vy *= DAMP;
+      for (var rj = ri + 1; rj < bubbles.length; rj++) {
+        var bb2 = bubbles[rj];
+        var rdx = ba.x - bb2.x, rdy = ba.y - bb2.y;
+        var dist = Math.sqrt(rdx*rdx + rdy*rdy) || 0.01;
+        if (dist < REPEL_DIST) {
+          var force = (REPEL_DIST - dist) / REPEL_DIST * REPEL_FORCE;
+          var nx = rdx/dist, ny = rdy/dist;
+          ba.vx += nx*force; ba.vy += ny*force;
+          bb2.vx -= nx*force; bb2.vy -= ny*force;
+        }
+      }
+    }
+    for (var ri2 = 0; ri2 < bubbles.length; ri2++) {
+      bubbles[ri2].x += bubbles[ri2].vx;
+      bubbles[ri2].y += bubbles[ri2].vy;
+    }
+  }
 
   // Bubbles (skip advancement if paused)
   bubbles = bubbles.filter(function(b) {
@@ -2497,11 +2710,11 @@ function drawSceneContent(dt, time) {
 
     var fs2 = Math.max(8, 8*scale*boostScale);
     var subFs = Math.max(6.5, 6.5*scale*boostScale);
-    ctx.font='700 '+fs2+'px "JetBrains Mono"';
+    ctx.font='700 '+fs2+'px monospace';
     var tw = ctx.measureText(b.text).width + 14;
     var subTw = 0;
     if (b.sub) {
-      ctx.font='500 '+subFs+'px "JetBrains Mono"';
+      ctx.font='500 '+subFs+'px monospace';
       subTw = ctx.measureText(b.sub).width + 14;
     }
     var boxW = Math.max(tw, subTw);
@@ -2527,14 +2740,14 @@ function drawSceneContent(dt, time) {
       ctx.closePath(); ctx.fillStyle = isHovered ? b.color + '28' : b.bg; ctx.fill();
     }
 
-    ctx.font='700 '+fs2+'px "JetBrains Mono"';
+    ctx.font='700 '+fs2+'px monospace';
     ctx.fillStyle=b.color;
     ctx.textAlign='center';
     var textY = b.sub ? (by - bh/2 + fs2 + 3) : (by + fs2/2 - 1);
     ctx.fillText(b.text, bx, textY);
 
     if (b.sub) {
-      ctx.font='500 '+subFs+'px "JetBrains Mono"';
+      ctx.font='500 '+subFs+'px monospace';
       ctx.fillStyle = isHovered ? b.color + 'cc' : b.color + '99';
       ctx.fillText(b.sub, bx, textY + subFs + 2);
     }
@@ -2562,8 +2775,13 @@ var lastTime=0;
 // Usage: new Particle(from, to, color, label, speed, onDone)
 //   OR:  new Particle(from, to, color, label, speed, onDone, {waypoints:[{x,y}, ...]})
 // Waypoints are intermediate stops; particle chains through them automatically.
+
+// particles.js — GPU Cache Coherency Demo
+
+// Particle animation, coordinate helpers, flash
+
 function Particle(from, to, color, label, speed, onDone, opts) {
-  this.color=color; this.label=label||''; this.speed=speed||2; this.alive=true; this.onDone=onDone;
+  this.color=color; this.label=label||''; this.speed=(speed||2)*SPEED_SCALE; this.alive=true; this.onDone=onDone;
   this.trail=[];
   // Build segment list from waypoints
   var pts = [{x:from.x,y:from.y}];
@@ -2632,7 +2850,7 @@ Particle.prototype.draw = function(ctx) {
   ctx.beginPath(); ctx.arc(cx,cy,7,0,Math.PI*2); ctx.fillStyle=this.color+'28'; ctx.fill();
   if (this.label) {
     var hasInfo = !!INSTRUCTION_INFO[this.label];
-    var lFont = (hasInfo ? '700' : '500') + ' 9px "JetBrains Mono"';
+    var lFont = (hasInfo ? '700' : '500') + ' 9px monospace';
     ctx.font = lFont;
     var lw = ctx.measureText(this.label).width;
     var lx = cx, ly = cy - 12;
@@ -2666,6 +2884,10 @@ function gmTop() { return {x:layout.globalMem.x+layout.globalMem.w/2,y:layout.gl
 function gmBot() { return {x:layout.globalMem.x+layout.globalMem.w/2,y:layout.globalMem.y+layout.globalMem.h}; }
 function hbmTop() { return {x:layout.hbm.x+layout.hbm.w/2,y:layout.hbm.y}; }
 function flash(b,c) { flashEffects.push({x:b.x,y:b.y,w:b.w,h:b.h,c:c,t:0,dur:.5}); }
+
+// scenarios.js — GPU Cache Coherency Demo
+
+// Cache scenario triggers, explanations, auto mode
 
 function getExplanation(type) {
   var arch = currentArch;
@@ -2793,14 +3015,51 @@ function updateStats() {
 }
 
 function triggerScenario(type) {
-  // If paused, unpause first so the animation plays
-  if (paused) {
-    togglePause();
-  }
+  if (paused) togglePause();
 
-  var si=Math.floor(Math.random()*layout.sms.length);
+  var si = Math.floor(Math.random()*layout.sms.length);
   showExplanation(type);
-  var sm=layout.sms[si];
+  var sm = layout.sms[si];
+
+  // ── Precondition enforcement ──
+  // Each scenario requires certain cache state. If preconditions aren't met,
+  // either coerce state or redirect to a scenario that makes sense first.
+  if (type === 'write' && currentArch !== 'pascal') {
+    // Write-evict requires line to be in L1 (Shared) to make sense visually.
+    // If invalid, force a read first then write. Don't dirty-write an empty cache.
+    var anyShared = layout.sms.some(function(s){ return s.l1.state !== 'invalid'; });
+    if (!anyShared) {
+      // Redirect: do a read first, write will happen naturally on next auto tick
+      type = 'read';
+      showExplanation(type);
+    }
+  }
+  if (type === 'invalidate') {
+    // INV only meaningful if at least one SM has a valid line
+    var anyValid = layout.sms.some(function(s){ return s.l1.state !== 'invalid'; });
+    if (!anyValid) { type = 'read'; showExplanation(type); }
+  }
+  if (type === 'writeback') {
+    // Writeback requires a dirty (Modified) line. If none, promote one SM to Modified first.
+    var anyModified = layout.sms.some(function(s){ return s.l1.state === 'modified'; });
+    if (!anyModified) {
+      // Coerce: pick any SM, give it a shared line, then we'll dirty it
+      var targetSM = layout.sms.find(function(s){ return s.l1.state !== 'invalid'; });
+      if (!targetSM) { type = 'read'; showExplanation(type); }
+      else {
+        // Find that SM's index and make it Modified
+        for (var di = 0; di < layout.sms.length; di++) {
+          if (layout.sms[di] === targetSM) { si = di; sm = targetSM; break; }
+        }
+        sm.l1.state = 'modified'; setL1Dirty(si);
+      }
+    } else {
+      // Use an SM that's actually Modified
+      for (var mi = 0; mi < layout.sms.length; mi++) {
+        if (layout.sms[mi].l1.state === 'modified') { si = mi; sm = layout.sms[si]; break; }
+      }
+    }
+  }
 
   switch(type) {
     case 'read':
@@ -2811,14 +3070,15 @@ function triggerScenario(type) {
         bubble(busP(si).x,busP(si).y,'going to L2','#ff6b6b',{life:1.4,sub:'fetch from below'});
         spawnPassthrough(si,'#ff6b6b','RdReq',2.5,function(){
           stats.hits++; logEvent('L2: Hit → data returning','#ffa94d');
+          // Add exactly one clean line to L2 to represent the fetched cache line
+          l2AbsorbOne();
           bubble(l2Top().x,l2Top().y,'L2 found it','#51cf66',{life:1.5,sub:'data ready'});
-          particles.push(new Particle(l2Top(),busP(si),'#ffa94d','DATA',2,function(){
-            particles.push(new Particle(busP(si),l1Pos(si),'#ffa94d','DATA',2,function(){
-              sm.l1.state='shared'; fillL1Random(si, false); flash(sm.l1,'#339af0');
-              bubble(l1Pos(si).x,l1Pos(si).y,'line cached','#339af0',{life:1.6,sub:'now Shared'});
-              logEvent('SM'+si+': L1 → Shared','#339af0');
-            }));
-          }));
+          // Route DATA back via bus junction — l2Top → busP → l1Pos (no diagonal shortcuts)
+          spawnParticle(l2Top(), l1Pos(si), '#ffa94d', 'DATA', 2, function(){
+            sm.l1.state='shared'; fillL1Random(si, false); flash(sm.l1,'#339af0');
+            bubble(l1Pos(si).x,l1Pos(si).y,'line cached','#339af0',{life:1.6,sub:'now Shared'});
+            logEvent('SM'+si+': L1 → Shared','#339af0');
+          }, [busP(si)]);
         });
       }));
       break;
@@ -2830,18 +3090,32 @@ function triggerScenario(type) {
         particles.push(new Particle(l1Pos(si),busP(si),'#51cf66','WR',2,function(){
           bubble(busP(si).x,busP(si).y,'skip L1','#8890a8',{life:1.2,sub:'straight to L2'});
           spawnPassthrough(si,'#51cf66','WR',2.5,function(){
-            flash(layout.l2,'#ffa94d');
+            flash(layout.l2,'#ffa94d'); l2Absorb();
             bubble(l2Top().x,l2Top().y,'L2 updated','#ffa94d',{life:1.5,sub:'write absorbed'});
             logEvent('L2: Write absorbed','#ffa94d');
           });
         }));
       } else {
-        sm.l1.state='modified'; setL1Dirty(si); stats.hits++;
+        stats.hits++;
         logEvent('SM'+si+': Write → Modified + invalidate','#51cf66');
-        flash(sm.l1,'#51cf66');
-        bubble(l1Pos(si).x,l1Pos(si).y,'line dirty','#51cf66',{sub:'now Modified'});
+        bubble(l1Pos(si).x,l1Pos(si).y,'store issued','#51cf66',{sub:'write-evict'});
+        // Capture snapshot of which SMs currently have valid lines BEFORE any state change
+        var staleSMs = [];
         for (var wi=0;wi<layout.sms.length;wi++) {
-          if (wi!==si && layout.sms[wi].l1.state!=='invalid') {
+          if (wi!==si && layout.sms[wi].l1.state!=='invalid') staleSMs.push(wi);
+        }
+        particles.push(new Particle(l1Pos(si),busP(si),'#51cf66','WR',2,function(){
+          // Write reaches bus — now L1 transitions to Modified and INV fires
+          sm.l1.state='modified'; setL1Dirty(si);
+          flash(sm.l1,'#51cf66');
+          bubble(l1Pos(si).x,l1Pos(si).y,'line dirty','#51cf66',{sub:'now Modified'});
+          spawnPassthrough(si,'#51cf66','WR',2.5,function(){
+            l2Absorb();
+            flash(layout.l2,'#ffa94d');
+            logEvent('L2: Write-evict received','#ffa94d');
+          });
+          // INV broadcast fires immediately from bus junction (write-evict policy)
+          for (var wj=0;wj<staleSMs.length;wj++) {
             (function(idx){
               setTimeout(function(){
                 particles.push(new Particle(busP(si),busP(idx),'#f06595','INV',3,function(){
@@ -2851,15 +3125,17 @@ function triggerScenario(type) {
                   logEvent('SM'+idx+': Invalidated','#f06595');
                   updateStats();
                 }));
-              }, idx*150);
-            })(wi);
+              }, wj*180 + Math.round(Math.random()*60));
+            })(staleSMs[wj]);
           }
-        }
+        }));
       }
       break;
     case 'invalidate':
       stats.inv++;
       logEvent('Broadcast INV','#f06595');
+      // INV also marks L2 dirty lines as clean — the L2 now holds the authoritative copy
+      for (var l2ci=0; l2ci<NUM_L2_LINES; l2ci++) { if (l2Lines[l2ci]===2) l2Lines[l2ci]=1; }
       bubble((layout.bus.x1+layout.bus.x2)/2,layout.bus.y,'broadcast flush','#f06595',{sub:'all SMs notified'});
       for (var ii=0;ii<layout.sms.length;ii++) {
         (function(idx){
@@ -2872,29 +3148,35 @@ function triggerScenario(type) {
                 bubble(l1Pos(idx).x,l1Pos(idx).y,'all cleared','#f06595',{life:1.2,sub:'lines dropped'});
               }));
             }));
-          }, idx*180);
+          }, idx*120 + Math.round(Math.random()*80));
         })(ii);
       }
       break;
     case 'writeback':
-      sm.l1.state='modified'; setL1Dirty(si); stats.wb++;
+      // Precondition already ensures sm is Modified — only coerce lines if not already dirty
+      if (sm.l1.state !== 'modified') { sm.l1.state='modified'; setL1Dirty(si); }
       logEvent('SM'+si+': Write-back → L2','#ffa94d');
       bubble(l1Pos(si).x,l1Pos(si).y,'dirty evict','#ffa94d',{sub:'must flush out'});
       particles.push(new Particle(l1Pos(si),busP(si),'#ffa94d','WB',2,function(){
         spawnPassthrough(si,'#ffa94d','WB',2.5,function(){
-          flash(layout.l2,'#ffa94d'); sm.l1.state='shared'; writebackL1(si);
+          flash(layout.l2,'#ffa94d'); sm.l1.state='invalid'; invalidateL1(si); l2Dirty(); stats.wb++;
           bubble(l2Top().x,l2Top().y,'L2 absorbed','#ffa94d',{life:1.4,sub:'dirty → L2'});
           logEvent('L2: Write-back received','#ffa94d');
           setTimeout(function(){
+            // Evict dirty victim from L2 → crossbar → globalMem → HBM
+            l2Evict();
             bubble(l2Bot().x,l2Bot().y,'L2 evicting','#339af0',{life:1.3,sub:'victim to DRAM'});
             particles.push(new Particle(l2Bot(),cbP(),'#339af0','EVICT',2,function(){
               particles.push(new Particle(cbP(),gmTop(),'#339af0','WR',2,function(){
                 flash(layout.globalMem,'#339af0');
                 bubble(gmTop().x,gmTop().y,'queued MC','#339af0',{life:1.2,sub:'scheduling write'});
-                particles.push(new Particle(gmBot(),hbmTop(),'#845ef7','STORE',1.5,function(){
-                  flash(layout.hbm,'#845ef7');
-                  bubble(hbmTop().x,hbmTop().y,'persisted','#845ef7',{life:1.5,sub:'written to DRAM'});
-                  logEvent(ARCHS[currentArch].blocks.hbm.label+': Stored','#845ef7');
+                // Continue from gmTop → gmBot (through the MC block) then to HBM
+                particles.push(new Particle(gmTop(),gmBot(),'#339af0','WR',2,function(){
+                  particles.push(new Particle(gmBot(),hbmTop(),'#845ef7','STORE',1.5,function(){
+                    flash(layout.hbm,'#845ef7');
+                    bubble(hbmTop().x,hbmTop().y,'persisted','#845ef7',{life:1.5,sub:'written to DRAM'});
+                    logEvent(ARCHS[currentArch].blocks.hbm.label+': Stored','#845ef7');
+                  }));
                 }));
               }));
             }));
@@ -2943,6 +3225,11 @@ function triggerScenario(type) {
   }
   updateStats();
 }
+
+
+// arbiter.js — GPU Cache Coherency Demo
+
+// Atomic arbiter state machine, ROB, spawn helpers, app utils
 
 function toggleAuto() {
   autoMode=!autoMode;
@@ -3007,6 +3294,7 @@ var arbiterState = {
   contentionLevel: 0,
   recentGrants: [],
   active: false,
+  retireTimerPending: false,  // guards against duplicate ghost timers in arbiterTryRetire
 };
 
 
@@ -3019,6 +3307,7 @@ function resetArbiter() {
   arbiterState.contentionLevel = 0;
   arbiterState.recentGrants = [];
   arbiterState.active = false;
+  arbiterState.retireTimerPending = false;
   updateArbiterDom();
 }
 
@@ -3110,41 +3399,62 @@ function arbiterAckFromL2(seq, onRetired) {
   arbiterTryRetire();
 }
 
-// Drain ROB head: retire all consecutive 'complete' entries in SEQ order
-// This is the actual reordering — if #3 finishes before #2, it waits here
+// Drain ROB head: retire all consecutive 'complete' entries in SEQ order.
+// This is the actual reordering — if #3 finishes before #2, it waits here.
+//
+// Fix Bug #1: replaced `changed = true` + while-loop continuation with an
+//   immediate `return` after marking a head 'done'. The removal setTimeout
+//   calls arbiterTryRetire() itself once the slot is gone, so the chain
+//   continues correctly without racing the while loop.
+//
+// Fix Bug #3: `retireTimerPending` flag prevents accumulating duplicate
+//   ghost timers when arbiterTryRetire() is called while the head is still
+//   in its 600ms removal window (state === 'done').
 function arbiterTryRetire() {
-  var changed = true;
-  while (changed) {
-    changed = false;
-    if (arbiterState.rob.length === 0) break;
-    var head = arbiterState.rob[0];
-    if (head.state === 'done') {
-      setTimeout(arbiterTryRetire, 650);
-      break;
+  if (arbiterState.rob.length === 0) return;
+
+  var head = arbiterState.rob[0];
+
+  // Head is already marked 'done' but not yet removed — removal timer is
+  // running. Guard against scheduling duplicate re-check timers.
+  if (head.state === 'done') {
+    if (!arbiterState.retireTimerPending) {
+      arbiterState.retireTimerPending = true;
+      setTimeout(function() {
+        arbiterState.retireTimerPending = false;
+        arbiterTryRetire();
+      }, 650);
     }
-    if (head.state === 'complete') {
-      head.state = 'done';
-      // Bubble on slot 0 (head position) to show retirement
-      var rPos = robSlotPos(0);
-      bubble(rPos.x, rPos.y, '#'+head.seq+' ✓', '#51cf66', { sub:'retired→DATA', life:1.2 });
-      updateArbiterDom();
-      var cb = head.onRetired;
-      (function(entry) {
-        setTimeout(function() {
-          arbiterState.rob = arbiterState.rob.filter(function(e){ return e.seq !== entry.seq; });
-          arbiterState.activeOps = arbiterState.activeOps.filter(function(e){ return e.seq !== entry.seq; });
-          if (arbiterState.queue.length === 0 && arbiterState.rob.length === 0) {
-            arbiterState.active = false;
-            arbiterState.contentionLevel = 0;
-          }
-          updateArbiterDom();
-          arbiterTryRetire();
-        }, 600);
-      })(head);
-      if (cb) cb();
-      changed = true;
-    }
+    return;
   }
+
+  // Head not yet complete — nothing to retire right now.
+  if (head.state !== 'complete') return;
+
+  // Retire the head: mark done, fire callback, schedule removal.
+  head.state = 'done';
+  var rPos = robSlotPos(0);
+  bubble(rPos.x, rPos.y, '#'+head.seq+' ✓', '#51cf66', { sub:'retired→DATA', life:1.2 });
+  updateArbiterDom();
+
+  var cb = head.onRetired;
+  if (cb) cb();  // send DATA to SM — fires immediately (correct: retirement is the trigger)
+
+  (function(entry) {
+    setTimeout(function() {
+      arbiterState.rob = arbiterState.rob.filter(function(e){ return e.seq !== entry.seq; });
+      arbiterState.activeOps = arbiterState.activeOps.filter(function(e){ return e.seq !== entry.seq; });
+      if (arbiterState.queue.length === 0 && arbiterState.rob.length === 0) {
+        arbiterState.active = false;
+        arbiterState.contentionLevel = 0;
+      }
+      updateArbiterDom();
+      // Try to retire the next head now that this slot is removed.
+      arbiterTryRetire();
+    }, 600);
+  })(head);
+  // Do NOT continue the loop here — the 600ms setTimeout above will call
+  // arbiterTryRetire() for the next entry once this slot is fully removed.
 }
 
 // Legacy wrapper kept for any remaining call sites
@@ -3287,6 +3597,11 @@ function spawnPassthrough(smIdx, color, label, speed, onArrival) {
 // ════════════════════════════════════════
 // ATOMIC SCENARIO
 // ════════════════════════════════════════
+
+// atomic.js — GPU Cache Coherency Demo
+
+// Atomic scenario, app startup, canvas event listeners
+
 function triggerAtomic() {
   if (paused) togglePause();
   var smCount2 = layout.sms.length;
@@ -3294,38 +3609,33 @@ function triggerAtomic() {
   showExplanation('atomic');
 
   if (isApex) {
-    // Don't re-enter while a run is in progress — particles still in flight,
-    // new closure would orphan the existing grantQueue
+    // ── APEX: Arbiter-serialized atomicAdd ──────────────────────────────────────
     if (arbiterState.active) return;
     logEvent('atomicAdd: ' + smCount2 + ' SMs → Arbiter', '#f59e0b');
     bubble((layout.bus.x1+layout.bus.x2)/2, layout.bus.y-12, 'atomic storm', '#f59e0b', { sub: smCount2+' reqs inbound', life:2.0 });
+    resetArbiter();
 
-    // Only reset if arbiter is fully idle — don't wipe in-flight state
-    if (!arbiterState.active) resetArbiter();
+    // Grant serialization: only one grant is outstanding at a time.
+    // The ATOM is already physically inside the arbiter when granted —
+    // we just need to route it arbEntry→arbExit→L2, not re-traverse the bus.
+    var pendingGrants = [];   // {seq, smIdx} — fifo, head gets issued next
+    var grantInFlight = false; // only one grant+RMW in flight through arbiter at once
 
-    // Track which SEQs have been enqueued so grants fire only after real enqueue
-    var enqueuedSeqs = {};
-    var enqueuedCount = 0;
-    var grantQueue = [];
-
-    // Arbiter pops the queue head and issues grants immediately in arrival order.
-    // No artificial serialization at the arbiter block — the true mutual exclusion
-    // point is the L2 atomic lock on the cache line. Multiple RMWs can be in-flight
-    // through the arbiter simultaneously; L2 handles ordering via its lock.
     function tryNextGrant() {
-      if (grantQueue.length === 0) return;
-      var next = grantQueue[0];
-      if (enqueuedSeqs[next.seq] === undefined) return;
-      grantQueue.shift();
-      issueGrant(next.seq, next.smIdx);
-      // Immediately try the next — arbiter can issue multiple grants back-to-back
-      tryNextGrant();
+      if (grantInFlight || pendingGrants.length === 0) return;
+      var head = pendingGrants.shift();
+      grantInFlight = true;
+      issueGrant(head.seq, head.smIdx);
     }
 
     function issueGrant(seq, smIdx) {
       arbiterGrant(seq);
       logEvent('ARBITER: GRANT SEQ#'+seq+' → SM'+smIdx, '#51cf66');
+
+      // Step 1: Send GRANT signal down to SM (control signal only, no data)
       spawnGrantToSM(smIdx, function() {
+        // GRANT arrived at SM's bus junction — warp scheduler ACKs.
+        // The ATOM is already at arbiterTop waiting — now route it through arbiter → L2.
         (function(capturedSeq, capturedIdx) {
           for (var pa = 0; pa < arbiterState.activeOps.length; pa++) {
             if (arbiterState.activeOps[pa].seq === capturedSeq) {
@@ -3335,86 +3645,86 @@ function triggerAtomic() {
               break;
             }
           }
-          var smBusJunct = busP(capturedIdx);
-          var busAbove   = arbiterBusEntry();
-          var arbEntry   = arbiterTop();
-          var arbExit    = arbiterBot();
-          var l2dest     = l2Top();
-          particles.push(new Particle(smBusJunct, busAbove, '#f59e0b', 'ATOM', 2.5, function() {
-            particles.push(new Particle(busAbove, arbEntry, '#f59e0b', 'ATOM', 2.2, function() {
-              // RMW physically entering the arbiter — queue slot frees now
-              arbiterDequeue(capturedSeq);
-              particles.push(new Particle(arbEntry, arbExit, '#f59e0b', 'ATOM', 2.0, function() {
-                // Arbiter exit — RMW now heading to L2. No serialization here;
-                // L2 atomic lock handles mutual exclusion on the cache line.
-                particles.push(new Particle(arbExit, l2dest, '#f59e0b', 'ATOM', 2.0, function() {
-                  flash(layout.l2, '#f59e0b');
-                  logEvent('L2: RMW SEQ#'+capturedSeq+' complete', '#ffa94d');
-                  for (var pb = 0; pb < arbiterState.activeOps.length; pb++) {
-                    if (arbiterState.activeOps[pb].seq === capturedSeq) {
-                      arbiterState.activeOps[pb].phase = 'ack';
-                      arbiterState.activeOps[pb].phaseName = ARB_PHASES.ack.label;
-                      arbiterState.activeOps[pb].phaseStart = Date.now();
-                      break;
-                    }
-                  }
-                  // L2 jitter: bimodal — 60% fast bank (50-180ms), 40% busy bank (320-600ms).
-                  // Models real L2 bank contention. Makes out-of-order ACK returns
-                  // clearly visible in the ROB rather than just occasionally.
-                  var l2Jitter = Math.random() < 0.6
-                    ? 50  + Math.random() * 130   // fast path
-                    : 320 + Math.random() * 280;  // slow path (bank busy)
-                  setTimeout(function() {
-                    particles.push(new Particle(l2Top(), arbExit, '#ffa94d', 'ACK#'+capturedSeq, 2.0, function() {
-                      flash(layout.arbiter, '#ffa94d');
-                      arbiterAckFromL2(capturedSeq, function() {
-                        logEvent('ROB: SEQ#'+capturedSeq+' retired → DATA→SM'+capturedIdx, '#a78bfa');
-                        spawnRoutedFromArbiter(capturedIdx, '#ffa94d', 'DATA', 2.2, function() {
-                          layout.sms[capturedIdx].l1.state = 'modified';
-                          setL1Dirty(capturedIdx);
-                          flash(layout.sms[capturedIdx].l1, '#f59e0b');
-                          stats.hits++; updateStats();
-                        });
-                      });
-                    }));
-                  }, l2Jitter);
+
+          // Dequeue now — slot frees as the ATOM proceeds
+          arbiterDequeue(capturedSeq);
+
+          var arbEntry = arbiterTop();
+          var arbExit  = arbiterBot();
+          var l2dest   = l2Top();
+
+          // Step 2: ATOM travels through arbiter body (arbEntry → arbExit)
+          particles.push(new Particle(arbEntry, arbExit, '#f59e0b', 'ATOM', 2.0, function() {
+            // Arbiter body exited — next grant can now issue (queue slot freed above)
+            grantInFlight = false;
+            tryNextGrant();  // issue next grant now that arbiter body is clear
+
+            // Step 3: ATOM exits arbiter → L2
+            particles.push(new Particle(arbExit, l2dest, '#f59e0b', 'ATOM', 2.0, function() {
+              flash(layout.l2, '#f59e0b');
+              logEvent('L2: RMW SEQ#'+capturedSeq+' complete', '#ffa94d');
+              for (var pb = 0; pb < arbiterState.activeOps.length; pb++) {
+                if (arbiterState.activeOps[pb].seq === capturedSeq) {
+                  arbiterState.activeOps[pb].phase = 'ack';
+                  arbiterState.activeOps[pb].phaseName = ARB_PHASES.ack.label;
+                  arbiterState.activeOps[pb].phaseStart = Date.now();
+                  break;
+                }
+              }
+              // L2 jitter: bimodal — 60% fast bank (50-180ms), 40% busy bank (320-600ms)
+              var l2Jitter = Math.random() < 0.6
+                ? 50  + Math.random() * 130
+                : 320 + Math.random() * 280;
+              setTimeout(function() {
+                // Step 4: ACK returns from L2 → arbiter
+                particles.push(new Particle(l2Top(), arbExit, '#ffa94d', 'ACK#'+capturedSeq, 2.0, function() {
+                  flash(layout.arbiter, '#ffa94d');
+                  arbiterAckFromL2(capturedSeq, function() {
+                    logEvent('ROB: SEQ#'+capturedSeq+' retired → DATA→SM'+capturedIdx, '#a78bfa');
+                    // Step 5: DATA returns from arbiter → SM's L1
+                    spawnRoutedFromArbiter(capturedIdx, '#ffa94d', 'DATA', 2.2, function() {
+                      layout.sms[capturedIdx].l1.state = 'modified';
+                      setL1Dirty(capturedIdx);
+                      flash(layout.sms[capturedIdx].l1, '#f59e0b');
+                      stats.hits++; updateStats();
+                    });
+                  });
                 }));
-              }));
+              }, l2Jitter);
             }));
           }));
         })(seq, smIdx);
       });
     }
 
-    // All SMs running the same kernel hit atomicAdd within a very tight window —
-    // a few warp scheduler quanta. 0-80ms visual spread ensures all 4 arrive at
-    // the arbiter before any grant's RMW has had time to drain a queue slot.
+    // All SMs send their ATOMs toward the arbiter with a small spread (0-80ms)
+    // ensuring they all arrive before any grant issues.
     for (var ai = 0; ai < smCount2; ai++) {
       (function(idx) {
-        var launchDelay = Math.random() * 80;
+        var launchDelay = idx * 18 + Math.random() * 25;  // staggered, not random overlap
         setTimeout(function() {
           stats.misses++;
-          if (bubbles.length > 6) bubbles.splice(0, bubbles.length - 6);
-          bubble(l1Pos(idx).x, l1Pos(idx).y, 'atomicAdd', '#f59e0b', { sub:'→ bus', life:1.0 });
+          bubble(l1Pos(idx).x, l1Pos(idx).y, 'atomicAdd', '#f59e0b', { sub:'→ arbiter', life:1.2 });
+          // ATOM travels: L1 → busP → arbiterBusEntry → arbiterTop (where it waits for grant)
           spawnRoutedToArbiter(idx, '#f59e0b', 'ATOM', 2.5, function() {
-            // Particle physically at arbiterBusEntry. Try to enqueue — may be full.
+            // Particle is now physically AT arbiterTop. Enqueue it.
             function tryEnqueue() {
               var seq = arbiterEnqueue(idx, 'ATOM');
               if (seq === -1) {
-                // Queue full — stall here, show backpressure, retry in 200ms
                 var iface = arbiterBusEntry();
                 bubble(iface.x + (idx - 1.5) * 14, iface.y, 'STALLED', '#ff6b6b', { sub:'queue full', life:0.7 });
                 setTimeout(tryEnqueue, 200);
                 return;
               }
-              // Accepted
-              enqueuedSeqs[seq] = idx;
-              enqueuedCount++;
               logEvent('SM'+idx+': ATOM arrived → SEQ#'+seq, '#f59e0b');
               flash(layout.arbiter, '#f59e0b');
-              var grantEntry = { seq: seq, smIdx: idx };
-              grantQueue.push(grantEntry);
-              if (grantQueue[0] && grantQueue[0].seq === seq) tryNextGrant();
+              pendingGrants.push({ seq: seq, smIdx: idx });
+              // Sort by SEQ# so grants always issue in strict sequence order,
+              // regardless of which SM's particle arrived at arbiterTop first.
+              // Without this, animation-timing jitter can invert grant order vs
+              // the ROB, causing SEQ#1 to be granted before SEQ#0.
+              pendingGrants.sort(function(a, b) { return a.seq - b.seq; });
+              tryNextGrant();  // will only fire if nothing currently in flight
             }
             tryEnqueue();
           });
@@ -3454,8 +3764,15 @@ function triggerAtomic() {
 
 
 function startApp() {
-  resize();
-  if (!W || !H) { requestAnimationFrame(startApp); return; }
+  dpr = window.devicePixelRatio || 1;
+  // Try to get real layout dimensions first
+  var r = canvas.getBoundingClientRect();
+  W = (r.width > 10 ? r.width : 0) || canvas.offsetWidth || canvas.width || 900;
+  H = (r.height > 10 ? r.height : 0) || canvas.offsetHeight || canvas.height || 640;
+  // Always stamp the canvas pixel buffer to match — never leave it zero
+  canvas.width  = Math.round(W * dpr);
+  canvas.height = Math.round(H * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   buildLayout();
   initialized = true;
   updateKeyCard();
@@ -3477,6 +3794,8 @@ explainerEl.addEventListener('mousemove', function(e) {
   }
 });
 explainerEl.addEventListener('mouseleave', function() { hideInstrTooltip(); });
-</script>
+
+
+  </script>
 </body>
 </html>
