@@ -173,7 +173,8 @@ position:relative;
   color: #6b7090;
 }
 .tt-arb-rob-slot.pend { background:#f59e0b18; border-color:#f59e0b50; color:#f59e0b; }
-.tt-arb-rob-slot.retn { background:#339af018; border-color:#339af050; color:#339af0; }
+.tt-arb-rob-slot.comp { background:#339af018; border-color:#339af050; color:#339af0; }
+.tt-arb-rob-slot.retr { background:#a78bfa18; border-color:#a78bfa50; color:#a78bfa; }
 .tt-arb-rob-slot.done { background:#51cf6618; border-color:#51cf6650; color:#51cf66; }
 .tt-arb-bar-bg {
   height: 5px; border-radius: 3px; background: #1e2030;
@@ -851,8 +852,9 @@ var BLOCK_INFO = {
     <span class="arb-row-label">States:</span>
     <span class="arb-row-val">
       <span class="arb-tag amber">⏳ pending</span> — dispatched to L2, ACK not yet back<br>
-      <span class="arb-tag blue">↩ returning</span> — ACK received, waiting for in-order slot<br>
-      <span class="arb-tag green">✓ done</span> — retired, DATA sent to SM
+      <span class="arb-tag blue">✦ complete</span> — ACK received, waiting for earlier SEQ#s to retire first<br>
+      <span class="arb-tag purple">↩ retiring</span> — head-of-line, DATA being sent to SM now<br>
+      <span class="arb-tag green">✓ done</span> — retired, DATA delivered
     </span>
   </div>
   <div class="arb-row">
@@ -1445,7 +1447,7 @@ function updateTooltip(hit, clientX, clientY) {
     for (var trs = 0; trs < 6; trs++) {
       var tre = trs < arbROB.length ? arbROB[trs] : null;
       var rstate = tre ? tre.state : '';
-      var rcls = 'tt-arb-rob-slot' + (rstate==='pending'?' pend':rstate==='returning'?' retn':rstate==='done'?' done':'');
+      var rcls = 'tt-arb-rob-slot' + (rstate==='pending'?' pend':rstate==='complete'?' comp':rstate==='retiring'?' retr':rstate==='done'?' done':'');
       var robLabel = tre ? '#'+tre.seq : '—';
       robSlots += '<div class="'+rcls+'" title="'+rstate+'">'+robLabel+'</div>';
     }
@@ -2195,8 +2197,9 @@ function drawSceneContent(dt, time) {
       var rIcon = '';
       if (robE2) {
         if (robE2.state === 'pending')   { rBg2='#f59e0b18'; rBr2='#f59e0b70'; rTxt2='#f59e0b'; rIcon='⏳'; }
-        if (robE2.state === 'returning') { rBg2='#339af020'; rBr2='#339af080'; rTxt2='#339af0'; rIcon='↩'; }
-        if (robE2.state === 'done')      { rBg2='#51cf6620'; rBr2='#51cf6680'; rTxt2='#51cf66'; rIcon='✓'; }
+        if (robE2.state === 'complete')  { rBg2='#339af020'; rBr2='#339af090'; rTxt2='#339af0'; rIcon='✦'; } // ACK back, waiting for head
+        if (robE2.state === 'retiring')  { rBg2='#a78bfa20'; rBr2='#a78bfa80'; rTxt2='#a78bfa'; rIcon='↩'; } // head-of-line, being retired
+        if (robE2.state === 'done')      { rBg2='#51cf6620'; rBr2='#51cf6680'; rTxt2='#51cf66'; rIcon='✓'; } // retired, DATA sent
       }
       ctx.fillStyle = rBg2; ctx.strokeStyle = rBr2; ctx.lineWidth = robE2 ? 1.1 : 0.7;
       rrect(rx3, robSlotY, robSlotW2, slotH2, 3); ctx.fill(); ctx.stroke();
@@ -2213,8 +2216,9 @@ function drawSceneContent(dt, time) {
     var robBotY = robSlotY + slotH2 + 11;
     ctx.font = '500 5.5px "JetBrains Mono"'; ctx.textAlign = 'left';
     ctx.fillStyle = '#f59e0b60'; ctx.fillText('⏳ pending', robLabelX, robBotY);
-    ctx.fillStyle = '#339af060'; ctx.fillText('↩ returning', robLabelX + 52, robBotY);
-    ctx.fillStyle = '#51cf6660'; ctx.fillText('✓ done', robLabelX + 112, robBotY);
+    ctx.fillStyle = '#339af060'; ctx.fillText('✦ complete', robLabelX + 52, robBotY);
+    ctx.fillStyle = '#a78bfa60'; ctx.fillText('↩ retiring', robLabelX + 110, robBotY);
+    ctx.fillStyle = '#51cf6660'; ctx.fillText('✓ done', robLabelX + 162, robBotY);
 
     // ── LEFT GUTTER ANNOTATION (side panel, left of arbiter) ──
     var gutterX = arb.x - 8;
@@ -2963,9 +2967,11 @@ function buildInstrChips() {
 // ════════════════════════════════════════
 var arbiterState = {
   seqCounter: 0,
-  queue: [],       // pending requests not yet granted
-  rob: [],         // all in-flight: pending|returning|done
-  activeOps: [],   // [{seq, smIdx, phase, phaseName, phaseStart}] — live ops with phase tracking
+  queue: [],       // pending requests waiting for grant (arrival order = grant order)
+  rob: [],         // reorder buffer: [{seq, smIdx, state:'pending'|'complete'|'retiring'|'done'}]
+  robHead: 0,      // next SEQ# that must retire before anything else can
+  pendingRetire: [],// completed SEQs waiting for robHead to catch up
+  activeOps: [],   // [{seq, smIdx, phase, phaseName, phaseStart}] — live phase tracking
   grantCount: 0,
   contentionLevel: 0,
   recentGrants: [],
@@ -2977,6 +2983,8 @@ function resetArbiter() {
   arbiterState.seqCounter = 0;
   arbiterState.queue = [];
   arbiterState.rob = [];
+  arbiterState.robHead = 0;
+  arbiterState.pendingRetire = [];
   arbiterState.activeOps = [];
   arbiterState.grantCount = 0;
   arbiterState.contentionLevel = 0;
@@ -2988,9 +2996,10 @@ function resetArbiter() {
 function arbiterEnqueue(smIdx, type) {
   if (currentArch !== 'apex') return -1;
   var seq = arbiterState.seqCounter++;
-  arbiterState.queue.push({ seq: seq, smIdx: smIdx, type: type || 'ATOM', state: 'waiting' });
-  arbiterState.rob.push({ seq: seq, state: 'pending' });
-  // Track as active op in 'queued' phase
+  // Queue: FIFO — grant order matches arrival order
+  arbiterState.queue.push({ seq: seq, smIdx: smIdx, type: type || 'ATOM' });
+  // ROB: one slot per in-flight op, state starts 'pending' until ACK returns from L2
+  arbiterState.rob.push({ seq: seq, smIdx: smIdx, state: 'pending' });
   arbiterState.activeOps.push({ seq: seq, smIdx: smIdx, phase: 'queued', phaseName: ARB_PHASES.queued.label, phaseStart: Date.now() });
   arbiterState.contentionLevel = Math.min(1, arbiterState.queue.length / 6);
   arbiterState.active = true;
@@ -3000,15 +3009,14 @@ function arbiterEnqueue(smIdx, type) {
 
 function arbiterGrant(seq) {
   if (currentArch !== 'apex') return;
+  // Remove from queue — grant issued, SM can now do RMW
   var qEntry = null;
   for (var qi = 0; qi < arbiterState.queue.length; qi++) {
     if (arbiterState.queue[qi].seq === seq) { qEntry = arbiterState.queue[qi]; break; }
   }
   arbiterState.queue = arbiterState.queue.filter(function(e){ return e.seq !== seq; });
-  for (var ri2 = 0; ri2 < arbiterState.rob.length; ri2++) {
-    if (arbiterState.rob[ri2].seq === seq) { arbiterState.rob[ri2].state = 'returning'; break; }
-  }
-  // Advance activeOp phase: queued → granted
+  // ROB slot stays 'pending' — it only moves to 'complete' when ACK returns from L2
+  // (do NOT mark 'returning' here — that was wrong)
   for (var ao = 0; ao < arbiterState.activeOps.length; ao++) {
     if (arbiterState.activeOps[ao].seq === seq) {
       arbiterState.activeOps[ao].phase = 'granted';
@@ -3019,26 +3027,80 @@ function arbiterGrant(seq) {
   }
   arbiterState.grantCount++;
   arbiterState.contentionLevel = Math.min(1, arbiterState.queue.length / 6);
-  var cycles = Math.round(2 + (qEntry ? arbiterState.queue.length : 0) * 8 + Math.random() * 6);
+  var cycles = Math.round(2 + arbiterState.queue.length * 8 + Math.random() * 6);
   arbiterState.recentGrants.unshift({ seq: seq, cycles: cycles });
   if (arbiterState.recentGrants.length > 4) arbiterState.recentGrants.pop();
   updateArbiterDom();
 }
 
-function arbiterRetire(seq) {
-  if (currentArch !== 'apex') return;
-  for (var ri3 = 0; ri3 < arbiterState.rob.length; ri3++) {
-    if (arbiterState.rob[ri3].seq === seq) { arbiterState.rob[ri3].state = 'done'; break; }
-  }
-  setTimeout(function() {
-    arbiterState.rob = arbiterState.rob.filter(function(e){ return e.seq !== seq; });
-    if (arbiterState.queue.length === 0 && arbiterState.rob.length === 0) {
-      arbiterState.active = false;
-      arbiterState.contentionLevel = 0;
+// Called when ACK physically arrives back from L2 for a given SEQ#
+// Marks ROB slot 'complete' but does NOT send DATA yet — that waits for in-order retirement
+// Returns a callback that the caller should invoke to actually send DATA when retirement is allowed
+function arbiterAckFromL2(seq, onRetired) {
+  if (currentArch !== 'apex') { if (onRetired) onRetired(); return; }
+  // Mark ROB slot as complete (ACK received, result in hand)
+  for (var ri = 0; ri < arbiterState.rob.length; ri++) {
+    if (arbiterState.rob[ri].seq === seq) {
+      arbiterState.rob[ri].state = 'complete';
+      arbiterState.rob[ri].onRetired = onRetired;
+      break;
     }
-    updateArbiterDom();
-  }, 900);
+  }
+  // Phase: ack → retiring (waiting for head-of-line)
+  for (var ao = 0; ao < arbiterState.activeOps.length; ao++) {
+    if (arbiterState.activeOps[ao].seq === seq) {
+      arbiterState.activeOps[ao].phase = 'retiring';
+      arbiterState.activeOps[ao].phaseName = ARB_PHASES.retiring.label;
+      arbiterState.activeOps[ao].phaseStart = Date.now();
+      break;
+    }
+  }
   updateArbiterDom();
+  // Try to drain ROB from the head — retire any contiguous run of 'complete' entries
+  arbiterTryRetire();
+}
+
+// Drain ROB head: retire all consecutive 'complete' entries in SEQ order
+// This is the actual reordering — if #3 finishes before #2, it waits here
+function arbiterTryRetire() {
+  var changed = true;
+  while (changed) {
+    changed = false;
+    if (arbiterState.rob.length === 0) break;
+    var head = arbiterState.rob[0];
+    // Skip entries already done (being cleaned up by setTimeout — not yet filtered out)
+    if (head.state === 'done') {
+      // Can't retire next until this is removed — re-check after cleanup delay
+      setTimeout(arbiterTryRetire, 650);
+      break;
+    }
+    if (head.state === 'complete') {
+      head.state = 'done';
+      updateArbiterDom();
+      var cb = head.onRetired;
+      (function(entry) {
+        setTimeout(function() {
+          arbiterState.rob = arbiterState.rob.filter(function(e){ return e.seq !== entry.seq; });
+          arbiterState.activeOps = arbiterState.activeOps.filter(function(e){ return e.seq !== entry.seq; });
+          if (arbiterState.queue.length === 0 && arbiterState.rob.length === 0) {
+            arbiterState.active = false;
+            arbiterState.contentionLevel = 0;
+          }
+          updateArbiterDom();
+          // Re-run retire loop now that this 'done' entry is gone — unblocks waiting entries
+          arbiterTryRetire();
+        }, 600);
+      })(head);
+      if (cb) cb();
+      changed = true;
+    }
+    // 'pending' = ACK not back yet — stop, arbiterAckFromL2 will call us again when ready
+  }
+}
+
+// Legacy wrapper kept for any remaining call sites
+function arbiterRetire(seq) {
+  // No-op — retirement now handled by arbiterAckFromL2 + arbiterTryRetire
 }
 
 function updateArbiterDom() {
@@ -3090,7 +3152,19 @@ function spawnRoutedToArbiter(smIdx, color, label, speed, onArrival) {
     }));
   }));
 }
-// Route from arbiter back to SM via bus (reverse path)
+// Route a GRANT signal from arbiter back to SM — stops at bus junction (warp scheduler receives it)
+// GRANT is a control signal, not data — it doesn't go into L1
+function spawnGrantToSM(smIdx, onArrival) {
+  var fromPos  = arbiterTop();
+  var busAbove = arbiterBusEntry();
+  var busJunct = busP(smIdx);
+  particles.push(new Particle(fromPos, busAbove, '#51cf66', 'GRANT', 2.8, function() {
+    particles.push(new Particle(busAbove, busJunct, '#51cf66', 'GRANT', 3.0, function() {
+      if (onArrival) onArrival();
+    }));
+  }));
+}
+// Route from arbiter back to SM via bus (DATA goes all the way to L1)
 function spawnRoutedFromArbiter(smIdx, color, label, speed, onArrival) {
   var fromPos  = arbiterTop();
   var busAbove = arbiterBusEntry();
@@ -3146,79 +3220,126 @@ function triggerAtomic() {
 
   if (isApex) {
     logEvent('atomicAdd: ' + smCount2 + ' SMs → Arbiter', '#f59e0b');
-    bubble((layout.bus.x1+layout.bus.x2)/2, layout.bus.y-12, 'atomic storm', '#f59e0b', { sub: smCount2+' reqs inbound', life:2.2 });
+    bubble((layout.bus.x1+layout.bus.x2)/2, layout.bus.y-12, 'atomic storm', '#f59e0b', { sub: smCount2+' reqs inbound', life:2.0 });
 
-    for (var ai = 0; ai < smCount2; ai++) {
-      (function(idx) {
-        setTimeout(function() {
-          // State only set on ARRIVAL — fixes "read before arrival"
-          stats.misses++;
-          bubble(l1Pos(idx).x, l1Pos(idx).y, 'atomicAdd', '#f59e0b', { sub:'→ bus', life:1.4 });
-          // Properly routed: L1 → busP → arbiterBusEntry → arbiterTop
-          spawnRoutedToArbiter(idx, '#f59e0b', 'ATOM', 2.5, function() {
-            // ← Particle has physically arrived at arbiter. NOW enqueue.
-            var seq = arbiterEnqueue(idx, 'ATOM');
-            logEvent('SM'+idx+': ATOM arrived → SEQ#'+seq, '#f59e0b');
-            flash(layout.arbiter, '#f59e0b');
-            bubble(layout.arbiter.x + layout.arbiter.w * 0.22, arbiterPos().y - 8, 'SEQ#'+seq, '#f59e0b', { sub:'queued', life:1.2 });
+    // Reset arbiter for a clean scenario each time atomicAdd is triggered
+    resetArbiter();
 
-            // Staggered grant — wait for queue position
-            setTimeout(function() {
-              arbiterGrant(seq);
-              logEvent('ARBITER: GRANT SEQ#'+seq+' → SM'+idx, '#51cf66');
-              bubble(layout.arbiter.x + layout.arbiter.w * 0.78, arbiterPos().y - 10, 'GRANT#'+seq, '#51cf66', { sub:'SM'+idx, life:1.4 });
-              // GRANT travels back: arbiterTop → arbiterBusEntry → busP → L1
-              spawnRoutedFromArbiter(idx, '#51cf66', 'GRANT', 2.8, function() {
-                // Phase: granted → rmw — SM dispatches the actual RMW to L2 via arbiter
-                (function(capturedSeq, capturedIdx) {
-                  for (var pa = 0; pa < arbiterState.activeOps.length; pa++) {
-                    if (arbiterState.activeOps[pa].seq === capturedSeq) {
-                      arbiterState.activeOps[pa].phase = 'rmw';
-                      arbiterState.activeOps[pa].phaseName = ARB_PHASES.rmw.label;
-                      arbiterState.activeOps[pa].phaseStart = Date.now();
+    // Track which SEQs have been enqueued so grants fire only after real enqueue
+    // enqueuedSeqs[seq] = smIdx, filled as particles physically arrive
+    var enqueuedSeqs = {};
+    var enqueuedCount = 0;
+    var grantQueue = []; // pending grant requests waiting for enqueue
+
+    // Try to process the next pending grant — called whenever a new enqueue happens
+    function tryNextGrant() {
+      if (grantQueue.length === 0) return;
+      var next = grantQueue[0];
+      if (enqueuedSeqs[next.seq] === undefined) return; // not enqueued yet, wait
+      grantQueue.shift();
+      issueGrant(next.seq, next.smIdx, next.onGrantComplete);
+    }
+
+    function issueGrant(seq, smIdx, onGrantComplete) {
+      arbiterGrant(seq);
+      logEvent('ARBITER: GRANT SEQ#'+seq+' → SM'+smIdx, '#51cf66');
+      if (bubbles.length <= 6)
+        bubble(layout.arbiter.x + layout.arbiter.w * 0.78, arbiterPos().y - 10,
+          'GRANT#'+seq, '#51cf66', { sub:'SM'+smIdx, life:1.0 });
+
+      spawnGrantToSM(smIdx, function() {
+        (function(capturedSeq, capturedIdx) {
+          for (var pa = 0; pa < arbiterState.activeOps.length; pa++) {
+            if (arbiterState.activeOps[pa].seq === capturedSeq) {
+              arbiterState.activeOps[pa].phase = 'rmw';
+              arbiterState.activeOps[pa].phaseName = ARB_PHASES.rmw.label;
+              arbiterState.activeOps[pa].phaseStart = Date.now();
+              break;
+            }
+          }
+          var smBusJunct = busP(capturedIdx);
+          var busAbove   = arbiterBusEntry();
+          var arbEntry   = arbiterTop();
+          var arbExit    = arbiterBot();
+          var l2dest     = l2Top();
+          particles.push(new Particle(smBusJunct, busAbove, '#f59e0b', 'RMW', 2.5, function() {
+            particles.push(new Particle(busAbove, arbEntry, '#f59e0b', 'RMW', 2.2, function() {
+              particles.push(new Particle(arbEntry, arbExit, '#f59e0b', 'ATOM', 2.0, function() {
+                if (onGrantComplete) onGrantComplete(); // unblock next grant
+                particles.push(new Particle(arbExit, l2dest, '#f59e0b', 'ATOM', 2.0, function() {
+                  flash(layout.l2, '#f59e0b');
+                  logEvent('L2: RMW SEQ#'+capturedSeq+' complete', '#ffa94d');
+                  for (var pb = 0; pb < arbiterState.activeOps.length; pb++) {
+                    if (arbiterState.activeOps[pb].seq === capturedSeq) {
+                      arbiterState.activeOps[pb].phase = 'ack';
+                      arbiterState.activeOps[pb].phaseName = ARB_PHASES.ack.label;
+                      arbiterState.activeOps[pb].phaseStart = Date.now();
                       break;
                     }
                   }
-                  // RMW: arbiter bottom → L2 top (direct vertical — they are adjacent)
-                  particles.push(new Particle(arbiterBot(), l2Top(), '#f59e0b', 'ATOM', 2.0, function() {
-                    flash(layout.l2, '#f59e0b');
-                    logEvent('L2: RMW complete → ACK SEQ#'+capturedSeq, '#ffa94d');
-                    // Phase: rmw → ack
-                    for (var pb = 0; pb < arbiterState.activeOps.length; pb++) {
-                      if (arbiterState.activeOps[pb].seq === capturedSeq) {
-                        arbiterState.activeOps[pb].phase = 'ack';
-                        arbiterState.activeOps[pb].phaseName = ARB_PHASES.ack.label;
-                        arbiterState.activeOps[pb].phaseStart = Date.now();
-                        break;
-                      }
-                    }
-                    // ACK returns: L2 top → arbiter bottom with prominent SEQ# label
-                    // Slower speed (2.0) so the travel through the gap is clearly visible
-                    particles.push(new Particle(l2Top(), arbiterBot(), '#ffa94d', 'ACK#'+capturedSeq, 2.0, function() {
+                  // L2 jitter: random extra latency models different bank response times
+                  // This causes ACKs to return out of order → ROB reordering is visible
+                  var l2Jitter = Math.random() * 500;
+                  setTimeout(function() {
+                    particles.push(new Particle(l2Top(), arbExit, '#ffa94d', 'ACK#'+capturedSeq, 2.0, function() {
                       flash(layout.arbiter, '#ffa94d');
-                      // Phase: ack → retiring
-                      for (var pc = 0; pc < arbiterState.activeOps.length; pc++) {
-                        if (arbiterState.activeOps[pc].seq === capturedSeq) {
-                          arbiterState.activeOps[pc].phase = 'retiring';
-                          arbiterState.activeOps[pc].phaseName = ARB_PHASES.retiring.label;
-                          arbiterState.activeOps[pc].phaseStart = Date.now();
-                          break;
-                        }
-                      }
-                      arbiterRetire(capturedSeq);
-                      bubble(arbiterPos().x, layout.arbiter.y + layout.arbiter.h + 6, 'ACK#'+capturedSeq+' retired', '#ffa94d', { sub:'ROB done', life:1.3 });
-                      // DATA back to SM: routed via bus
-                      spawnRoutedFromArbiter(capturedIdx, '#ffa94d', 'DATA', 2.2, function() {
-                        arbiterState.activeOps = arbiterState.activeOps.filter(function(e){ return e.seq !== capturedSeq; });
-                        layout.sms[capturedIdx].l1.state = 'modified'; setL1Dirty(capturedIdx);
-                        flash(layout.sms[capturedIdx].l1, '#f59e0b');
-                        stats.hits++; updateStats();
+                      if (bubbles.length <= 6)
+                        bubble(arbiterPos().x, layout.arbiter.y + layout.arbiter.h + 8,
+                          'ACK#'+capturedSeq, '#ffa94d', { sub:'→ ROB', life:0.9 });
+                      arbiterAckFromL2(capturedSeq, function() {
+                        logEvent('ROB: SEQ#'+capturedSeq+' retired → DATA→SM'+capturedIdx, '#a78bfa');
+                        if (bubbles.length <= 5)
+                          bubble(layout.arbiter.x + layout.arbiter.w * 0.5,
+                            layout.arbiter.y + layout.arbiter.h + 8,
+                            'SEQ#'+capturedSeq+' retired', '#a78bfa', { sub:'in order', life:1.0 });
+                        spawnRoutedFromArbiter(capturedIdx, '#ffa94d', 'DATA', 2.2, function() {
+                          layout.sms[capturedIdx].l1.state = 'modified';
+                          setL1Dirty(capturedIdx);
+                          flash(layout.sms[capturedIdx].l1, '#f59e0b');
+                          stats.hits++; updateStats();
+                        });
                       });
                     }));
-                  }));
-                })(seq, idx);
-              });
-            }, idx * 480 + 350);
+                  }, l2Jitter);
+                }));
+              }));
+            }));
+          }));
+        })(seq, smIdx);
+      });
+    }
+
+    // Phase 1: all SMs send ATOM, enqueue on arrival, queue grants in FIFO order
+    for (var ai = 0; ai < smCount2; ai++) {
+      (function(idx) {
+        setTimeout(function() {
+          stats.misses++;
+          if (bubbles.length > 6) bubbles.splice(0, bubbles.length - 6);
+          bubble(l1Pos(idx).x, l1Pos(idx).y, 'atomicAdd', '#f59e0b', { sub:'→ bus', life:1.0 });
+          spawnRoutedToArbiter(idx, '#f59e0b', 'ATOM', 2.5, function() {
+            var seq = arbiterEnqueue(idx, 'ATOM');
+            enqueuedSeqs[seq] = idx;
+            enqueuedCount++;
+            logEvent('SM'+idx+': ATOM arrived → SEQ#'+seq, '#f59e0b');
+            flash(layout.arbiter, '#f59e0b');
+            if (bubbles.length <= 6)
+              bubble(layout.arbiter.x + layout.arbiter.w * 0.22, arbiterPos().y - 8,
+                'SEQ#'+seq, '#f59e0b', { sub:'queued', life:0.9 });
+
+            // Queue a grant for this SEQ in FIFO order — will fire once enqueued
+            // The grant for SEQ N fires only after SEQ N-1's RMW has entered the arbiter
+            // (onGrantComplete callback chains to next grant)
+            var grantEntry = { seq: seq, smIdx: idx, onGrantComplete: null };
+            // Wire up chain: this grant's onComplete triggers next grant attempt
+            grantEntry.onGrantComplete = function() {
+              tryNextGrant();
+            };
+            grantQueue.push(grantEntry);
+
+            // If this is the first enqueue, or all previous were already enqueued, try now
+            if (grantQueue[0] && grantQueue[0].seq === seq) {
+              tryNextGrant();
+            }
           });
         }, idx * 220);
       })(ai);
