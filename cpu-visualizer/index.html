@@ -1584,6 +1584,8 @@ let power = 12;
 
 // Sort overlay state
 let sortOverlayActive = false;
+let pendingBranchFlush = false;   // set by executeEX on misprediction, consumed by step()
+let pendingBranchTarget = null;   // instruction index to restart from
 let sortArray = [];
 let sortArrayInitial = [];
 let sortCmpCount = 0;
@@ -1930,6 +1932,20 @@ function step() {
     setText('loadUseDetect', 'NO');
   }
 
+  // ── BRANCH FLUSH ──────────────────────────────────────────────────────────
+  // If a branch in EX resolved as taken (or mispredicted), flush the two
+  // speculatively-fetched instructions from IF and ID (they're from the wrong path).
+  if (pendingBranchFlush) {
+    pendingBranchFlush = false;
+    const flushBubble1 = parseInstr('NOP'); flushBubble1.isBubble = true;
+    const flushBubble2 = parseInstr('NOP'); flushBubble2.isBubble = true;
+    // IF and ID had wrong-path instructions - replace with bubbles
+    if (pipeline.ID) { addLog(totalCycles, 'BRANCH', `Flushed: ${pipeline.ID.isBubble ? 'bubble' : pipeline.ID.raw} from ID (wrong path)`, 'hazard'); }
+    if (pipeline.IF) { addLog(totalCycles, 'BRANCH', `Flushed: ${pipeline.IF.isBubble ? 'bubble' : pipeline.IF.raw} from IF (wrong path)`, 'hazard'); }
+    pipeline.IF = flushBubble1;
+    pipeline.ID = flushBubble2;
+  }
+
   updateAll();
   updateInstrQueueDisplay();
 }
@@ -1955,36 +1971,46 @@ function executeEX(instr) {
   addLog(totalCycles, 'EX', `Execute: ${instr.raw} → ${result} (${instr.def.aluOp})`, 'execute');
 
   // Sort narrative hooks
-  if (sortOverlayActive && sortProgramType === 'bubble' && instr._sortMeta) {
+  // Sort state tracking — always runs regardless of overlay visibility
+  if (sortProgramType === 'bubble' && instr._sortMeta) {
     const m = instr._sortMeta;
     if (m.type === 'compare') {
       sortCmpCount++;
-      const needsSwap = result === 1;
-      renderSortBars(m.j, m.j + 1, -1, -1, sortSortedUpTo);
-      pushNarrative('compare',
-        `<b>Comparing</b> arr[${m.j}] vs arr[${m.j+1}] → ${needsSwap ? '<span class="highlight-red">SWAP NEEDED</span>' : '<span class="highlight-green">NO SWAP</span>'}`,
-        `SLT: is arr[${m.j+1}] < arr[${m.j}]? Result R3=${result}. ${needsSwap ? 'Elements are out of order.' : 'Elements are in order.'}`,
-        needsSwap ? [{cls:'swap', label:'OUT OF ORDER'}, {cls:'alu', label:'SLT'}] : [{cls:'nswap', label:'IN ORDER'}, {cls:'alu', label:'SLT'}]
-      );
     }
     if (m.type === 'pass_end') {
       sortPass++;
       sortSortedUpTo = sortArray.length - sortPass;
-      renderSortBars(-1, -1, -1, -1, sortSortedUpTo);
-      pushNarrative('info',
-        `<b>Pass ${m.pass+1} complete</b> — element bubbled to final position [${sortSortedUpTo}]`,
-        `${sortPassTotal - sortPass} more passes needed.`,
-        [{cls:'nswap', label:`PASS ${m.pass+1} DONE`}]
-      );
     }
     if (m.type === 'done') {
       sortSortedUpTo = 0;
-      renderSortBars(-1,-1,-1,-1,0);
-      pushNarrative('info',
-        `<b>SORT COMPLETE</b> — array: <span class="highlight-green">[${sortArray.join(', ')}]</span>`,
-        `All ${sortPassTotal} passes done. ${sortCmpCount} comparisons, ${sortSwapCount} swaps.`,
-        [{cls:'nswap', label:'SORTED ✓'}]
-      );
+    }
+    // Display updates only when overlay is open
+    if (sortOverlayActive) {
+      if (m.type === 'compare') {
+        const needsSwap = result === 1;
+        renderSortBars(m.j, m.j + 1, -1, -1, sortSortedUpTo);
+        pushNarrative('compare',
+          `<b>Comparing</b> arr[${m.j}] vs arr[${m.j+1}] → ${needsSwap ? '<span class="highlight-red">SWAP NEEDED</span>' : '<span class="highlight-green">NO SWAP</span>'}`,
+          `SLT: is arr[${m.j+1}] < arr[${m.j}]? Result R3=${result}. ${needsSwap ? 'Elements are out of order.' : 'Elements are in order.'}`,
+          needsSwap ? [{cls:'swap', label:'OUT OF ORDER'}, {cls:'alu', label:'SLT'}] : [{cls:'nswap', label:'IN ORDER'}, {cls:'alu', label:'SLT'}]
+        );
+      }
+      if (m.type === 'pass_end') {
+        renderSortBars(-1, -1, -1, -1, sortSortedUpTo);
+        pushNarrative('info',
+          `<b>Pass ${m.pass+1} complete</b> — element bubbled to final position [${sortSortedUpTo}]`,
+          `${sortPassTotal - sortPass} more passes needed.`,
+          [{cls:'nswap', label:`PASS ${m.pass+1} DONE`}]
+        );
+      }
+      if (m.type === 'done') {
+        renderSortBars(-1,-1,-1,-1,0);
+        pushNarrative('info',
+          `<b>SORT COMPLETE</b> — array: <span class="highlight-green">[${sortArray.join(', ')}]</span>`,
+          `All ${sortPassTotal} passes done. ${sortCmpCount} comparisons, ${sortSwapCount} swaps.`,
+          [{cls:'nswap', label:'SORTED ✓'}]
+        );
+      }
     }
   }
 
@@ -2000,12 +2026,18 @@ function executeEX(instr) {
     instr._branchTaken = taken;
     instr._branchTarget = programCounter + instr.imm - 4;
     let predicted = (bpState === 'WT' || bpState === 'ST');
+    // If branch is taken, the 2 instructions fetched after it (IF, ID) are WRONG
+    // and must be flushed regardless of prediction correctness
+    if (taken) {
+      pendingBranchFlush = true;
+    }
     if (predicted !== taken) {
       totalBranchMispred++;
       mispredictions++;
       btbMispred++;
       addLog(totalCycles, 'BRANCH', `MISPREDICTION! Predicted:${predicted?'T':'N'} Actual:${taken?'T':'N'}`, 'hazard');
       highlightHazard('control');
+      pendingBranchFlush = true;  // signal step() to flush IF and ID next
     } else {
       btbCorrect++;
     }
@@ -2026,23 +2058,27 @@ function executeMEM(instr) {
     addLog(totalCycles, 'MEM', `Load@${key}: loaded value ${instr._loadVal} into R${instr.rd}`, 'memory');
     logMemAccess('LW', addr, instr._loadVal);
 
-    if (sortOverlayActive && sortProgramType === 'bubble' && instr._sortMeta) {
+    // Sort state tracking - always runs
+    if (sortProgramType === 'bubble' && instr._sortMeta) {
       const m = instr._sortMeta;
-      if (m.type === 'load_a') {
-        sortComparingIdx = [m.j, m.j+1];
-        renderSortBars(m.j, m.j+1, -1, -1, sortSortedUpTo);
-        pushNarrative('load',
-          `<b>Pass ${m.pass+1}</b> — Loading arr[${m.j}]=${instr._loadVal} into R1`,
-          `${m.desc}. Next LW will cause another load-use stall.`,
-          [{cls:'load', label:'LW'}, {cls:'stall', label:'STALL NEXT'}]
-        );
-      } else if (m.type === 'load_b') {
-        renderSortBars(m.j, m.j+1, -1, -1, sortSortedUpTo);
-        pushNarrative('load',
-          `<b>Pass ${m.pass+1}</b> — Loading arr[${m.j+1}]=${instr._loadVal} into R2`,
-          `Both values loaded. SLT will compare in the next cycle.`,
-          [{cls:'load', label:'LW'}]
-        );
+      if (m.type === 'load_a') sortComparingIdx = [m.j, m.j+1];
+      // Display updates only when overlay is open
+      if (sortOverlayActive) {
+        if (m.type === 'load_a') {
+          renderSortBars(m.j, m.j+1, -1, -1, sortSortedUpTo);
+          pushNarrative('load',
+            `<b>Pass ${m.pass+1}</b> — Loading arr[${m.j}]=${instr._loadVal} into R1`,
+            `${m.desc}. Next LW will cause another load-use stall.`,
+            [{cls:'load', label:'LW'}, {cls:'stall', label:'STALL NEXT'}]
+          );
+        } else if (m.type === 'load_b') {
+          renderSortBars(m.j, m.j+1, -1, -1, sortSortedUpTo);
+          pushNarrative('load',
+            `<b>Pass ${m.pass+1}</b> — Loading arr[${m.j+1}]=${instr._loadVal} into R2`,
+            `Both values loaded. SLT will compare in the next cycle.`,
+            [{cls:'load', label:'LW'}]
+          );
+        }
       }
     }
   } else if (instr.def.memWrite) {
@@ -2058,30 +2094,35 @@ function executeMEM(instr) {
     logMemAccess('SW', addr, storeVal);
     initDataMem();
 
-    if (sortOverlayActive && sortProgramType === 'bubble' && instr._sortMeta) {
+    // Sort state tracking - always update sortArray from memory
+    if (sortProgramType === 'bubble' && instr._sortMeta) {
       const m = instr._sortMeta;
       const BASE = 0x1000;
       if (m.type === 'swap_a' || m.type === 'swap_b') {
+        // Always sync sortArray from memory so state is correct when overlay reopens
         const n = sortArray.length;
         for (let i = 0; i < n; i++) {
           const k = '0x' + (BASE + i*4).toString(16).toUpperCase();
           if (memory[k] !== undefined) sortArray[i] = memory[k];
         }
-        if (m.type === 'swap_a') {
-          sortSwapCount++;
-          renderSortBars(-1,-1,m.j,m.j+1,sortSortedUpTo);
-          pushNarrative('swap',
-            `<b>SWAP!</b> Writing ${storeVal} → arr[${m.j}]`,
-            `Second SW will complete the swap next cycle.`,
-            [{cls:'swap', label:'SWAP'}, {cls:'store', label:'SW'}]
-          );
-        } else {
-          renderSortBars(-1,-1,m.j,m.j+1,sortSortedUpTo);
-          pushNarrative('swap',
-            `<b>SWAP complete</b> — arr now: <span class="highlight-yellow">[${sortArray.join(', ')}]</span>`,
-            `Both elements exchanged in memory.`,
-            [{cls:'swap', label:'SWAP DONE'}, {cls:'store', label:'SW'}]
-          );
+        if (m.type === 'swap_a') sortSwapCount++;
+        // Display updates only when overlay is open
+        if (sortOverlayActive) {
+          if (m.type === 'swap_a') {
+            renderSortBars(-1,-1,m.j,m.j+1,sortSortedUpTo);
+            pushNarrative('swap',
+              `<b>SWAP!</b> Writing ${storeVal} → arr[${m.j}]`,
+              `Second SW will complete the swap next cycle.`,
+              [{cls:'swap', label:'SWAP'}, {cls:'store', label:'SW'}]
+            );
+          } else {
+            renderSortBars(-1,-1,m.j,m.j+1,sortSortedUpTo);
+            pushNarrative('swap',
+              `<b>SWAP complete</b> — arr now: <span class="highlight-yellow">[${sortArray.join(', ')}]</span>`,
+              `Both elements exchanged in memory.`,
+              [{cls:'swap', label:'SWAP DONE'}, {cls:'store', label:'SW'}]
+            );
+          }
         }
       }
     }
@@ -3214,6 +3255,10 @@ function openSortOverlay(title) {
   const btn = document.getElementById('btnSortView');
   if (btn) { btn.style.display = ''; btn.textContent = 'SORT VIEW ✕'; }
   switchTab('overview');
+  // Re-render current sort state so reopening shows current progress, not initial state
+  if (sortArray.length > 0) {
+    renderSortBars(-1, -1, -1, -1, sortSortedUpTo);
+  }
 }
 
 function toggleSortOverlay() {
