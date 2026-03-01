@@ -68,21 +68,104 @@ position:relative;
 .controls button.pause-btn:hover { background:#845ef720; border-color:#845ef7; color:#c0a8ff; }
 .controls button.pause-btn.active { background:#845ef7; border-color:#845ef7; color:#fff; }
 
-/* ── Scenario buttons — add data-tooltip support ── */
-.controls button.scenario-btn {
-  position: relative;
+/* ── Atomic button ── */
+.controls button.atomic-btn {
+  background: transparent; border-color: #f59e0b60; color: #f59e0b;
 }
+.controls button.atomic-btn:hover { background:#f59e0b18; border-color:#f59e0b; color:#fbbf24; }
+.controls button.atomic-btn.apex-only { display:none; }
 
-/* Paused overlay badge */
-.paused-badge {
-  position:absolute; top:10px; left:50%; transform:translateX(-50%);
-  background:#845ef7dd; color:#fff; font-family:'JetBrains Mono',monospace;
-  font-size:.7rem; font-weight:700; padding:6px 16px; border-radius:6px;
-  letter-spacing:1.5px; pointer-events:none; z-index:50;
-  display:none; text-transform:uppercase;
-  border: 1px solid #845ef7;
-  box-shadow: 0 4px 20px rgba(132,94,247,.4);
+/* ── Wide tooltip mode for Arbiter block ── */
+.tt-wide {
+  max-width: 380px !important;
+  min-width: 340px !important;
 }
+.tt-arb-section {
+  margin-top: 8px;
+  padding-top: 7px;
+  border-top: 1px solid var(--border);
+}
+.tt-arb-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .56rem;
+  color: #6b7090;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 4px;
+}
+.tt-arb-queue {
+  display: flex;
+  gap: 3px;
+  flex-wrap: wrap;
+  margin-bottom: 3px;
+}
+.tt-arb-slot {
+  width: 26px; height: 18px;
+  border-radius: 3px;
+  background: #1e2030;
+  border: 1px solid #2a2d3a;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .56rem;
+  display: flex; align-items: center; justify-content: center;
+  color: #6b7090;
+  transition: all .2s;
+}
+.tt-arb-slot.occ { background:#f59e0b22; border-color:#f59e0b80; color:#fbbf24; }
+.tt-arb-slot.ret { background:#339af022; border-color:#339af080; color:#339af0; }
+.tt-arb-slot.don { background:#51cf6622; border-color:#51cf6680; color:#51cf66; }
+.tt-arb-rob {
+  display: flex;
+  gap: 3px;
+  margin-bottom: 3px;
+}
+.tt-arb-rob-slot {
+  flex: 1;
+  height: 16px;
+  border-radius: 3px;
+  background: #1e2030;
+  border: 1px solid #2a2d3a;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .5rem;
+  display: flex; align-items: center; justify-content: center;
+  color: #6b7090;
+}
+.tt-arb-rob-slot.pend { background:#f59e0b18; border-color:#f59e0b50; color:#f59e0b; }
+.tt-arb-rob-slot.retn { background:#339af018; border-color:#339af050; color:#339af0; }
+.tt-arb-rob-slot.done { background:#51cf6618; border-color:#51cf6650; color:#51cf66; }
+.tt-arb-bar-bg {
+  height: 5px; border-radius: 3px; background: #1e2030;
+  overflow: hidden; margin: 3px 0;
+}
+.tt-arb-bar-fill {
+  height: 100%; border-radius: 3px;
+  background: linear-gradient(90deg, #51cf66, #f59e0b, #ff6b6b);
+  transition: width .3s;
+}
+.tt-arb-grant-log {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .58rem;
+  color: #6b7090;
+  line-height: 1.7;
+}
+.tt-arb-grant-log .gs { color: #f59e0b; }
+.tt-arb-grant-log .gc { color: #e0e2ec; }
+
+/* ── Latency badge on blocks ── */
+.lat-badge {
+  position: absolute;
+  pointer-events: none;
+  z-index: 25;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .58rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 4px;
+  border: 1px solid currentColor;
+  opacity: 0;
+  transition: opacity .2s;
+  white-space: nowrap;
+}
+.lat-badge.visible { opacity: 1; }
 .paused-badge.visible { display:block; }
 
 /* ── Scenario tooltip ── */
@@ -114,7 +197,7 @@ position:relative;
 
 .main-container { display:flex; gap:24px; padding:12px 20px; max-width:1200px; margin:0 auto; align-items:flex-start; }
 .viz-area { flex:1; min-width:0; max-width:700px; position:relative; }
-canvas { width:100%; height:520px; background:var(--surface); border-radius:12px; border:1px solid var(--border); display:block; cursor:default; }
+canvas { width:100%; height:540px; background:var(--surface); border-radius:12px; border:1px solid var(--border); display:block; cursor:default; }
 @media(max-width:500px){ canvas { height:500px; } .viz-area { max-width:none; } }
 
 /* ── Tooltip ── */
@@ -336,6 +419,7 @@ position:absolute; top:-12px; width:100%; text-align:center; white-space:nowrap;
   <div class="arch-tab" data-arch="volta" style="--accent-color:#339af0" onclick="switchArch('volta')">Volta<span class="tab-gen">SM 7.0 · 2017</span></div>
   <div class="arch-tab" data-arch="ampere" style="--accent-color:#ffa94d" onclick="switchArch('ampere')">Ampere<span class="tab-gen">SM 8.0 · 2020</span></div>
   <div class="arch-tab" data-arch="hopper" style="--accent-color:#845ef7" onclick="switchArch('hopper')">Hopper<span class="tab-gen">SM 9.0 · 2022</span></div>
+  <div class="arch-tab" data-arch="apex" style="--accent-color:#f59e0b" onclick="switchArch('apex')">Apex ✦<span class="tab-gen">SM 10.0 · Concept</span></div>
 </div>
 
 <div class="diff-banner" id="diff-banner"></div>
@@ -347,6 +431,7 @@ position:absolute; top:-12px; width:100%; text-align:center; white-space:nowrap;
   <button class="scenario-btn" data-scenario="invalidate" onclick="triggerScenario('invalidate')">Invalidate</button>
   <button class="scenario-btn" data-scenario="writeback"  onclick="triggerScenario('writeback')">Write-Back</button>
   <button class="scenario-btn" data-scenario="shared"     onclick="triggerScenario('shared')">Shared Mem</button>
+  <button class="scenario-btn atomic-btn" data-scenario="atomic" onclick="triggerScenario('atomic')" id="btn-atomic">⚛ atomicAdd</button>
   <button id="btn-pause" class="pause-btn" onclick="togglePause()">⏸ Pause</button>
   <button id="btn-auto" class="active" onclick="toggleAuto()">Auto</button>
   <button class="reset-btn" onclick="resetAll()">Reset</button>
@@ -529,6 +614,12 @@ var SCENARIO_INFO = {
     color: '#51cf66',
     desc: 'Threads access __shared__ SRAM via LDS/STS — no coherency protocol, no bus traffic, no L2 involvement. Pure on-chip speed. Hopper adds DSMEM: cross-SM shared memory within a cluster.',
     watch: 'Notice: no bus or L2 activity at all. The particles stay entirely inside the SM. On Hopper, a second DSMEM particle crosses to the adjacent SM — still on-chip, ~20 cycle latency.'
+  },
+  atomic: {
+    title: '⚛ atomicAdd — Hardware Serialization',
+    color: '#f59e0b',
+    desc: 'Multiple SMs simultaneously call atomicAdd() to the same address. Without an arbiter, two SMs could both read the value, add to it, and one result gets silently lost. The Apex Arbiter prevents this by serializing all requests with sequence numbers.',
+    watch: 'On Apex: watch ATOM packets queue in the Arbiter panel (hover it to expand). Each gets a SEQ#. GRANTs fire one at a time. On older archs: watch the raw bus contention with no coordination — and imagine the race conditions without hardware atomics.'
   }
 };
 
@@ -616,6 +707,9 @@ var BLOCK_INFO = {
   l2Persist: { name:'L2 Persistence Window', color:'#ffa94d', desc:'Ampere+ feature. You can pin a set of addresses to always stay in L2. Useful for weights or lookup tables accessed repeatedly across many kernels. Set via cudaAccessPolicyWindow.', chips:[{t:'Ampere+',c:'#ffa94d'},{t:'software ctrl',c:'#51cf66'}], connects:[{to:'l2',arrow:'↔',why:'A sub-region of the L2 pinned via CUDA API policy'},{to:'globalMem',arrow:'←',why:'Persistently caches frequently-read global data in L2'}] },
   globalMem: { name:'Global Memory Interface', color:'#339af0', desc:'The on-chip logic (memory controllers + NoC) that bridges L2 to physical DRAM. Handles address translation, ECC, and row/bank scheduling. Multiple controllers run in parallel for bandwidth.', chips:[{t:'memory ctrl',c:'#339af0'},{t:'multi-channel',c:'#845ef7'}], connects:[{to:'l2',arrow:'↔',why:'Receives evictions from L2; returns fetched DRAM data to L2'},{to:'hbm',arrow:'↔',why:'Issues actual read/write commands to HBM stacks'}] },
   hbm:       { name:'HBM / GDDR (DRAM)', color:'#845ef7', desc:'Off-chip high-bandwidth memory. HBM stacks dies vertically connected via micro-bumps. Hopper HBM3 = 3.35 TB/s. Slowest in the hierarchy but largest — all GPU memory ultimately lives here.', chips:[{t:'~400 cycles',c:'#ff6b6b'},{t:'off-chip',c:'#845ef7'},{t:'largest',c:'#6b7094'}], connects:[{to:'globalMem',arrow:'↔',why:'Memory controllers read/write HBM banks via wide parallel buses'}] },
+  arbiter:   { name:'Atomic Arbiter', color:'#f59e0b', desc:'Hardware serialization unit for atomic operations. Every atomicAdd, atomicCAS, etc. passes through here. Assigns a monotonically increasing sequence number (SEQ#) to each incoming request, queues up to 6 at once, and grants them round-robin to L2. A Reorder Buffer (ROB) holds responses until they can be retired in the original request order — because L2 banks respond at different speeds.', chips:[{t:'NEW: Apex',c:'#f59e0b'},{t:'seq-numbered',c:'#339af0'},{t:'ROB ordered',c:'#51cf66'}], connects:[{to:'bus',arrow:'←',why:'Receives all atomic requests from SMs via the coherency bus'},{to:'l2',arrow:'↔',why:'Dispatches one atomic at a time to L2; receives return data out of order'},{to:'l2',arrow:'→',why:'Reorder buffer retires data in original SEQ order before returning to SM'}] },
+  cohDir:    { name:'Coherency Directory', color:'#22d3ee', desc:'A hardware table tracking which SMs hold a copy of each cache line. When a write occurs, instead of broadcasting INV to all SMs (O(n) traffic), the directory sends INV only to the SMs listed as sharers — O(sharers). At 256+ SMs this is a massive bus bandwidth saving. CPUs have used directories for decades; GPUs are still mostly broadcast-based.', chips:[{t:'NEW: Apex',c:'#22d3ee'},{t:'targeted INV',c:'#f06595'},{t:'O(sharers)',c:'#51cf66'}], connects:[{to:'l2',arrow:'↔',why:'Directory lives alongside L2 — each L2 set has an associated sharer vector'},{to:'bus',arrow:'→',why:'Sends targeted INV only to SMs in the sharer list'}] },
+  warpScheduler:{ name:'Warp Scheduler', color:'#a78bfa', desc:'The SM sub-unit that decides which warp runs each clock cycle. When a warp stalls (waiting for L2 data, a dependency, or a barrier), the scheduler instantly switches to another ready warp. With enough resident warps, the stall is completely hidden by useful work from other warps — this is GPU latency tolerance. In Apex this becomes an explicit visible block with per-warp stall reason tracking.', chips:[{t:'NEW: Apex',c:'#a78bfa'},{t:'per-SM',c:'#339af0'},{t:'latency hiding',c:'#51cf66'}], connects:[{to:'l1',arrow:'↔',why:'When a warp misses L1, scheduler marks it stalled; when DATA arrives, marks it ready'},{to:'regs',arrow:'↔',why:'Stalled warp context (registers, PC) is swapped out when another warp runs'}] },
 };
 
 var INSTRUCTION_INFO = {
@@ -661,6 +755,18 @@ var INSTRUCTION_INFO = {
   'cp.async':{ name:'cp.async  (async global→shared copy)', color:'#22d3ee',
     what:'Ampere instruction. Initiates a DMA-style transfer from global memory directly into SMEM — without allocating registers, without stalling the issuing warp. Multiple cp.async loads can be in flight simultaneously.',
     why:'The key to software pipelining (double-buffering) on Ampere+: issue cp.async for tile N+1 while computing on tile N. Completely hides DRAM latency. Critical for reaching peak FLOPS on matrix multiply kernels.' },
+  'ATOM':   { name:'ATOM  (atomic request)', color:'#f59e0b',
+    what:'An atomic operation packet (e.g. atomicAdd) leaving an SM and entering the Apex Arbiter. Carries: the target address, the operation type (ADD/CAS/MIN/MAX), the operand value, and the SM source ID. The arbiter stamps a SEQ# on it immediately.',
+    why:'Atomics are the only safe way for concurrent threads to update shared memory without races. The cost is serialization — all atomics to the same address queue through the arbiter one at a time. See the atomicAdd scenario to watch this unfold.' },
+  'GRANT':  { name:'GRANT  (arbiter grant signal)', color:'#51cf66',
+    what:'Apex Arbiter signal sent back to the SM whose ATOM request just reached the front of the queue. Tells the SM: "you now have exclusive access to this cache line — proceed with the read-modify-write." The L2 cache line is locked until ACK is received.',
+    why:'The grant/ack protocol prevents two SMs from simultaneously modifying the same address. Without it, atomicAdd would not be atomic — two SMs could both read the value, both add to it, and one result would be silently lost.' },
+  'ACK':    { name:'ACK  (atomic acknowledgement)', color:'#f59e0b',
+    what:'Returned by L2 to the Arbiter after the atomic read-modify-write is complete. The arbiter logs this in the ROB under the original SEQ#, marks the slot done, and notifies the originating SM that the operation finished.',
+    why:'The ACK closes the transaction loop. Until the arbiter receives ACK, the next SM in the queue cannot be granted access to that cache line address. High atomic contention means long chains of GRANT → op → ACK cycles.' },
+  'SEQ':    { name:'SEQ#  (sequence number)', color:'#fbbf24',
+    what:'A monotonically incrementing transaction ID stamped by the Apex Arbiter on every incoming ATOM request. Travels with the request all the way to L2 and back. The ROB uses it to match returning ACKs to the correct waiting SM.',
+    why:'Without sequence numbers, returning data has no way to identify which SM asked for it — especially when L2 bank conflicts cause some atomics to complete before earlier-numbered ones. The ROB uses SEQ# to restore order before retiring.' },
 };
 
 var ARCHS = {
@@ -741,6 +847,27 @@ var ARCHS = {
     writePolicy:'Write-evict + TMA bulk transfers',
     coherency:'Cluster-level DSMEM coherency + L2 global coherence',
     keyChange:'TMA engine, Distributed Shared Memory (DSMEM), HBM3',
+  },
+  apex: {
+    name:'Apex', gen:'SM 10.0', year:2026, color:'#f59e0b', example:'Concept',
+    smLabel:'SM',
+    intro:"A forward-looking architecture exploring three unsolved problems in GPU memory design. The headline addition: a hardware <strong>Atomic Arbiter</strong> with a visible request queue, sequence-numbered transactions, and a Reorder Buffer (ROB) to handle out-of-order returns. Also features a Coherency Directory replacing broadcast INV with targeted per-SM invalidation. None of these exist in shipping silicon yet — but the problems they solve are very real.",
+    perf:{ smCount:144, l1Size:320, smemSize:256, l2Size:65536, bw:5000, flops:120, memType:'HBM4', vram:192, tdp:1000, l1Latency:25, l2Latency:160, dramLatency:350 },
+    blocks:{
+      l1:{ label:'L1 + TEX (320KB)', desc:'Enlarged unified L1 with lower latency predictor logic.', state:true, changed:true },
+      texCache:null,
+      sharedMem:{ label:'SMEM (up to 256KB)', desc:'Larger SMEM with hardware bank-conflict detection.', changed:true },
+      warpScheduler:{ label:'WARP SCHED', desc:'Explicit warp scheduler sub-unit. Tracks stall reasons per warp — memory, dependency, branch — and uses them to pick the best next warp to run. Makes latency hiding observable.', isNew:true },
+      arbiter:{ label:'ATOMIC ARBITER', desc:'Hardware arbiter serializing atomic operations. Assigns a sequence number to every atomic request, queues up to 6 pending ops, and grants them round-robin. A Reorder Buffer (ROB) holds returning data until it can be retired in order.', isNew:true },
+      l2:{ label:'L2 Cache (64MB)', desc:'Larger L2 with per-address owner tracking for the coherency directory.', size:'64MB', changed:true },
+      cohDir:{ label:'COHERENCY DIR', desc:'Directory replacing broadcast INV. Tracks which SMs hold a copy of each cache line. Writes only send INV to SMs that actually have a copy — O(sharers) instead of O(all SMs). Critical for scaling to 256+ SM counts.', isNew:true },
+      coherencyBus:{ label:'Targeted Inval. Bus', desc:'Bus now carries targeted (not broadcast) INV messages. Only SMs listed in the directory receive INV — massive bandwidth saving at high SM counts.', changed:true },
+      globalMem:{ label:'Global Memory', desc:'HBM4 interface. 8 stacks, 5 TB/s.' },
+      hbm:{ label:'HBM4', desc:'5 TB/s. 192GB. Next-generation stacked DRAM.', changed:true },
+    },
+    writePolicy:'Write-evict + arbiter-serialized atomics',
+    coherency:'Directory-based targeted INV + ROB-ordered atomic returns',
+    keyChange:'Atomic Arbiter with ROB, Coherency Directory, Warp Scheduler',
   }
 };
 
@@ -828,6 +955,15 @@ var selectedBlock = null;
 var connLines = [];
 var mouseX = 0, mouseY = 0;
 var lastClientX = 0, lastClientY = 0;
+
+// Phase names for display
+var ARB_PHASES = {
+  queued:    { label: 'QUEUED',    color: '#f59e0b', desc: 'Waiting in request queue for grant' },
+  granted:   { label: 'GRANTED',   color: '#51cf66', desc: 'Grant issued — SM has exclusive access' },
+  rmw:       { label: 'RMW→L2',   color: '#339af0', desc: 'Read-Modify-Write in progress at L2' },
+  ack:       { label: 'ACK←L2',   color: '#ffa94d', desc: 'Acknowledgement returning from L2' },
+  retiring:  { label: 'RETIRING',  color: '#a78bfa', desc: 'ROB retiring — data routing to SM' },
+};
 var hitRects = [];
 
 function buildHitRects() {
@@ -841,6 +977,8 @@ function buildHitRects() {
   }
   if (layout.l2) hitRects.push({ type: 'l2', x: layout.l2.x, y: layout.l2.y, w: layout.l2.w, h: layout.l2.h });
   if (layout.l2Persist) hitRects.push({ type: 'l2Persist', x: layout.l2Persist.x, y: layout.l2Persist.y, w: layout.l2Persist.w, h: layout.l2Persist.h });
+  if (layout.arbiter) hitRects.push({ type: 'arbiter', x: layout.arbiter.x, y: layout.arbiter.y, w: layout.arbiter.w, h: layout.arbiter.h });
+  if (layout.cohDir) hitRects.push({ type: 'cohDir', x: layout.cohDir.x, y: layout.cohDir.y, w: layout.cohDir.w, h: layout.cohDir.h });
   if (layout.bus) hitRects.push({ type: 'bus', x: layout.bus.x1, y: layout.bus.y - 12, w: layout.bus.x2 - layout.bus.x1, h: 24 });
   if (layout.globalMem) hitRects.push({ type: 'globalMem', x: layout.globalMem.x, y: layout.globalMem.y, w: layout.globalMem.w, h: layout.globalMem.h });
   if (layout.hbm) hitRects.push({ type: 'hbm', x: layout.hbm.x, y: layout.hbm.y, w: layout.hbm.w, h: layout.hbm.h });
@@ -857,6 +995,8 @@ function hitTest(mx, my) {
 function getBlockCenter(type, smIdx) {
   if (type === 'l2') return { x: layout.l2.x + layout.l2.w/2, y: layout.l2.y + layout.l2.h/2 };
   if (type === 'l2Persist') return { x: layout.l2Persist.x + layout.l2Persist.w/2, y: layout.l2Persist.y + layout.l2Persist.h/2 };
+  if (type === 'arbiter' && layout.arbiter) return { x: layout.arbiter.x + layout.arbiter.w/2, y: layout.arbiter.y + layout.arbiter.h/2 };
+  if (type === 'cohDir' && layout.cohDir) return { x: layout.cohDir.x + layout.cohDir.w/2, y: layout.cohDir.y + layout.cohDir.h/2 };
   if (type === 'bus') return { x: (layout.bus.x1 + layout.bus.x2)/2, y: layout.bus.y };
   if (type === 'globalMem') return { x: layout.globalMem.x + layout.globalMem.w/2, y: layout.globalMem.y + layout.globalMem.h/2 };
   if (type === 'hbm') return { x: layout.hbm.x + layout.hbm.w/2, y: layout.hbm.y + layout.hbm.h/2 };
@@ -1057,8 +1197,8 @@ function buildParticleLabelRects() {
   for (var i = 0; i < particles.length; i++) {
     var p = particles[i];
     if (!p.label || !p.alive) continue;
-    var cx2 = p.from.x + (p.to.x - p.from.x) * p.t;
-    var cy2 = p.from.y + (p.to.y - p.from.y) * p.t;
+    var ppos = p._getPos ? p._getPos() : { x: p.from.x + (p.to.x - p.from.x) * (p.t||0), y: p.from.y + (p.to.y - p.from.y) * (p.t||0) };
+    var cx2 = ppos.x, cy2 = ppos.y;
     var clientX = cr.left + cx2;
     var clientY = cr.top  + cy2;
     particleLabelRects.push({ key: p.label, cx: cx2, cy: cy2, clientX: clientX, clientY: clientY });
@@ -1087,6 +1227,125 @@ function updateTooltip(hit, clientX, clientY) {
   ttDesc.textContent = info.desc;
 
   var isCacheBlock = (hit.type === 'l1' || hit.type === 'smem') && hit.smIdx !== undefined;
+  var isArbiterBlock = hit.type === 'arbiter';
+  var isCohDirBlock = hit.type === 'cohDir';
+
+  if (isArbiterBlock) {
+    tooltipEl.classList.add('tt-wide');
+    // Render rich arbiter state in tooltip
+    var arbQ = arbiterState.queue;
+    var arbROB = arbiterState.rob;
+    var arbOps = arbiterState.activeOps;
+    var arbGrants = arbiterState.recentGrants;
+    var latFracTT = arbiterState.contentionLevel;
+    var cycTT = Math.round(2 + latFracTT * 30);
+    var statusTT = arbQ.length >= 4 ? 'SATURATED' : arbiterState.active ? 'ACTIVE' : 'IDLE';
+    var statusColor = arbQ.length >= 4 ? '#ff6b6b' : arbiterState.active ? '#fbbf24' : '#4a5080';
+
+    // ── Live ops table — what each in-flight op is doing RIGHT NOW ──
+    var liveOpsHtml = '';
+    if (arbOps.length === 0) {
+      liveOpsHtml = '<div style="color:#4a5080;font-size:.6rem;padding:2px 0">No ops in flight</div>';
+    } else {
+      for (var tao = 0; tao < Math.min(arbOps.length, 6); tao++) {
+        var aop = arbOps[tao];
+        var ph = ARB_PHASES[aop.phase] || ARB_PHASES.queued;
+        var elapsed = Math.round((Date.now() - aop.phaseStart) / 10); // in ~cycles (10ms ≈ 1 notional cycle)
+        var phaseBar = '';
+        // 5-step pipeline indicator
+        var phases = ['queued','granted','rmw','ack','retiring'];
+        var curPhaseIdx = phases.indexOf(aop.phase);
+        for (var pp = 0; pp < phases.length; pp++) {
+          var ppActive = pp === curPhaseIdx;
+          var ppDone = pp < curPhaseIdx;
+          var ppColor = ppDone ? '#51cf6660' : ppActive ? ph.color : '#2a2d3a';
+          phaseBar += '<span style="display:inline-block;width:14px;height:4px;border-radius:2px;background:'+ppColor+';margin-right:2px"></span>';
+        }
+        liveOpsHtml +=
+          '<div style="display:flex;align-items:center;gap:6px;padding:3px 0;border-bottom:1px solid #1e2030">' +
+            '<span style="font-family:JetBrains Mono,monospace;font-size:.58rem;color:#f59e0b;min-width:28px">#'+aop.seq+'</span>' +
+            '<span style="font-family:JetBrains Mono,monospace;font-size:.58rem;color:#e0e2ec;min-width:22px">SM'+aop.smIdx+'</span>' +
+            '<span style="font-family:JetBrains Mono,monospace;font-size:.58rem;font-weight:700;color:'+ph.color+';min-width:64px">'+ph.label+'</span>' +
+            '<span style="flex:1">'+phaseBar+'</span>' +
+            '<span style="font-family:JetBrains Mono,monospace;font-size:.54rem;color:#6b7090">'+elapsed+'τ</span>' +
+          '</div>';
+      }
+    }
+
+    // ── ROB slots ──
+    var robSlots = '';
+    for (var trs = 0; trs < 6; trs++) {
+      var tre = trs < arbROB.length ? arbROB[trs] : null;
+      var rstate = tre ? tre.state : '';
+      var rcls = 'tt-arb-rob-slot' + (rstate==='pending'?' pend':rstate==='returning'?' retn':rstate==='done'?' done':'');
+      var robLabel = tre ? '#'+tre.seq : '—';
+      robSlots += '<div class="'+rcls+'" title="'+rstate+'">'+robLabel+'</div>';
+    }
+
+    // ── Queue slots ──
+    var qSlots = '';
+    for (var tqs = 0; tqs < 6; tqs++) {
+      var tqe = tqs < arbQ.length ? arbQ[tqs] : null;
+      var cls = tqe ? 'tt-arb-slot occ' : 'tt-arb-slot';
+      qSlots += '<div class="'+cls+'">'+(tqe ? '#'+tqe.seq : '—')+'</div>';
+    }
+
+    // ── Grant log ──
+    var grantHtml = '';
+    if (arbGrants.length === 0) {
+      grantHtml = '<span style="color:#4a5080">No grants yet — run atomicAdd scenario</span>';
+    } else {
+      for (var tgi = 0; tgi < Math.min(arbGrants.length, 3); tgi++) {
+        var tge = arbGrants[tgi];
+        grantHtml += '→ <span class="gs">#'+tge.seq+'</span> retired in <span class="gc">'+tge.cycles+' cyc</span><br>';
+      }
+    }
+
+    var latBarPct = Math.round(latFracTT * 100);
+    var latColor = latFracTT > 0.6 ? '#ff6b6b' : latFracTT > 0.3 ? '#f59e0b' : '#51cf66';
+
+    ttMeta.innerHTML =
+      // Status header
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">' +
+        '<span style="font-family:JetBrains Mono,monospace;font-size:.58rem;color:#6b7090">STATUS</span>' +
+        '<span style="font-family:JetBrains Mono,monospace;font-size:.64rem;font-weight:700;letter-spacing:.5px;color:'+statusColor+'">● '+statusTT+'</span>' +
+      '</div>' +
+      // Live ops — the star of the show
+      '<div class="tt-arb-section">' +
+        '<div class="tt-arb-label">Live In-Flight Operations <span style="float:right;color:#f59e0b">SEQ#'+String(arbiterState.seqCounter).padStart(3,'0')+'</span></div>' +
+        liveOpsHtml +
+      '</div>' +
+      // Queue + ROB side by side
+      '<div class="tt-arb-section" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">' +
+        '<div>' +
+          '<div class="tt-arb-label">Wait Queue</div>' +
+          '<div class="tt-arb-queue">'+qSlots+'</div>' +
+        '</div>' +
+        '<div>' +
+          '<div class="tt-arb-label">ROB</div>' +
+          '<div class="tt-arb-rob">'+robSlots+'</div>' +
+        '</div>' +
+      '</div>' +
+      // Contention bar
+      '<div class="tt-arb-section">' +
+        '<div class="tt-arb-label">Bus Contention <span style="float:right;color:'+latColor+'">~'+cycTT+' cyc/grant</span></div>' +
+        '<div class="tt-arb-bar-bg"><div class="tt-arb-bar-fill" style="width:'+latBarPct+'%"></div></div>' +
+        '<div style="font-family:JetBrains Mono,monospace;font-size:.54rem;color:#4a5080;margin-top:2px">'+
+          'Idle: 2 cyc · Contended: up to 32 cyc' +
+        '</div>' +
+      '</div>' +
+      // Grant log
+      '<div class="tt-arb-section">' +
+        '<div class="tt-arb-label">Recent Completions <span style="float:right;color:#6b7090">'+arbiterState.grantCount+' total</span></div>' +
+        '<div class="tt-arb-grant-log">'+grantHtml+'</div>' +
+      '</div>';
+    ttHint.style.display = 'none';
+    positionTooltip(clientX, clientY);
+    tooltipEl.classList.add('visible');
+    return;
+  } else {
+    tooltipEl.classList.remove('tt-wide');
+  }
 
   if (isCacheBlock) {
     ttMeta.innerHTML =
@@ -1229,9 +1488,12 @@ function updateKeyCard() {
     { key:'l1', color:'var(--l1)', meta:'per-SM' },
     { key:'texCache', color:'#e599f7', meta:'per-SM' },
     { key:'sharedMem', color:'var(--smem)', meta:'per-SM' },
+    { key:'warpScheduler', color:'#a78bfa', meta:'per-SM' },
     { key:'dsmem', color:'var(--new-block)', meta:'cluster' },
     { key:'tma', color:'var(--new-block)', meta:'per-SM' },
     { key:'asyncCopy', color:'var(--new-block)', meta:'engine' },
+    { key:'arbiter', color:'#f59e0b', meta:'atomic ctrl' },
+    { key:'cohDir', color:'#22d3ee', meta:'dir-based' },
     { key:'coherencyBus', color:'var(--coherency)', meta:'fabric' },
     { key:'l2', color:'var(--l2)', meta:'unified' },
     { key:'l2Persist', color:'var(--l2)', meta:'L2 ctrl' },
@@ -1276,7 +1538,7 @@ function buildLayout() {
   var cx = W/2;
   var mob = W < 500;
   var arch = ARCHS[currentArch];
-  var smCount = mob ? 2 : (currentArch === 'hopper' ? 4 : (currentArch === 'pascal' ? 3 : 4));
+  var smCount = mob ? 2 : (currentArch === 'hopper' ? 4 : (currentArch === 'pascal' ? 3 : (currentArch === 'apex' ? 4 : 4)));
   var margin = mob ? 12 : 30;
   var usable = W - margin*2;
   var smGap = mob ? 12 : 20;
@@ -1286,6 +1548,7 @@ function buildLayout() {
   if (arch.blocks.tma) smSubBlocks++;
   if (arch.blocks.dsmem) smSubBlocks++;
   if (arch.blocks.asyncCopy && arch.blocks.asyncCopy.isNew) smSubBlocks++;
+  if (arch.blocks.warpScheduler) smSubBlocks++;
   var smH = mob ? (80+smSubBlocks*18) : (90+smSubBlocks*22);
   var totalSmW = smCount*smW + (smCount-1)*smGap;
   var smStartX = cx - totalSmW/2;
@@ -1321,6 +1584,10 @@ function buildLayout() {
       sub.push({ type:'async', x:x+6, y:subY, w:smW-12, h:14, label:'cp.async' });
       subY += 14+subPad;
     }
+    if (arch.blocks.warpScheduler) {
+      sub.push({ type:'warpScheduler', x:x+6, y:subY, w:smW-12, h:subH, label:'WARP SCHED' });
+      subY += subH+subPad;
+    }
     var actualH = Math.max(smH, subY-smY+8);
     layout.sms.push({ x:x, y:smY, w:smW, h:actualH, label:arch.smLabel+' '+i, sub:sub, l1:l1Ref });
   }
@@ -1340,6 +1607,39 @@ function buildLayout() {
   var l2H = mob ? 42 : 52;
   layout.l2 = { x:cx-l2W/2, y:l2Y, w:l2W, h:l2H };
   layout.l2Persist = (currentArch==='ampere'||currentArch==='hopper') ? { x:cx-l2W/2+6, y:l2Y+l2H-12, w:l2W-12, h:8 } : null;
+
+  // Apex-specific: Arbiter is a FULL-WIDTH block between bus and L2
+  // cohDir is a sub-region INSIDE L2 (right portion)
+  if (currentArch === 'apex') {
+    var arbH = mob ? 48 : 60;
+    var arbGap = mob ? 20 : 32;
+    // Arbiter sits between bus and l2, full l2 width
+    var newL2Y = l2Y + arbH + arbGap;
+    layout.arbiter = { x: cx - l2W/2, y: l2Y, w: l2W, h: arbH };
+    // Shift l2 down to make room
+    layout.l2 = { x: cx-l2W/2, y: newL2Y, w: l2W, h: l2H };
+    // cohDir is a sub-region inside l2 (right 38%)
+    var cdW = Math.round(l2W * 0.38);
+    layout.cohDir = { x: cx + l2W/2 - cdW - 6, y: newL2Y + 6, w: cdW, h: l2H - 12 };
+    // Shift everything below l2 down too
+    var extraShift = arbH + arbGap;
+    var cbY2 = newL2Y + l2H + (mob ? 22 : 30);
+    layout.crossbar = { y: cbY2, x1: cx-l2W/2-8, x2: cx+l2W/2+8 };
+    var gmY2 = cbY2 + (mob ? 28 : 38);
+    var gmW2 = Math.min(totalSmW*0.85, usable*0.82);
+    layout.globalMem = { x: cx-gmW2/2, y: gmY2, w: gmW2, h: gmH };
+    var mcGap3 = (gmW2 - mcCount*mcW)/(mcCount+1);
+    layout.mcs = [];
+    for (var mi2 = 0; mi2 < mcCount; mi2++) {
+      layout.mcs.push({ x: layout.globalMem.x+mcGap3+mi2*(mcW+mcGap3), y: gmY2+24, w: mcW, h: 14 });
+    }
+    var hbmY2 = gmY2 + gmH + (mob ? 16 : 22);
+    var hbmW2 = gmW2*0.88;
+    layout.hbm = { x: cx-hbmW2/2, y: hbmY2, w: hbmW2, h: mob ? 34 : 42, label: ARCHS[currentArch].blocks.hbm.label };
+  } else {
+    layout.arbiter = null;
+    layout.cohDir = null;
+  }
 
   var cbY = l2Y+l2H+(mob ? 22 : 30);
   layout.crossbar = { y:cbY, x1:cx-l2W/2-8, x2:cx+l2W/2+8 };
@@ -1495,7 +1795,6 @@ function drawFrame(time) {
 function drawStaticFrame() {
   ctx.clearRect(0, 0, W, H);
   drawSceneContent(0, performance.now());
-  // Still update tooltip for hovered block
   if (hoveredBlock && (hoveredBlock.type === 'l1' || hoveredBlock.type === 'smem')) {
     refreshTooltipCacheData(hoveredBlock, BLOCK_INFO[hoveredBlock.type]);
   }
@@ -1509,12 +1808,18 @@ function drawAnimatedFrame(dt, time) {
   if (hoveredBlock && (hoveredBlock.type === 'l1' || hoveredBlock.type === 'smem')) {
     refreshTooltipCacheData(hoveredBlock, BLOCK_INFO[hoveredBlock.type]);
   }
+  // Live tooltip refresh for arbiter (state changes while hovered)
+  if (hoveredBlock && hoveredBlock.type === 'arbiter' && tooltipEl.classList.contains('visible')) {
+    updateTooltip(hoveredBlock, lastClientX, lastClientY);
+  }
 
   if (autoMode) {
     autoTimer+=dt;
     if (autoTimer>2.8) {
       autoTimer=0;
-      var ops=['read','write','invalidate','writeback','shared'];
+      var ops = currentArch === 'apex'
+        ? ['read','write','invalidate','writeback','shared','atomic']
+        : ['read','write','invalidate','writeback','shared'];
       triggerScenario(ops[Math.floor(Math.random()*ops.length)]);
     }
   }
@@ -1598,6 +1903,7 @@ function drawSceneContent(dt, time) {
         else if (b.type==='tma')             { cBg='#22d3ee12'; cBr='#22d3ee70'; cLbl='#22d3ee'; }
         else if (b.type==='dsmem')           { cBg='#22d3ee10'; cBr='#22d3ee60'; cLbl='#22d3ee'; }
         else if (b.type==='async')           { cBg='#22d3ee0a'; cBr='#22d3ee45'; cLbl='#6de8f0'; }
+        else if (b.type==='warpScheduler')   { cBg='#a78bfa12'; cBr='#a78bfa60'; cLbl='#c4b5fd'; }
         else /* smem */                      { cBg='#51cf660a'; cBr='#51cf6660'; cLbl='#6ee09a'; }
         ctx.fillStyle=cBg; ctx.fill();
         ctx.strokeStyle=cBr; ctx.lineWidth=1; ctx.stroke();
@@ -1627,6 +1933,135 @@ function drawSceneContent(dt, time) {
   drawHoverHighlight();
   drawSelectionHighlight();
   drawConnLines(time);
+
+  // ── Draw Apex arbiter (full-width block) and cohDir (L2 sub-region) ──
+  if (currentArch === 'apex' && layout.arbiter) {
+    var arb = layout.arbiter;
+    var arbTime = Date.now();
+    var arbPulse = Math.sin(arbTime/600) * 0.3 + 0.7;
+    var isHovArb = hoveredBlock && hoveredBlock.type === 'arbiter';
+    var latFrac = Math.min(arbiterState.contentionLevel, 1);
+    var arbColor = latFrac > 0.6 ? '#ff6b6b' : latFrac > 0.3 ? '#f59e0b' : '#f59e0b';
+
+    // Main block
+    rrect(arb.x, arb.y, arb.w, arb.h, 8);
+    ctx.fillStyle = isHovArb ? '#f59e0b18' : '#f59e0b0c'; ctx.fill();
+    ctx.strokeStyle = arbColor + Math.round(arbPulse * (isHovArb ? 230 : 160)).toString(16).padStart(2,'0');
+    ctx.lineWidth = isHovArb ? 2 : 1.5; ctx.stroke();
+
+    // Subtle glow when active
+    if (arbiterState.active) {
+      ctx.save();
+      ctx.shadowColor = '#f59e0b'; ctx.shadowBlur = 12;
+      rrect(arb.x, arb.y, arb.w, arb.h, 8);
+      ctx.strokeStyle = '#f59e0b20'; ctx.lineWidth = 3; ctx.stroke();
+      ctx.restore();
+    }
+
+    // Header strip
+    ctx.fillStyle = '#f59e0b14';
+    rrect(arb.x+1, arb.y+1, arb.w-2, 16, 7);
+    ctx.fill();
+
+    // Title + status
+    ctx.font = '700 8px "JetBrains Mono"'; ctx.fillStyle = '#f59e0b'; ctx.textAlign = 'left';
+    ctx.fillText('⚖ ATOMIC ARBITER', arb.x + 10, arb.y + 12);
+    var statusText = arbiterState.queue.length >= 4 ? 'SATURATED' : arbiterState.active ? 'ACTIVE' : 'IDLE';
+    var statusColor = arbiterState.queue.length >= 4 ? '#ff6b6b' : arbiterState.active ? '#fbbf24' : '#4a5080';
+    ctx.font = '600 7px "JetBrains Mono"'; ctx.fillStyle = statusColor; ctx.textAlign = 'right';
+    ctx.fillText(statusText, arb.x + arb.w - 10, arb.y + 12);
+
+    // ── Queue slots (left section) ──
+    var slotW = 22, slotH = 14, slotGap = 4;
+    var qStartX = arb.x + 10;
+    var qY = arb.y + 21;
+    ctx.font = '500 6.5px "JetBrains Mono"'; ctx.textAlign = 'left';
+    ctx.fillStyle = '#6b7090'; ctx.fillText('QUEUE', qStartX, qY + 11);
+    var qSlotsX = qStartX + 38;
+    for (var qs = 0; qs < 6; qs++) {
+      var sx = qSlotsX + qs * (slotW + slotGap);
+      var qe = qs < arbiterState.queue.length ? arbiterState.queue[qs] : null;
+      ctx.fillStyle = qe ? '#f59e0b22' : '#1a1c28';
+      ctx.strokeStyle = qe ? '#f59e0b90' : '#2a2d3a';
+      ctx.lineWidth = qe ? 1 : 0.7;
+      rrect(sx, qY, slotW, slotH, 3); ctx.fill(); ctx.stroke();
+      ctx.font = '600 5.5px "JetBrains Mono"'; ctx.textAlign = 'center';
+      ctx.fillStyle = qe ? '#fbbf24' : '#3a3d55';
+      ctx.fillText(qe ? '#'+qe.seq : '—', sx + slotW/2, qY + 9);
+    }
+
+    // ── ROB slots (right of queue) ──
+    var robX = qSlotsX + 6*(slotW+slotGap) + 12;
+    ctx.font = '500 6.5px "JetBrains Mono"'; ctx.textAlign = 'left';
+    ctx.fillStyle = '#6b7090'; ctx.fillText('ROB', robX, qY + 11);
+    var robSlotsX = robX + 26;
+    var robSlotW = Math.min(slotW, (arb.x + arb.w - 10 - robSlotsX) / 6 - slotGap);
+    for (var rs = 0; rs < 6; rs++) {
+      var rx2 = robSlotsX + rs * (robSlotW + slotGap);
+      if (rx2 + robSlotW > arb.x + arb.w - 8) break;
+      var robE = rs < arbiterState.rob.length ? arbiterState.rob[rs] : null;
+      var rBg = '#1a1c28', rBr = '#2a2d3a', rTxt = '#3a3d55';
+      if (robE) {
+        if (robE.state === 'pending')   { rBg='#f59e0b18'; rBr='#f59e0b60'; rTxt='#f59e0b'; }
+        if (robE.state === 'returning') { rBg='#339af018'; rBr='#339af060'; rTxt='#339af0'; }
+        if (robE.state === 'done')      { rBg='#51cf6618'; rBr='#51cf6660'; rTxt='#51cf66'; }
+      }
+      ctx.fillStyle = rBg; ctx.strokeStyle = rBr; ctx.lineWidth = robE ? 1 : 0.7;
+      rrect(rx2, qY, robSlotW, slotH, 3); ctx.fill(); ctx.stroke();
+      ctx.font = '600 5.5px "JetBrains Mono"'; ctx.textAlign = 'center';
+      ctx.fillStyle = rTxt;
+      ctx.fillText(robE ? '#'+robE.seq : '—', rx2 + robSlotW/2, qY + 9);
+    }
+
+    // ── Bottom row: SEQ counter + contention bar ──
+    var botY = qY + slotH + 7;
+    ctx.font = '500 6.5px "JetBrains Mono"'; ctx.fillStyle = '#f59e0b80'; ctx.textAlign = 'left';
+    ctx.fillText('SEQ#' + String(arbiterState.seqCounter).padStart(3,'0') + '  · Granted: ' + arbiterState.grantCount, arb.x + 10, botY);
+
+    // Contention bar (right side of bottom row)
+    var cBarX = arb.x + arb.w/2 + 20, cBarW = arb.w/2 - 30, cBarH = 5;
+    var cBarY = botY - 8;
+    ctx.fillStyle = '#1a1c28'; rrect(cBarX, cBarY, cBarW, cBarH, 2); ctx.fill();
+    if (latFrac > 0) {
+      var cGrad = ctx.createLinearGradient(cBarX, 0, cBarX+cBarW, 0);
+      cGrad.addColorStop(0, '#51cf66'); cGrad.addColorStop(0.5, '#f59e0b'); cGrad.addColorStop(1, '#ff6b6b');
+      ctx.fillStyle = cGrad;
+      rrect(cBarX, cBarY, cBarW * latFrac, cBarH, 2); ctx.fill();
+    }
+    var cycleEst2 = Math.round(2 + latFrac * 30);
+    ctx.font = '600 6px "JetBrains Mono"'; ctx.fillStyle = '#f59e0b'; ctx.textAlign = 'right';
+    ctx.fillText('~'+cycleEst2+' cyc', arb.x + arb.w - 8, botY);
+  }
+
+  // ── cohDir drawn as sub-region INSIDE L2 block ──
+  if (currentArch === 'apex' && layout.cohDir) {
+    var cd = layout.cohDir;
+    var isHovCd = hoveredBlock && hoveredBlock.type === 'cohDir';
+    var cdPulse = Math.sin(Date.now()/900) * 0.2 + 0.8;
+    // Background sub-region
+    rrect(cd.x, cd.y, cd.w, cd.h, 5);
+    ctx.fillStyle = isHovCd ? '#22d3ee18' : '#22d3ee0a'; ctx.fill();
+    ctx.strokeStyle = '#22d3ee' + Math.round(cdPulse * (isHovCd ? 200 : 100)).toString(16).padStart(2,'0');
+    ctx.lineWidth = isHovCd ? 1.5 : 0.8; ctx.stroke();
+    // Label
+    ctx.font = '700 6.5px "JetBrains Mono"'; ctx.fillStyle = '#22d3ee'; ctx.textAlign = 'center';
+    ctx.fillText('COH. DIR', cd.x + cd.w/2, cd.y + 10);
+    // Sharer bit rows
+    var cdRowH = 5, cdRowGap = 2, cdRows = 3;
+    var cdBitCount = 4;
+    for (var dr2 = 0; dr2 < cdRows; dr2++) {
+      var ry2 = cd.y + 15 + dr2 * (cdRowH + cdRowGap);
+      var cdBitW = (cd.w - 14) / cdBitCount;
+      for (var db2 = 0; db2 < cdBitCount; db2++) {
+        var hasSharer = (dr2 * 7 + db2 * 3 + Math.floor(Date.now()/2000)) % 3 !== 0;
+        ctx.fillStyle = hasSharer ? '#22d3ee35' : '#1a1c28';
+        ctx.strokeStyle = '#22d3ee30'; ctx.lineWidth = 0.5;
+        ctx.fillRect(cd.x + 7 + db2*cdBitW, ry2, cdBitW-1, cdRowH);
+      }
+    }
+    ctx.font = '500 5.5px "JetBrains Mono"'; ctx.fillStyle = '#22d3ee50'; ctx.textAlign = 'center';
+    ctx.fillText('targeted', cd.x + cd.w/2, cd.y + cd.h - 3);
+  }
 
   for (var ci = 0; ci < layout.sms.length; ci++) {
     var csm = layout.sms[ci];
@@ -1849,17 +2284,67 @@ function drawSceneContent(dt, time) {
 
 var lastTime=0;
 
-function Particle(from, to, color, label, speed, onDone) {
-  this.from={x:from.x,y:from.y}; this.to={x:to.x,y:to.y}; this.color=color; this.label=label||'';
-  this.t=0; this.speed=speed||2; this.alive=true; this.onDone=onDone;
-  this.dist=Math.sqrt((to.x-from.x)*(to.x-from.x)+(to.y-from.y)*(to.y-from.y)); this.trail=[];
+// Particle — supports waypoint routing so particles travel along logical wire paths
+// Usage: new Particle(from, to, color, label, speed, onDone)
+//   OR:  new Particle(from, to, color, label, speed, onDone, {waypoints:[{x,y}, ...]})
+// Waypoints are intermediate stops; particle chains through them automatically.
+function Particle(from, to, color, label, speed, onDone, opts) {
+  this.color=color; this.label=label||''; this.speed=speed||2; this.alive=true; this.onDone=onDone;
+  this.trail=[];
+  // Build segment list from waypoints
+  var pts = [{x:from.x,y:from.y}];
+  if (opts && opts.waypoints) { for (var wi=0;wi<opts.waypoints.length;wi++) pts.push(opts.waypoints[wi]); }
+  pts.push({x:to.x,y:to.y});
+  this.pts = pts;
+  this.segIdx = 0;  // current segment index
+  this.segT = 0;    // progress within current segment [0..1]
+  // Compute segment lengths for proportional speed
+  this.segLens = [];
+  this.totalLen = 0;
+  for (var si=0;si<pts.length-1;si++) {
+    var dx=pts[si+1].x-pts[si].x, dy=pts[si+1].y-pts[si].y;
+    var len=Math.sqrt(dx*dx+dy*dy)||1;
+    this.segLens.push(len); this.totalLen+=len;
+  }
+  this.from={x:from.x,y:from.y}; this.to={x:to.x,y:to.y}; // kept for compat
+  // passthrough callbacks: {t:0..1, fn:function} — fire when particle crosses that fraction of total path
+  this.passthroughs = opts && opts.passthroughs ? opts.passthroughs : [];
+  this._ptFired = [];
+  for (var pi=0;pi<this.passthroughs.length;pi++) this._ptFired.push(false);
+  // compute elapsed fraction
+  this._frac = 0;
 }
+Particle.prototype._getPos = function() {
+  var pts=this.pts, segIdx=this.segIdx, segT=this.segT;
+  if (segIdx>=pts.length-1) return {x:pts[pts.length-1].x,y:pts[pts.length-1].y};
+  var a=pts[segIdx], b=pts[segIdx+1];
+  return {x:a.x+(b.x-a.x)*segT, y:a.y+(b.y-a.y)*segT};
+};
 Particle.prototype.update = function(dt) {
-  this.t+=(this.speed*dt*60)/Math.max(this.dist,1);
-  if (this.t>=1) { this.t=1; this.alive=false; if (this.onDone) this.onDone(); }
-  var cx=this.from.x+(this.to.x-this.from.x)*this.t;
-  var cy=this.from.y+(this.to.y-this.from.y)*this.t;
-  this.trail.push({x:cx,y:cy}); if (this.trail.length>16) this.trail.shift();
+  var step = (this.speed*dt*60)/Math.max(this.segLens[this.segIdx]||1,1);
+  this.segT += step;
+  // Advance through segments
+  while (this.segT >= 1 && this.segIdx < this.pts.length-2) {
+    this.segT -= 1; this.segIdx++;
+    // Recompute step rate for new segment
+  }
+  if (this.segIdx >= this.pts.length-2 && this.segT >= 1) {
+    this.segT=1; this.alive=false; if (this.onDone) this.onDone(); return;
+  }
+  // Compute overall fraction for passthrough callbacks
+  var elapsed=0;
+  for (var si=0;si<this.segIdx;si++) elapsed+=this.segLens[si];
+  elapsed+=this.segLens[this.segIdx]*this.segT;
+  this._frac = elapsed/this.totalLen;
+  // Fire passthroughs
+  for (var pi=0;pi<this.passthroughs.length;pi++) {
+    if (!this._ptFired[pi] && this._frac >= this.passthroughs[pi].t) {
+      this._ptFired[pi]=true;
+      this.passthroughs[pi].fn();
+    }
+  }
+  var pos=this._getPos();
+  this.trail.push({x:pos.x,y:pos.y}); if(this.trail.length>18) this.trail.shift();
 };
 Particle.prototype.draw = function(ctx) {
   for (var i=0;i<this.trail.length;i++) {
@@ -1867,8 +2352,8 @@ Particle.prototype.draw = function(ctx) {
     ctx.beginPath(); ctx.arc(p.x,p.y,Math.max(r,.5),0,Math.PI*2);
     ctx.fillStyle=this.color+Math.round(a*255).toString(16).padStart(2,'0'); ctx.fill();
   }
-  var cx=this.from.x+(this.to.x-this.from.x)*this.t;
-  var cy=this.from.y+(this.to.y-this.from.y)*this.t;
+  var pos=this._getPos();
+  var cx=pos.x, cy=pos.y;
   ctx.beginPath(); ctx.arc(cx,cy,4,0,Math.PI*2); ctx.fillStyle=this.color; ctx.fill();
   ctx.beginPath(); ctx.arc(cx,cy,7,0,Math.PI*2); ctx.fillStyle=this.color+'28'; ctx.fill();
   if (this.label) {
@@ -1877,20 +2362,26 @@ Particle.prototype.draw = function(ctx) {
     ctx.font = lFont;
     var lw = ctx.measureText(this.label).width;
     var lx = cx, ly = cy - 12;
-
     if (hasInfo) {
       var pw = lw + 10, ph = 13;
       rrect(lx - pw/2, ly - ph + 3, pw, ph, 3);
       ctx.fillStyle = this.color + '28'; ctx.fill();
       ctx.strokeStyle = this.color + '70'; ctx.lineWidth = 0.8; ctx.stroke();
     }
-
-    ctx.font = lFont;
-    ctx.fillStyle = this.color;
-    ctx.textAlign = 'center';
+    ctx.font = lFont; ctx.fillStyle = this.color; ctx.textAlign = 'center';
     ctx.fillText(this.label, lx, ly);
   }
 };
+
+// Convenience: spawn a particle that routes through waypoints automatically
+function spawnParticle(from, to, color, label, speed, onDone, waypoints, passthroughs) {
+  var opts = {};
+  if (waypoints && waypoints.length) opts.waypoints = waypoints;
+  if (passthroughs && passthroughs.length) opts.passthroughs = passthroughs;
+  var p = new Particle(from, to, color, label, speed, onDone, opts);
+  particles.push(p);
+  return p;
+}
 
 function l1Pos(i) { var l1=layout.sms[i].l1; return {x:l1.x+l1.w/2,y:l1.y+l1.h/2}; }
 function busP(i) { var s=layout.sms[i]; return {x:s.x+s.w/2,y:layout.bus.y}; }
@@ -1959,6 +2450,26 @@ function getExplanation(type) {
         {text:'<strong>Bank conflict check</strong>', micro:'Best: 1 cycle. Worst: 32-way', delay:1100},
         {text:'<strong>SM-local only</strong> — no bus traffic.', micro:'Scope: CTA local', delay:1600},
       ], summary: currentArch==='hopper' ? 'DSMEM enables cross-SM shared memory within a cluster.' : 'Shared memory sidesteps coherency by being SM-private.'
+    },
+    atomic:{ title: currentArch==='apex' ? '⚛ atomicAdd → Apex Arbiter (SEQ# + ROB)' : '⚛ atomicAdd → Raw L2 Serialization', color:'#f59e0b',
+      steps: currentArch==='apex' ? [
+        {text:'<strong>All SMs issue atomicAdd</strong> simultaneously', micro:'ATOM → coherency bus', delay:0},
+        {text:'<strong>ATOM packets hit the Arbiter</strong> — each gets a SEQ#', micro:'Arbiter: seq++ per request', delay:500},
+        {text:'<strong>Arbiter queues requests</strong> — up to 6 deep', micro:'Round-robin grant policy', delay:1100},
+        {text:'<strong>GRANT fires</strong> to front-of-queue SM', micro:'GRANT → SM: exclusive access', delay:1800},
+        {text:'<strong>SM does read-modify-write</strong> on L2', micro:'ATOM → L2 RMW → ACK', delay:2600},
+        {text:'<strong>ACK returns → ROB retires</strong> in SEQ order', micro:'ROB: #N retired → next SM', delay:3400},
+        {text:'<strong>DATA sent back</strong> to originating SM', micro:'DATA#N → SM L1', delay:4200},
+      ] : [
+        {text:'<strong>All SMs issue atomicAdd</strong> simultaneously', micro:'ATOM → bus (no coordination)', delay:0},
+        {text:'<strong>All ATOM packets race for L2</strong>', micro:'L2 serializes them internally', delay:600},
+        {text:'<strong>L2 locks the cache line</strong> for each ATOM', micro:'One SM at a time — slow', delay:1400},
+        {text:'<strong>DATA returns</strong> to each SM in turn', micro:'No ROB — order not guaranteed', delay:2400},
+        {text:'<strong>On Apex</strong>: an explicit Arbiter would handle this cleanly', micro:'SEQ# + ROB = ordered, visible', delay:3200},
+      ],
+      summary: currentArch==='apex'
+        ? 'Arbiter: SEQ# tags enable ROB ordering. Contention meter shows cost of serialization.'
+        : 'Without an arbiter, atomics serialize hidden inside L2 — no visibility, high latency. Switch to Apex to see the full arbiter system.'
     }
   };
   return e[type];
@@ -2024,7 +2535,7 @@ function triggerScenario(type) {
       bubble(l1Pos(si).x,l1Pos(si).y,'cache miss','#ff6b6b',{sub:'not in L1'});
       particles.push(new Particle(l1Pos(si),busP(si),'#ff6b6b','RdReq',2,function(){
         bubble(busP(si).x,busP(si).y,'going to L2','#ff6b6b',{life:1.4,sub:'fetch from below'});
-        particles.push(new Particle(busP(si),l2Top(),'#ff6b6b','RdReq',2.5,function(){
+        spawnPassthrough(si,'#ff6b6b','RdReq',2.5,function(){
           stats.hits++; logEvent('L2: Hit → data returning','#ffa94d');
           bubble(l2Top().x,l2Top().y,'L2 found it','#51cf66',{life:1.5,sub:'data ready'});
           particles.push(new Particle(l2Top(),busP(si),'#ffa94d','DATA',2,function(){
@@ -2034,7 +2545,7 @@ function triggerScenario(type) {
               logEvent('SM'+si+': L1 → Shared','#339af0');
             }));
           }));
-        }));
+        });
       }));
       break;
     case 'write':
@@ -2044,11 +2555,11 @@ function triggerScenario(type) {
         bubble(l1Pos(si).x,l1Pos(si).y,'write bypass','#51cf66',{sub:'L1 skipped'});
         particles.push(new Particle(l1Pos(si),busP(si),'#51cf66','WR',2,function(){
           bubble(busP(si).x,busP(si).y,'skip L1','#8890a8',{life:1.2,sub:'straight to L2'});
-          particles.push(new Particle(busP(si),l2Top(),'#51cf66','WR',2.5,function(){
+          spawnPassthrough(si,'#51cf66','WR',2.5,function(){
             flash(layout.l2,'#ffa94d');
             bubble(l2Top().x,l2Top().y,'L2 updated','#ffa94d',{life:1.5,sub:'write absorbed'});
             logEvent('L2: Write absorbed','#ffa94d');
-          }));
+          });
         }));
       } else {
         sm.l1.state='modified'; setL1Dirty(si); stats.hits++;
@@ -2096,7 +2607,7 @@ function triggerScenario(type) {
       logEvent('SM'+si+': Write-back → L2','#ffa94d');
       bubble(l1Pos(si).x,l1Pos(si).y,'dirty evict','#ffa94d',{sub:'must flush out'});
       particles.push(new Particle(l1Pos(si),busP(si),'#ffa94d','WB',2,function(){
-        particles.push(new Particle(busP(si),l2Top(),'#ffa94d','WB',2.5,function(){
+        spawnPassthrough(si,'#ffa94d','WB',2.5,function(){
           flash(layout.l2,'#ffa94d'); sm.l1.state='shared'; writebackL1(si);
           bubble(l2Top().x,l2Top().y,'L2 absorbed','#ffa94d',{life:1.4,sub:'dirty → L2'});
           logEvent('L2: Write-back received','#ffa94d');
@@ -2114,7 +2625,7 @@ function triggerScenario(type) {
               }));
             }));
           },500);
-        }));
+        });
       }));
       break;
     case 'shared':
@@ -2152,6 +2663,9 @@ function triggerScenario(type) {
         }
       }
       break;
+    case 'atomic':
+      triggerAtomic();
+      return;
   }
   updateStats();
 }
@@ -2175,6 +2689,7 @@ function resetAll(silent) {
   autoTimer=0;
   // Also unpause on reset
   if (paused) togglePause();
+  resetArbiter();
   if(!silent) logEvent('Reset — all caches invalidated','#6b7094');
 }
 
@@ -2203,6 +2718,302 @@ function buildInstrChips() {
     container.appendChild(chip);
   });
 }
+
+// ════════════════════════════════════════
+// APEX ARBITER STATE SYSTEM
+// ════════════════════════════════════════
+var arbiterState = {
+  seqCounter: 0,
+  queue: [],       // pending requests not yet granted
+  rob: [],         // all in-flight: pending|returning|done
+  activeOps: [],   // [{seq, smIdx, phase, phaseName, phaseStart}] — live ops with phase tracking
+  grantCount: 0,
+  contentionLevel: 0,
+  recentGrants: [],
+  active: false,
+};
+
+
+function resetArbiter() {
+  arbiterState.seqCounter = 0;
+  arbiterState.queue = [];
+  arbiterState.rob = [];
+  arbiterState.activeOps = [];
+  arbiterState.grantCount = 0;
+  arbiterState.contentionLevel = 0;
+  arbiterState.recentGrants = [];
+  arbiterState.active = false;
+  updateArbiterDom();
+}
+
+function arbiterEnqueue(smIdx, type) {
+  if (currentArch !== 'apex') return -1;
+  var seq = arbiterState.seqCounter++;
+  arbiterState.queue.push({ seq: seq, smIdx: smIdx, type: type || 'ATOM', state: 'waiting' });
+  arbiterState.rob.push({ seq: seq, state: 'pending' });
+  // Track as active op in 'queued' phase
+  arbiterState.activeOps.push({ seq: seq, smIdx: smIdx, phase: 'queued', phaseName: ARB_PHASES.queued.label, phaseStart: Date.now() });
+  arbiterState.contentionLevel = Math.min(1, arbiterState.queue.length / 6);
+  arbiterState.active = true;
+  updateArbiterDom();
+  return seq;
+}
+
+function arbiterGrant(seq) {
+  if (currentArch !== 'apex') return;
+  var qEntry = null;
+  for (var qi = 0; qi < arbiterState.queue.length; qi++) {
+    if (arbiterState.queue[qi].seq === seq) { qEntry = arbiterState.queue[qi]; break; }
+  }
+  arbiterState.queue = arbiterState.queue.filter(function(e){ return e.seq !== seq; });
+  for (var ri2 = 0; ri2 < arbiterState.rob.length; ri2++) {
+    if (arbiterState.rob[ri2].seq === seq) { arbiterState.rob[ri2].state = 'returning'; break; }
+  }
+  // Advance activeOp phase: queued → granted
+  for (var ao = 0; ao < arbiterState.activeOps.length; ao++) {
+    if (arbiterState.activeOps[ao].seq === seq) {
+      arbiterState.activeOps[ao].phase = 'granted';
+      arbiterState.activeOps[ao].phaseName = ARB_PHASES.granted.label;
+      arbiterState.activeOps[ao].phaseStart = Date.now();
+      break;
+    }
+  }
+  arbiterState.grantCount++;
+  arbiterState.contentionLevel = Math.min(1, arbiterState.queue.length / 6);
+  var cycles = Math.round(2 + (qEntry ? arbiterState.queue.length : 0) * 8 + Math.random() * 6);
+  arbiterState.recentGrants.unshift({ seq: seq, cycles: cycles });
+  if (arbiterState.recentGrants.length > 4) arbiterState.recentGrants.pop();
+  updateArbiterDom();
+}
+
+function arbiterRetire(seq) {
+  if (currentArch !== 'apex') return;
+  for (var ri3 = 0; ri3 < arbiterState.rob.length; ri3++) {
+    if (arbiterState.rob[ri3].seq === seq) { arbiterState.rob[ri3].state = 'done'; break; }
+  }
+  setTimeout(function() {
+    arbiterState.rob = arbiterState.rob.filter(function(e){ return e.seq !== seq; });
+    if (arbiterState.queue.length === 0 && arbiterState.rob.length === 0) {
+      arbiterState.active = false;
+      arbiterState.contentionLevel = 0;
+    }
+    updateArbiterDom();
+  }, 900);
+  updateArbiterDom();
+}
+
+function updateArbiterDom() {
+  // State-only update — rendering is done entirely on canvas
+  // Nothing to update in DOM since we removed the arbiter panel
+}
+
+
+// ════════════════════════════════════════
+// LATENCY ANNOTATION TOASTS
+// ════════════════════════════════════════
+
+
+// ════════════════════════════════════════
+// APEX HELPERS
+// ════════════════════════════════════════
+function arbiterPos() {
+  if (!layout.arbiter) return l2Top();
+  return { x: layout.arbiter.x + layout.arbiter.w/2, y: layout.arbiter.y + layout.arbiter.h/2 };
+}
+function arbiterBot() {
+  if (!layout.arbiter) return l2Top();
+  return { x: layout.arbiter.x + layout.arbiter.w/2, y: layout.arbiter.y + layout.arbiter.h };
+}
+function arbiterTop() {
+  if (!layout.arbiter) return l2Top();
+  return { x: layout.arbiter.x + layout.arbiter.w/2, y: layout.arbiter.y };
+}
+// Point on the coherency bus directly above arbiter centre — waypoint for routed particles
+function arbiterBusEntry() {
+  if (!layout.arbiter || !layout.bus) return arbiterTop();
+  return { x: layout.arbiter.x + layout.arbiter.w/2, y: layout.bus.y };
+}
+// Route a particle through the bus correctly:
+// from l1 → busP(smIdx) → arbiterBusEntry → arbiterTop (two right-angle turns, no diagonals)
+function spawnRoutedToArbiter(smIdx, color, label, speed, onArrival) {
+  var fromPos  = l1Pos(smIdx);
+  var busJunct = busP(smIdx);
+  var busAbove = arbiterBusEntry();
+  var dest     = arbiterTop();
+  // leg 1: L1 → bus junction (vertical up)
+  particles.push(new Particle(fromPos, busJunct, color, label, speed, function() {
+    // leg 2: bus junction → arbiter bus entry (horizontal along bus)
+    particles.push(new Particle(busJunct, busAbove, color, label, speed * 1.1, function() {
+      // leg 3: bus entry → arbiter top (vertical down)
+      particles.push(new Particle(busAbove, dest, color, label, speed, function() {
+        if (onArrival) onArrival();
+      }));
+    }));
+  }));
+}
+// Route from arbiter back to SM via bus (reverse path)
+function spawnRoutedFromArbiter(smIdx, color, label, speed, onArrival) {
+  var fromPos  = arbiterTop();
+  var busAbove = arbiterBusEntry();
+  var busJunct = busP(smIdx);
+  var dest     = l1Pos(smIdx);
+  particles.push(new Particle(fromPos, busAbove, color, label, speed, function() {
+    particles.push(new Particle(busAbove, busJunct, color, label, speed * 1.1, function() {
+      particles.push(new Particle(busJunct, dest, color, label, speed, function() {
+        if (onArrival) onArrival();
+      }));
+    }));
+  }));
+}
+// Passthrough: flash arbiter briefly when a non-atomic op crosses it on Apex
+// Shows a dim pulse and a small label — particles routed through it as a waypoint
+function spawnPassthrough(smIdx, color, label, speed, onArrival) {
+  if (currentArch !== 'apex' || !layout.arbiter) {
+    // Non-Apex: go straight bus → L2 as before
+    particles.push(new Particle(busP(smIdx), l2Top(), color, label, speed, onArrival));
+    return;
+  }
+  var busJunct  = busP(smIdx);
+  var busAbove  = arbiterBusEntry();
+  var arbEntry  = arbiterTop();
+  var arbExit   = arbiterBot();
+  var l2dest    = l2Top();
+  // leg 1: bus junction → bus-above-arbiter (horizontal)
+  particles.push(new Particle(busJunct, busAbove, color, label, speed * 1.1, function() {
+    // leg 2: bus above → arbiter top (enter arbiter — vertical down)
+    particles.push(new Particle(busAbove, arbEntry, color, label, speed, function() {
+      // Passthrough pulse on arbiter
+      flashEffects.push({ x:layout.arbiter.x, y:layout.arbiter.y, w:layout.arbiter.w, h:layout.arbiter.h,
+        c: color, t:0, dur:0.35 });
+      // leg 3: arbiter top → arbiter bottom (pass through — very short, vertical)
+      particles.push(new Particle(arbEntry, arbExit, color, 'PASS', speed * 1.5, function() {
+        // leg 4: arbiter bottom → L2 top (exit to L2)
+        particles.push(new Particle(arbExit, l2dest, color, label, speed, function() {
+          if (onArrival) onArrival();
+        }));
+      }));
+    }));
+  }));
+}
+
+// ════════════════════════════════════════
+// ATOMIC SCENARIO
+// ════════════════════════════════════════
+function triggerAtomic() {
+  if (paused) togglePause();
+  var smCount2 = layout.sms.length;
+  var isApex = currentArch === 'apex';
+  showExplanation('atomic');
+
+  if (isApex) {
+    logEvent('atomicAdd: ' + smCount2 + ' SMs → Arbiter', '#f59e0b');
+    bubble((layout.bus.x1+layout.bus.x2)/2, layout.bus.y-12, 'atomic storm', '#f59e0b', { sub: smCount2+' reqs inbound', life:2.2 });
+
+    for (var ai = 0; ai < smCount2; ai++) {
+      (function(idx) {
+        setTimeout(function() {
+          // State only set on ARRIVAL — fixes "read before arrival"
+          stats.misses++;
+          bubble(l1Pos(idx).x, l1Pos(idx).y, 'atomicAdd', '#f59e0b', { sub:'→ bus', life:1.4 });
+          // Properly routed: L1 → busP → arbiterBusEntry → arbiterTop
+          spawnRoutedToArbiter(idx, '#f59e0b', 'ATOM', 2.5, function() {
+            // ← Particle has physically arrived at arbiter. NOW enqueue.
+            var seq = arbiterEnqueue(idx, 'ATOM');
+            logEvent('SM'+idx+': ATOM arrived → SEQ#'+seq, '#f59e0b');
+            flash(layout.arbiter, '#f59e0b');
+            bubble(arbiterPos().x, arbiterPos().y, 'SEQ#'+seq, '#f59e0b', { sub:'queued', life:1.2 });
+
+            // Staggered grant — wait for queue position
+            setTimeout(function() {
+              arbiterGrant(seq);
+              logEvent('ARBITER: GRANT SEQ#'+seq+' → SM'+idx, '#51cf66');
+              bubble(arbiterPos().x, arbiterPos().y, 'GRANT#'+seq, '#51cf66', { sub:'SM'+idx, life:1.4 });
+              // GRANT travels back: arbiterTop → arbiterBusEntry → busP → L1
+              spawnRoutedFromArbiter(idx, '#51cf66', 'GRANT', 2.8, function() {
+                // Phase: granted → rmw — SM dispatches the actual RMW to L2 via arbiter
+                (function(capturedSeq, capturedIdx) {
+                  for (var pa = 0; pa < arbiterState.activeOps.length; pa++) {
+                    if (arbiterState.activeOps[pa].seq === capturedSeq) {
+                      arbiterState.activeOps[pa].phase = 'rmw';
+                      arbiterState.activeOps[pa].phaseName = ARB_PHASES.rmw.label;
+                      arbiterState.activeOps[pa].phaseStart = Date.now();
+                      break;
+                    }
+                  }
+                  // RMW: arbiter bottom → L2 top (direct vertical — they are adjacent)
+                  particles.push(new Particle(arbiterBot(), l2Top(), '#f59e0b', 'ATOM', 2.5, function() {
+                    flash(layout.l2, '#f59e0b');
+                    logEvent('L2: RMW complete → ACK SEQ#'+capturedSeq, '#ffa94d');
+                    // Phase: rmw → ack
+                    for (var pb = 0; pb < arbiterState.activeOps.length; pb++) {
+                      if (arbiterState.activeOps[pb].seq === capturedSeq) {
+                        arbiterState.activeOps[pb].phase = 'ack';
+                        arbiterState.activeOps[pb].phaseName = ARB_PHASES.ack.label;
+                        arbiterState.activeOps[pb].phaseStart = Date.now();
+                        break;
+                      }
+                    }
+                    // ACK returns: L2 top → arbiter bottom (direct vertical)
+                    particles.push(new Particle(l2Top(), arbiterBot(), '#ffa94d', 'ACK', 2.5, function() {
+                      flash(layout.arbiter, '#ffa94d');
+                      // Phase: ack → retiring
+                      for (var pc = 0; pc < arbiterState.activeOps.length; pc++) {
+                        if (arbiterState.activeOps[pc].seq === capturedSeq) {
+                          arbiterState.activeOps[pc].phase = 'retiring';
+                          arbiterState.activeOps[pc].phaseName = ARB_PHASES.retiring.label;
+                          arbiterState.activeOps[pc].phaseStart = Date.now();
+                          break;
+                        }
+                      }
+                      arbiterRetire(capturedSeq);
+                      bubble(arbiterPos().x, arbiterPos().y, 'ACK#'+capturedSeq+' retired', '#ffa94d', { sub:'ROB done', life:1.3 });
+                      // DATA back to SM: routed via bus
+                      spawnRoutedFromArbiter(capturedIdx, '#ffa94d', 'DATA', 2.2, function() {
+                        arbiterState.activeOps = arbiterState.activeOps.filter(function(e){ return e.seq !== capturedSeq; });
+                        layout.sms[capturedIdx].l1.state = 'modified'; setL1Dirty(capturedIdx);
+                        flash(layout.sms[capturedIdx].l1, '#f59e0b');
+                        stats.hits++; updateStats();
+                      });
+                    }));
+                  }));
+                })(seq, idx);
+              });
+            }, idx * 480 + 350);
+          });
+        }, idx * 220);
+      })(ai);
+    }
+  } else {
+    // Non-Apex: raw bus contention, no arbiter coordination
+    logEvent('atomicAdd: raw bus contention (no arbiter)', '#f59e0b');
+    bubble((layout.bus.x1+layout.bus.x2)/2, layout.bus.y, 'no arbiter!', '#ff6b6b', { sub:'serialized at L2 (slow)', life:2.2 });
+    for (var ri = 0; ri < smCount2; ri++) {
+      (function(idx2) {
+        setTimeout(function() {
+          stats.misses++;
+          bubble(l1Pos(idx2).x, l1Pos(idx2).y, 'atomicAdd', '#f59e0b', { sub:'racing for bus', life:1.4 });
+          particles.push(new Particle(l1Pos(idx2), busP(idx2), '#f59e0b', 'ATOM', 2.5, function() {
+            particles.push(new Particle(busP(idx2), l2Top(), '#f59e0b', 'ATOM', 2.5, function() {
+              flash(layout.l2, '#f59e0b');
+              logEvent('L2: atomic locked (SM'+idx2+')', '#ffa94d');
+              setTimeout(function() {
+                particles.push(new Particle(l2Top(), busP(idx2), '#ffa94d', 'DATA', 2, function() {
+                  particles.push(new Particle(busP(idx2), l1Pos(idx2), '#ffa94d', 'DATA', 2, function() {
+                    layout.sms[idx2].l1.state = 'modified'; setL1Dirty(idx2);
+                    flash(layout.sms[idx2].l1, '#f59e0b');
+                    stats.hits++; updateStats();
+                  }));
+                }));
+              }, idx2 * 380);
+            }));
+          }));
+        }, idx2 * 130);
+      })(ri);
+    }
+  }
+  updateStats();
+}
+
 
 function startApp() {
   resize();
