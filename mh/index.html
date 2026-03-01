@@ -759,18 +759,18 @@ var BLOCK_INFO = {
     descHTML: `
 <div class="arb-section">
   <div class="arb-section-title">What it does</div>
-  <div class="arb-note">Every <code>atomicAdd</code>, <code>atomicCAS</code>, <code>atomicExch</code> etc. passes through this block. Without it, multiple SMs race to L2 and corrupt each other's read-modify-write. The arbiter serializes them with zero programmer effort.</div>
+  <div class="arb-note">Every <code>atomicAdd</code>, <code>atomicCAS</code>, <code>atomicExch</code> passes through this block. Without it, multiple SMs race to L2 simultaneously and corrupt each other's read-modify-write — the lost-update bug. The arbiter serializes all atomics to the same address with zero programmer effort.</div>
 </div>
 
 <div class="arb-section">
   <div class="arb-section-title">Full pipeline</div>
   <div class="arb-pipeline">
-    <span class="arb-step amber">ATOM arrives</span><span class="arb-arrow">→</span>
-    <span class="arb-step amber">SEQ#</span><span class="arb-arrow">→</span>
-    <span class="arb-step amber">QUEUE</span><span class="arb-arrow">→</span>
-    <span class="arb-step green">GRANT</span><span class="arb-arrow">→</span>
-    <span class="arb-step blue">RMW@L2</span><span class="arb-arrow">→</span>
-    <span class="arb-step orange">ACK</span><span class="arb-arrow">→</span>
+    <span class="arb-step amber">ATOM</span><span class="arb-arrow">→</span>
+    <span class="arb-step amber">interface</span><span class="arb-arrow">→</span>
+    <span class="arb-step amber">SEQ# + queue</span><span class="arb-arrow">→</span>
+    <span class="arb-step green">GRANT→SM</span><span class="arb-arrow">→</span>
+    <span class="arb-step blue">RMW through arbiter→L2</span><span class="arb-arrow">→</span>
+    <span class="arb-step orange">ACK#N←L2</span><span class="arb-arrow">→</span>
     <span class="arb-step purple">ROB retire</span><span class="arb-arrow">→</span>
     <span class="arb-step green">DATA→SM</span>
   </div>
@@ -779,92 +779,95 @@ var BLOCK_INFO = {
 <hr class="arb-divider">
 
 <div class="arb-section">
-  <div class="arb-section-title">① SEQ# tagging</div>
+  <div class="arb-section-title amber">① Bus interface + back-pressure</div>
   <div class="arb-row">
     <span class="arb-row-label">What:</span>
-    <span class="arb-row-val">Each incoming ATOM gets a monotonically increasing sequence number stamped on arrival. <span class="arb-tag amber">SEQ#000</span> <span class="arb-tag amber">SEQ#001</span> …</span>
+    <span class="arb-row-val">The single entry point between the coherency bus and the arbiter. All ATOM particles arrive here first. This is where back-pressure manifests — if the queue is full (6 slots), the particle stalls <em>at this line</em> and retries until space opens. The SM warp is stalled for that entire duration.</span>
   </div>
   <div class="arb-row">
-    <span class="arb-row-label">Why:</span>
-    <span class="arb-row-val">L2 banks respond out-of-order. Without a SEQ#, we can't tell which result belongs to which request. The tag is the anchor for the ROB to re-order at the end.</span>
+    <span class="arb-row-label">Why a line:</span>
+    <span class="arb-row-val">The interface is a distinct named boundary, not a bus segment. It represents the hardware FIFO entry gate — one logical point, not a block.</span>
   </div>
 </div>
 
 <div class="arb-section">
-  <div class="arb-section-title">② Incoming queue (hold up)</div>
+  <div class="arb-section-title amber">② SEQ# tagging + queue</div>
   <div class="arb-row">
     <span class="arb-row-label">What:</span>
-    <span class="arb-row-val">Up to <strong>6 requests</strong> wait here in arrival order. New arrivals beyond 6 cause back-pressure (the SM stalls).</span>
+    <span class="arb-row-val">On admission, each ATOM gets a monotonically increasing sequence number — <span class="arb-tag amber">SEQ#0</span>, <span class="arb-tag amber">SEQ#1</span>, … assigned strictly in arrival order. Simultaneously, a slot is reserved in both the Incoming Queue (left) and the Hold Buffer/ROB (right).</span>
+  </div>
+  <div class="arb-row">
+    <span class="arb-row-label">Why:</span>
+    <span class="arb-row-val">L2 banks complete out of order. Without a SEQ# the arbiter can't match a returning ACK to the right SM. The number travels with the request all the way to L2 and back — it's the ordering anchor for the ROB.</span>
+  </div>
+  <div class="arb-row">
+    <span class="arb-row-label">Capacity:</span>
+    <span class="arb-row-val"><strong>6 in-flight ops maximum.</strong> Queue and ROB both have 6 slots. Arrivals beyond 6 stall at the interface until a slot frees.</span>
+  </div>
+</div>
+
+<div class="arb-section">
+  <div class="arb-section-title green">③ GRANT (control signal only)</div>
+  <div class="arb-row">
+    <span class="arb-row-label">What:</span>
+    <span class="arb-row-val">The arbiter pops the front-of-queue entry and sends a <span class="arb-tag green">GRANT</span> back to that SM's warp scheduler. This is a <em>control signal</em>, not data — it travels only to the bus junction (warp scheduler), not all the way to L1. The SM holds the atomic operand in a register already.</span>
   </div>
   <div class="arb-row">
     <span class="arb-row-label">Policy:</span>
-    <span class="arb-row-val"><strong>Round-robin grant</strong> — front-of-queue SM gets exclusive access. One at a time, no exceptions.</span>
-  </div>
-  <div class="arb-row">
-    <span class="arb-row-label">Cost:</span>
-    <span class="arb-row-val">~2 cycles idle, up to ~32 cycles fully contended (8 SMs × ~4 cyc each). This is the serialization penalty you pay for correctness.</span>
+    <span class="arb-row-val"><strong>FIFO arrival order.</strong> The SM that arrived first gets granted first. The arbiter issues grants back-to-back as fast as requests arrive — multiple RMWs can be in-flight through the arbiter simultaneously. Mutual exclusion on the cache line lives at L2, not here.</span>
   </div>
 </div>
 
 <div class="arb-section">
-  <div class="arb-section-title green">③ Grant</div>
+  <div class="arb-section-title blue">④ RMW through arbiter → L2</div>
   <div class="arb-row">
-    <span class="arb-row-label">What:</span>
-    <span class="arb-row-val">Arbiter sends a <span class="arb-tag green">GRANT</span> back to the winning SM. Only that SM may now proceed with the read-modify-write. All others wait in queue.</span>
+    <span class="arb-row-label">Path:</span>
+    <span class="arb-row-val">SM bus junction → bus → arbiter top (enters block) → arbiter bottom (exits block) → L2. The particle physically traverses the arbiter block. The arbiter is a pass-through for ordering and sequencing — the actual atomic lock is held by L2 on the cache line.</span>
   </div>
   <div class="arb-row">
-    <span class="arb-row-label">Why:</span>
-    <span class="arb-row-val">Mutual exclusion on the cache line. Without a grant, two SMs could both read the old value before either writes back — classic lost-update bug.</span>
-  </div>
-</div>
-
-<div class="arb-section">
-  <div class="arb-section-title blue">④ RMW at L2</div>
-  <div class="arb-row">
-    <span class="arb-row-label">What:</span>
-    <span class="arb-row-val">The granted SM dispatches <span class="arb-tag blue">ATOM</span> → L2. L2 performs the Read-Modify-Write atomically: read old value, apply op (add/cas/exch), write new value, all in one locked step.</span>
+    <span class="arb-row-label">At L2:</span>
+    <span class="arb-row-val">L2 performs Read-Modify-Write atomically in one locked step: read old value → apply op → write new value. <strong>~200 cycles</strong> round-trip. This is why atomics are expensive — full L2 latency, serialized.</span>
   </div>
   <div class="arb-row">
-    <span class="arb-row-label">Latency:</span>
-    <span class="arb-row-val">~200 cycles round-trip to L2 for the RMW. This is why atomics are expensive — you pay full L2 latency per operation, serialized.</span>
+    <span class="arb-row-label">Jitter:</span>
+    <span class="arb-row-val">Different L2 banks take different amounts of time. A random per-op latency (0–500ms visual) models this — it's what causes ACKs to return out of order, making the ROB actually do work.</span>
   </div>
 </div>
 
 <div class="arb-section">
-  <div class="arb-section-title orange">⑤ ACK ← L2</div>
+  <div class="arb-section-title orange">⑤ ACK ← L2 (out of order)</div>
   <div class="arb-row">
     <span class="arb-row-label">What:</span>
-    <span class="arb-row-val">L2 sends <span class="arb-tag orange">ACK#N</span> back to the arbiter with the result value and the original SEQ# tag.</span>
-  </div>
-  <div class="arb-row">
-    <span class="arb-row-label">Out-of-order:</span>
-    <span class="arb-row-val">Multiple L2 banks may complete in any order. <span class="arb-tag orange">ACK#5</span> might arrive before <span class="arb-tag orange">ACK#3</span> if they hit different banks. The ROB handles this.</span>
+    <span class="arb-row-val">L2 sends <span class="arb-tag orange">ACK#N</span> back to the arbiter bottom carrying the result value and original SEQ# tag. Because multiple RMWs are in-flight simultaneously, <span class="arb-tag orange">ACK#2</span> may arrive before <span class="arb-tag orange">ACK#0</span>. The SEQ# is the only way to know which result belongs to which SM.</span>
   </div>
 </div>
 
 <div class="arb-section">
-  <div class="arb-section-title purple">⑥ Hold Buffer (ROB)</div>
+  <div class="arb-section-title purple">⑥ Hold Buffer (ROB) — the reordering</div>
   <div class="arb-row">
     <span class="arb-row-label">What:</span>
-    <span class="arb-row-val">Reorder Buffer. Holds all in-flight ACKs by SEQ#. Waits until the <em>next expected</em> SEQ# arrives before retiring — ensures DATA is returned to SMs in the original request order.</span>
+    <span class="arb-row-val">Reorder Buffer with 6 slots, one per in-flight op, allocated at enqueue time in SEQ order. The ROB head always points to the lowest unretired SEQ#. Retirement only proceeds from the head.</span>
   </div>
   <div class="arb-row">
-    <span class="arb-row-label">States:</span>
+    <span class="arb-row-label">States per slot:</span>
     <span class="arb-row-val">
-      <span class="arb-tag amber">⏳ pending</span> — dispatched to L2, ACK not yet back<br>
-      <span class="arb-tag blue">✦ complete</span> — ACK received, waiting for earlier SEQ#s to retire first<br>
-      <span class="arb-tag purple">↩ retiring</span> — head-of-line, DATA being sent to SM now<br>
-      <span class="arb-tag green">✓ done</span> — retired, DATA delivered
+      <span class="arb-tag amber">⏳ pending</span> — RMW dispatched, ACK not back yet<br>
+      <span class="arb-tag blue">✦ complete</span> — ACK received, result in hand — but blocked behind earlier pending slots<br>
+      <span class="arb-tag green">✓ done</span> — head-of-line, DATA being sent to SM, slot cleaning up
     </span>
   </div>
   <div class="arb-row">
+    <span class="arb-row-label">Example:</span>
+    <span class="arb-row-val">SEQ#2 finishes before SEQ#0. ROB slot 2 flips to <span class="arb-tag blue">✦ complete</span> but cannot retire — slot 0 is still <span class="arb-tag amber">⏳ pending</span>. When SEQ#0 finally arrives: slot 0 retires → slot 1 checked → slot 2 checked → cascade drain in one pass. All three DATA packets leave in order 0, 1, 2.</span>
+  </div>
+  <div class="arb-row">
     <span class="arb-row-label">Why order?</span>
-    <span class="arb-row-val">The SM that issued atomicAdd expects the old value back. If we returned results out of order, SM1 might get SM3's result. ROB prevents this: you always get your own old value.</span>
+    <span class="arb-row-val">Each SM expects its own old value back — not another SM's result. Out-of-order delivery would give SM1 SM3's pre-op value. The ROB guarantees every SM gets exactly the result of its own atomic, in the correct order.</span>
   </div>
 </div>
 
 <hr class="arb-divider">
-<div class="arb-note">Without this arbiter, atomics serialize inside L2 invisibly — you get correctness but zero visibility into latency or contention. Apex exposes the full mechanism.</div>`,
+<div class="arb-note">Without this arbiter, atomics serialize inside L2 invisibly — you get correctness but zero visibility into latency, back-pressure, or reordering. The interface line, queue, and ROB are all implicit in real silicon. Apex makes every stage explicit.</div>`,
     chips: [{t:'NEW: Apex',c:'#f59e0b'},{t:'seq-numbered',c:'#339af0'},{t:'ROB ordered',c:'#51cf66'}],
     connects: [
       {to:'bus',   arrow:'←', why:'Receives all atomic requests from SMs via the coherency bus'},
@@ -1409,8 +1412,8 @@ function updateTooltip(hit, clientX, clientY) {
     var arbGrants = arbiterState.recentGrants;
     var latFracTT = arbiterState.contentionLevel;
     var cycTT = Math.round(2 + latFracTT * 30);
-    var statusTT = arbQ.length >= 4 ? 'SATURATED' : arbiterState.active ? 'ACTIVE' : 'IDLE';
-    var statusColor = arbQ.length >= 4 ? '#ff6b6b' : arbiterState.active ? '#fbbf24' : '#4a5080';
+    var statusTT = arbQ.length >= QUEUE_CAPACITY - 2 ? 'SATURATED' : arbiterState.active ? 'ACTIVE' : 'IDLE';
+    var statusColor = arbQ.length >= QUEUE_CAPACITY - 2 ? '#ff6b6b' : arbiterState.active ? '#fbbf24' : '#4a5080';
 
     // ── Live ops table — what each in-flight op is doing RIGHT NOW ──
     var liveOpsHtml = '';
@@ -1989,7 +1992,9 @@ function drawAnimatedFrame(dt, time) {
 
   if (autoMode) {
     autoTimer+=dt;
-    if (autoTimer>2.8) {
+    // Atomic scenario takes 4-6s end-to-end — use a longer interval and skip if still active
+    var autoInterval = (currentArch === 'apex' && arbiterState.active) ? 99 : 5.0;
+    if (autoTimer > autoInterval) {
       autoTimer=0;
       var ops = currentArch === 'apex'
         ? ['read','write','invalidate','writeback','shared','atomic']
@@ -2111,6 +2116,28 @@ function drawSceneContent(dt, time) {
   // ── Draw Apex arbiter (full-width block) and cohDir (L2 sub-region) ──
   if (currentArch === 'apex' && layout.arbiter) {
     var arb = layout.arbiter;
+
+    // ── Bus-to-arbiter interface line ──
+    // A single vertical tick at the arbiterBusEntry point, between bus and arbiter top.
+    // This is the physical interface where back-pressure manifests when the queue is full.
+    var ifaceX = arb.x + arb.w / 2;
+    var ifaceY0 = layout.bus.y;       // bus level
+    var ifaceY1 = arb.y;              // arbiter top
+    var qFull = arbiterState.queue.length >= QUEUE_CAPACITY;
+    ctx.save();
+    ctx.strokeStyle = qFull ? '#ff6b6b' : '#f59e0b60';
+    ctx.lineWidth   = qFull ? 2 : 1;
+    if (qFull) { ctx.shadowColor = '#ff6b6b'; ctx.shadowBlur = 6; }
+    ctx.beginPath(); ctx.moveTo(ifaceX, ifaceY0); ctx.lineTo(ifaceX, ifaceY1); ctx.stroke();
+    // Small horizontal crossbar at the interface point (shows it's a named boundary)
+    var tickW = qFull ? 10 : 6;
+    ctx.beginPath(); ctx.moveTo(ifaceX - tickW, ifaceY0 + 2); ctx.lineTo(ifaceX + tickW, ifaceY0 + 2); ctx.stroke();
+    ctx.restore();
+    // Interface label
+    ctx.font = '500 5px "JetBrains Mono"'; ctx.textAlign = 'left';
+    ctx.fillStyle = qFull ? '#ff6b6b90' : '#f59e0b35';
+    ctx.fillText(qFull ? '⚠ STALL' : 'interface', ifaceX + tickW + 3, ifaceY0 + 5);
+
     var arbTime2 = Date.now();
     var arbPulse = Math.sin(arbTime2/600) * 0.3 + 0.7;
     var isHovArb = hoveredBlock && hoveredBlock.type === 'arbiter';
@@ -2136,8 +2163,8 @@ function drawSceneContent(dt, time) {
 
     ctx.font = '700 8.5px "JetBrains Mono"'; ctx.fillStyle = '#f59e0b'; ctx.textAlign = 'left';
     ctx.fillText('⚖ ATOMIC ARBITER', arb.x + 12, arb.y + 13);
-    var statusText = arbiterState.queue.length >= 4 ? 'SATURATED' : arbiterState.active ? 'ACTIVE' : 'IDLE';
-    var statusColor = arbiterState.queue.length >= 4 ? '#ff6b6b' : arbiterState.active ? '#fbbf24' : '#4a5080';
+    var statusText = arbiterState.queue.length >= QUEUE_CAPACITY - 2 ? 'SATURATED' : arbiterState.active ? 'ACTIVE' : 'IDLE';
+    var statusColor = arbiterState.queue.length >= QUEUE_CAPACITY - 2 ? '#ff6b6b' : arbiterState.active ? '#fbbf24' : '#4a5080';
     ctx.font = '600 7px "JetBrains Mono"'; ctx.fillStyle = statusColor; ctx.textAlign = 'right';
     ctx.fillText('● ' + statusText, arb.x + arb.w - 12, arb.y + 13);
 
@@ -2165,14 +2192,18 @@ function drawSceneContent(dt, time) {
       var sx2 = qSlotStartX + qs2 * (qSlotW2 + slotGap2);
       var qe2 = qs2 < arbiterState.queue.length ? arbiterState.queue[qs2] : null;
       ctx.fillStyle = qe2 ? '#f59e0b22' : '#141620';
-      ctx.strokeStyle = qe2 ? '#f59e0baa' : '#252840'; ctx.lineWidth = qe2 ? 1.1 : 0.7;
+      // granted slots show green (RMW dispatched, slot still held until arbiter entry)
+      var qGranted = qe2 && qe2.granted;
+      ctx.fillStyle = qGranted ? '#51cf6618' : (qe2 ? '#f59e0b22' : '#141620');
+      ctx.strokeStyle = qGranted ? '#51cf6680' : (qe2 ? '#f59e0baa' : '#252840');
+      ctx.lineWidth = qe2 ? 1.1 : 0.7;
       rrect(sx2, qSlotY, qSlotW2, slotH2, 3); ctx.fill(); ctx.stroke();
       ctx.font = '700 6px "JetBrains Mono"'; ctx.textAlign = 'center';
-      ctx.fillStyle = qe2 ? '#fbbf24' : '#2a2d45';
+      ctx.fillStyle = qGranted ? '#51cf66' : (qe2 ? '#fbbf24' : '#2a2d45');
       ctx.fillText(qe2 ? '#'+qe2.seq : '—', sx2 + qSlotW2/2, qSlotY + 10);
       // SM label below slot
       if (qe2) {
-        ctx.font = '500 5px "JetBrains Mono"'; ctx.fillStyle = '#f59e0b60';
+        ctx.font = '500 5px "JetBrains Mono"'; ctx.fillStyle = qGranted ? '#51cf6660' : '#f59e0b60';
         ctx.fillText('SM'+qe2.smIdx, sx2 + qSlotW2/2, qSlotY + slotH2 + 6);
       }
     }
@@ -2965,6 +2996,8 @@ function buildInstrChips() {
 // ════════════════════════════════════════
 // APEX ARBITER STATE SYSTEM
 // ════════════════════════════════════════
+var QUEUE_CAPACITY = 6;  // hard limit — arrivals beyond this stall at the bus interface
+
 var arbiterState = {
   seqCounter: 0,
   queue: [],       // pending requests waiting for grant (arrival order = grant order)
@@ -2991,16 +3024,16 @@ function resetArbiter() {
 
 function arbiterEnqueue(smIdx, type) {
   if (currentArch !== 'apex') return -1;
+  // Queue full → back-pressure. Caller stalls the particle at the bus interface.
+  if (arbiterState.queue.length >= QUEUE_CAPACITY) return -1;
   var seq = arbiterState.seqCounter++;
   arbiterState.queue.push({ seq: seq, smIdx: smIdx, type: type || 'ATOM' });
   arbiterState.rob.push({ seq: seq, smIdx: smIdx, state: 'pending' });
   arbiterState.activeOps.push({ seq: seq, smIdx: smIdx, phase: 'queued', phaseName: ARB_PHASES.queued.label, phaseStart: Date.now() });
-  arbiterState.contentionLevel = Math.min(1, arbiterState.queue.length / 6);
+  arbiterState.contentionLevel = Math.min(1, arbiterState.queue.length / QUEUE_CAPACITY);
   arbiterState.active = true;
-  // Bubble on the queue slot this entry just landed in
   var qPos = queueSlotPos(arbiterState.queue.length - 1);
   bubble(qPos.x, qPos.y, '#'+seq, '#f59e0b', { sub:'SM'+smIdx+' queued', life:1.1 });
-  // Bubble on the ROB slot (same ordinal — ROB mirrors queue order at enqueue)
   var rPos = robSlotPos(arbiterState.rob.length - 1);
   bubble(rPos.x, rPos.y, '#'+seq, '#f59e0b', { sub:'⏳ pending', life:1.0 });
   updateArbiterDom();
@@ -3009,17 +3042,18 @@ function arbiterEnqueue(smIdx, type) {
 
 function arbiterGrant(seq) {
   if (currentArch !== 'apex') return;
-  var qEntry = null;
+  // Mark as granted — change phase and show bubble, but KEEP the queue slot.
+  // The slot stays visible until the RMW physically enters the arbiter (arbiterDequeue).
+  // This way the queue shows the full occupancy picture: pending + in-transit.
   var qIdx = -1;
   for (var qi = 0; qi < arbiterState.queue.length; qi++) {
-    if (arbiterState.queue[qi].seq === seq) { qEntry = arbiterState.queue[qi]; qIdx = qi; break; }
+    if (arbiterState.queue[qi].seq === seq) { qIdx = qi; break; }
   }
-  // Bubble on the queue slot being vacated
   if (qIdx >= 0) {
+    arbiterState.queue[qIdx].granted = true;  // visually distinguish granted-but-not-entered
     var qPos = queueSlotPos(qIdx);
     bubble(qPos.x, qPos.y, '#'+seq+' granted', '#51cf66', { sub:'→ RMW', life:1.0 });
   }
-  arbiterState.queue = arbiterState.queue.filter(function(e){ return e.seq !== seq; });
   for (var ao = 0; ao < arbiterState.activeOps.length; ao++) {
     if (arbiterState.activeOps[ao].seq === seq) {
       arbiterState.activeOps[ao].phase = 'granted';
@@ -3029,10 +3063,18 @@ function arbiterGrant(seq) {
     }
   }
   arbiterState.grantCount++;
-  arbiterState.contentionLevel = Math.min(1, arbiterState.queue.length / 6);
   var cycles = Math.round(2 + arbiterState.queue.length * 8 + Math.random() * 6);
   arbiterState.recentGrants.unshift({ seq: seq, cycles: cycles });
   if (arbiterState.recentGrants.length > 4) arbiterState.recentGrants.pop();
+  updateArbiterDom();
+}
+
+// Called when the granted RMW particle physically enters the arbiter top.
+// Only now does the queue slot free up — back-pressure lifts here.
+function arbiterDequeue(seq) {
+  if (currentArch !== 'apex') return;
+  arbiterState.queue = arbiterState.queue.filter(function(e){ return e.seq !== seq; });
+  arbiterState.contentionLevel = Math.min(1, arbiterState.queue.length / QUEUE_CAPACITY);
   updateArbiterDom();
 }
 
@@ -3252,33 +3294,35 @@ function triggerAtomic() {
   showExplanation('atomic');
 
   if (isApex) {
+    // Don't re-enter while a run is in progress — particles still in flight,
+    // new closure would orphan the existing grantQueue
+    if (arbiterState.active) return;
     logEvent('atomicAdd: ' + smCount2 + ' SMs → Arbiter', '#f59e0b');
     bubble((layout.bus.x1+layout.bus.x2)/2, layout.bus.y-12, 'atomic storm', '#f59e0b', { sub: smCount2+' reqs inbound', life:2.0 });
 
-    // Reset arbiter for a clean scenario each time atomicAdd is triggered
-    resetArbiter();
+    // Only reset if arbiter is fully idle — don't wipe in-flight state
+    if (!arbiterState.active) resetArbiter();
 
     // Track which SEQs have been enqueued so grants fire only after real enqueue
-    // enqueuedSeqs[seq] = smIdx, filled as particles physically arrive
     var enqueuedSeqs = {};
     var enqueuedCount = 0;
-    var grantQueue = []; // pending grant requests waiting for enqueue
-    // grantInFlight: true while a grant's RMW is traversing the arbiter block (legs 1-3).
-    // Enforces arbiter serialization — only one RMW may be inside the arbiter at a time.
-    var grantInFlight = false;
+    var grantQueue = [];
 
-    // Try to process the next pending grant — called on enqueue or when previous leg3 completes
+    // Arbiter pops the queue head and issues grants immediately in arrival order.
+    // No artificial serialization at the arbiter block — the true mutual exclusion
+    // point is the L2 atomic lock on the cache line. Multiple RMWs can be in-flight
+    // through the arbiter simultaneously; L2 handles ordering via its lock.
     function tryNextGrant() {
-      if (grantInFlight) return;           // previous RMW still in arbiter block, wait
       if (grantQueue.length === 0) return;
       var next = grantQueue[0];
-      if (enqueuedSeqs[next.seq] === undefined) return; // not yet arrived at arbiter, wait
-      grantInFlight = true;
+      if (enqueuedSeqs[next.seq] === undefined) return;
       grantQueue.shift();
-      issueGrant(next.seq, next.smIdx, next.onGrantComplete);
+      issueGrant(next.seq, next.smIdx);
+      // Immediately try the next — arbiter can issue multiple grants back-to-back
+      tryNextGrant();
     }
 
-    function issueGrant(seq, smIdx, onGrantComplete) {
+    function issueGrant(seq, smIdx) {
       arbiterGrant(seq);
       logEvent('ARBITER: GRANT SEQ#'+seq+' → SM'+smIdx, '#51cf66');
       spawnGrantToSM(smIdx, function() {
@@ -3296,11 +3340,13 @@ function triggerAtomic() {
           var arbEntry   = arbiterTop();
           var arbExit    = arbiterBot();
           var l2dest     = l2Top();
-          particles.push(new Particle(smBusJunct, busAbove, '#f59e0b', 'RMW', 2.5, function() {
-            particles.push(new Particle(busAbove, arbEntry, '#f59e0b', 'RMW', 2.2, function() {
+          particles.push(new Particle(smBusJunct, busAbove, '#f59e0b', 'ATOM', 2.5, function() {
+            particles.push(new Particle(busAbove, arbEntry, '#f59e0b', 'ATOM', 2.2, function() {
+              // RMW physically entering the arbiter — queue slot frees now
+              arbiterDequeue(capturedSeq);
               particles.push(new Particle(arbEntry, arbExit, '#f59e0b', 'ATOM', 2.0, function() {
-                grantInFlight = false;                  // RMW through arbiter, next grant can proceed
-                if (onGrantComplete) onGrantComplete();
+                // Arbiter exit — RMW now heading to L2. No serialization here;
+                // L2 atomic lock handles mutual exclusion on the cache line.
                 particles.push(new Particle(arbExit, l2dest, '#f59e0b', 'ATOM', 2.0, function() {
                   flash(layout.l2, '#f59e0b');
                   logEvent('L2: RMW SEQ#'+capturedSeq+' complete', '#ffa94d');
@@ -3312,9 +3358,12 @@ function triggerAtomic() {
                       break;
                     }
                   }
-                  // L2 jitter: random extra latency models different bank response times
-                  // This causes ACKs to return out of order → ROB reordering is visible
-                  var l2Jitter = Math.random() * 500;
+                  // L2 jitter: bimodal — 60% fast bank (50-180ms), 40% busy bank (320-600ms).
+                  // Models real L2 bank contention. Makes out-of-order ACK returns
+                  // clearly visible in the ROB rather than just occasionally.
+                  var l2Jitter = Math.random() < 0.6
+                    ? 50  + Math.random() * 130   // fast path
+                    : 320 + Math.random() * 280;  // slow path (bank busy)
                   setTimeout(function() {
                     particles.push(new Particle(l2Top(), arbExit, '#ffa94d', 'ACK#'+capturedSeq, 2.0, function() {
                       flash(layout.arbiter, '#ffa94d');
@@ -3337,35 +3386,39 @@ function triggerAtomic() {
       });
     }
 
-    // Phase 1: all SMs send ATOM, enqueue on arrival, queue grants in FIFO order
+    // All SMs running the same kernel hit atomicAdd within a very tight window —
+    // a few warp scheduler quanta. 0-80ms visual spread ensures all 4 arrive at
+    // the arbiter before any grant's RMW has had time to drain a queue slot.
     for (var ai = 0; ai < smCount2; ai++) {
       (function(idx) {
+        var launchDelay = Math.random() * 80;
         setTimeout(function() {
           stats.misses++;
           if (bubbles.length > 6) bubbles.splice(0, bubbles.length - 6);
           bubble(l1Pos(idx).x, l1Pos(idx).y, 'atomicAdd', '#f59e0b', { sub:'→ bus', life:1.0 });
           spawnRoutedToArbiter(idx, '#f59e0b', 'ATOM', 2.5, function() {
-            var seq = arbiterEnqueue(idx, 'ATOM');
-            enqueuedSeqs[seq] = idx;
-            enqueuedCount++;
-            logEvent('SM'+idx+': ATOM arrived → SEQ#'+seq, '#f59e0b');
-            flash(layout.arbiter, '#f59e0b');
-            // Queue a grant for this SEQ in FIFO order — will fire once enqueued
-            // The grant for SEQ N fires only after SEQ N-1's RMW has entered the arbiter
-            // (onGrantComplete callback chains to next grant)
-            var grantEntry = { seq: seq, smIdx: idx, onGrantComplete: null };
-            // Wire up chain: this grant's onComplete triggers next grant attempt
-            grantEntry.onGrantComplete = function() {
-              tryNextGrant();
-            };
-            grantQueue.push(grantEntry);
-
-            // If this is the first enqueue, or all previous were already enqueued, try now
-            if (grantQueue[0] && grantQueue[0].seq === seq) {
-              tryNextGrant();
+            // Particle physically at arbiterBusEntry. Try to enqueue — may be full.
+            function tryEnqueue() {
+              var seq = arbiterEnqueue(idx, 'ATOM');
+              if (seq === -1) {
+                // Queue full — stall here, show backpressure, retry in 200ms
+                var iface = arbiterBusEntry();
+                bubble(iface.x + (idx - 1.5) * 14, iface.y, 'STALLED', '#ff6b6b', { sub:'queue full', life:0.7 });
+                setTimeout(tryEnqueue, 200);
+                return;
+              }
+              // Accepted
+              enqueuedSeqs[seq] = idx;
+              enqueuedCount++;
+              logEvent('SM'+idx+': ATOM arrived → SEQ#'+seq, '#f59e0b');
+              flash(layout.arbiter, '#f59e0b');
+              var grantEntry = { seq: seq, smIdx: idx };
+              grantQueue.push(grantEntry);
+              if (grantQueue[0] && grantQueue[0].seq === seq) tryNextGrant();
             }
+            tryEnqueue();
           });
-        }, idx * 220);
+        }, launchDelay);
       })(ai);
     }
   } else {
@@ -3389,10 +3442,10 @@ function triggerAtomic() {
                     stats.hits++; updateStats();
                   }));
                 }));
-              }, idx2 * 380);
+              }, 100 + Math.random() * 600); // random L2 lock contention
             }));
           }));
-        }, idx2 * 130);
+        }, Math.random() * 600); // random warp scheduler timing
       })(ri);
     }
   }
