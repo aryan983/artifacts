@@ -195,10 +195,10 @@ position:relative;
 }
 #scenario-tooltip .st-detail-text { color:#90c8f0; font-size:.72rem; line-height:1.5; }
 
-.main-container { display:flex; gap:24px; padding:12px 20px; max-width:1200px; margin:0 auto; align-items:flex-start; }
-.viz-area { flex:1; min-width:0; max-width:700px; position:relative; }
-canvas { width:100%; height:540px; background:var(--surface); border-radius:12px; border:1px solid var(--border); display:block; cursor:default; }
-@media(max-width:500px){ canvas { height:500px; } .viz-area { max-width:none; } }
+.main-container { display:flex; gap:24px; padding:12px 20px; max-width:1400px; margin:0 auto; align-items:flex-start; }
+.viz-area { flex:1; min-width:0; position:relative; }
+canvas { width:100%; height:640px; background:var(--surface); border-radius:12px; border:1px solid var(--border); display:block; cursor:default; }
+@media(max-width:500px){ canvas { height:580px; } .viz-area { max-width:none; } }
 
 /* ── Tooltip ── */
 #block-tooltip {
@@ -440,7 +440,7 @@ position:absolute; top:-12px; width:100%; text-align:center; white-space:nowrap;
 <div class="main-container">
   <div class="viz-area">
     <canvas id="canvas"></canvas>
-    <div class="paused-badge" id="paused-badge">⏸ PAUSED — hover tooltips freely</div>
+    <!-- paused badge removed -->
     <!-- Block tooltip -->
     <div id="block-tooltip">
       <div class="tt-title"><div class="tt-dot" id="tt-dot"></div><span id="tt-name"></span></div>
@@ -1608,26 +1608,32 @@ function buildLayout() {
   layout.l2 = { x:cx-l2W/2, y:l2Y, w:l2W, h:l2H };
   layout.l2Persist = (currentArch==='ampere'||currentArch==='hopper') ? { x:cx-l2W/2+6, y:l2Y+l2H-12, w:l2W-12, h:8 } : null;
 
+  // Shared vars needed by both Apex and non-Apex paths
+  var gmH = mob ? 52 : 62;
+  var mcCount = mob ? 2 : (currentArch==='pascal' ? 3 : 4);
+  var mcW = mob ? 36 : 44;
+
   // Apex-specific: Arbiter is a FULL-WIDTH block between bus and L2
   // cohDir is a sub-region INSIDE L2 (right portion)
   if (currentArch === 'apex') {
-    var arbH = mob ? 48 : 60;
-    var arbGap = mob ? 20 : 32;
-    // Arbiter sits between bus and l2, full l2 width
+    var arbH = mob ? 56 : 68;
+    var arbGap = mob ? 52 : 72;  // big gap so ACK travel is clearly visible
+    // Arbiter and L2 span the full usable width on Apex
+    var apexW = Math.min(usable * 0.92, totalSmW * 1.02);
+    var apexX = cx - apexW/2;
     var newL2Y = l2Y + arbH + arbGap;
-    layout.arbiter = { x: cx - l2W/2, y: l2Y, w: l2W, h: arbH };
+    layout.arbiter = { x: apexX, y: l2Y, w: apexW, h: arbH };
     // Shift l2 down to make room
-    layout.l2 = { x: cx-l2W/2, y: newL2Y, w: l2W, h: l2H };
-    // cohDir is a sub-region inside l2 (right 38%)
-    var cdW = Math.round(l2W * 0.38);
-    layout.cohDir = { x: cx + l2W/2 - cdW - 6, y: newL2Y + 6, w: cdW, h: l2H - 12 };
+    layout.l2 = { x: apexX, y: newL2Y, w: apexW, h: l2H };
+    // cohDir is a sub-region inside l2 (right 35%)
+    var cdW = Math.round(apexW * 0.35);
+    layout.cohDir = { x: apexX + apexW - cdW - 6, y: newL2Y + 6, w: cdW, h: l2H - 12 };
     // Shift everything below l2 down too
-    var extraShift = arbH + arbGap;
     var cbY2 = newL2Y + l2H + (mob ? 22 : 30);
-    layout.crossbar = { y: cbY2, x1: cx-l2W/2-8, x2: cx+l2W/2+8 };
+    layout.crossbar = { y: cbY2, x1: apexX-8, x2: apexX+apexW+8 };
     var gmY2 = cbY2 + (mob ? 28 : 38);
-    var gmW2 = Math.min(totalSmW*0.85, usable*0.82);
-    layout.globalMem = { x: cx-gmW2/2, y: gmY2, w: gmW2, h: gmH };
+    var gmW2 = apexW;
+    layout.globalMem = { x: apexX, y: gmY2, w: gmW2, h: gmH };
     var mcGap3 = (gmW2 - mcCount*mcW)/(mcCount+1);
     layout.mcs = [];
     for (var mi2 = 0; mi2 < mcCount; mi2++) {
@@ -1637,29 +1643,27 @@ function buildLayout() {
     var hbmW2 = gmW2*0.88;
     layout.hbm = { x: cx-hbmW2/2, y: hbmY2, w: hbmW2, h: mob ? 34 : 42, label: ARCHS[currentArch].blocks.hbm.label };
   } else {
+    // Non-Apex: no arbiter, standard layout
     layout.arbiter = null;
     layout.cohDir = null;
+
+    var cbY = l2Y+l2H+(mob ? 22 : 30);
+    layout.crossbar = { y:cbY, x1:cx-l2W/2-8, x2:cx+l2W/2+8 };
+
+    var gmW = Math.min(totalSmW*0.85, usable*0.82);
+    var gmY = cbY + (mob ? 28 : 38);
+    layout.globalMem = { x:cx-gmW/2, y:gmY, w:gmW, h:gmH };
+
+    var mcGap2 = (gmW - mcCount*mcW)/(mcCount+1);
+    layout.mcs = [];
+    for (var mi = 0; mi < mcCount; mi++) {
+      layout.mcs.push({ x:layout.globalMem.x+mcGap2+mi*(mcW+mcGap2), y:gmY+24, w:mcW, h:14 });
+    }
+
+    var hbmY = gmY+gmH+(mob ? 16 : 22);
+    var hbmW = gmW*0.88;
+    layout.hbm = { x:cx-hbmW/2, y:hbmY, w:hbmW, h:mob ? 34 : 42, label:ARCHS[currentArch].blocks.hbm.label };
   }
-
-  var cbY = l2Y+l2H+(mob ? 22 : 30);
-  layout.crossbar = { y:cbY, x1:cx-l2W/2-8, x2:cx+l2W/2+8 };
-
-  var gmW = Math.min(totalSmW*0.85, usable*0.82);
-  var gmY = cbY + (mob ? 28 : 38);
-  var gmH = mob ? 52 : 62;
-  layout.globalMem = { x:cx-gmW/2, y:gmY, w:gmW, h:gmH };
-
-  var mcCount = mob ? 2 : (currentArch==='pascal' ? 3 : 4);
-  var mcW = mob ? 36 : 44;
-  var mcGap2 = (gmW - mcCount*mcW)/(mcCount+1);
-  layout.mcs = [];
-  for (var mi = 0; mi < mcCount; mi++) {
-    layout.mcs.push({ x:layout.globalMem.x+mcGap2+mi*(mcW+mcGap2), y:gmY+24, w:mcW, h:14 });
-  }
-
-  var hbmY = gmY+gmH+(mob ? 16 : 22);
-  var hbmW = gmW*0.88;
-  layout.hbm = { x:cx-hbmW/2, y:hbmY, w:hbmW, h:mob ? 34 : 42, label:ARCHS[currentArch].blocks.hbm.label };
 
   buildHitRects();
   initCacheState();
@@ -1937,11 +1941,11 @@ function drawSceneContent(dt, time) {
   // ── Draw Apex arbiter (full-width block) and cohDir (L2 sub-region) ──
   if (currentArch === 'apex' && layout.arbiter) {
     var arb = layout.arbiter;
-    var arbTime = Date.now();
-    var arbPulse = Math.sin(arbTime/600) * 0.3 + 0.7;
+    var arbTime2 = Date.now();
+    var arbPulse = Math.sin(arbTime2/600) * 0.3 + 0.7;
     var isHovArb = hoveredBlock && hoveredBlock.type === 'arbiter';
     var latFrac = Math.min(arbiterState.contentionLevel, 1);
-    var arbColor = latFrac > 0.6 ? '#ff6b6b' : latFrac > 0.3 ? '#f59e0b' : '#f59e0b';
+    var arbColor = latFrac > 0.6 ? '#ff6b6b' : '#f59e0b';
 
     // Main block
     rrect(arb.x, arb.y, arb.w, arb.h, 8);
@@ -1949,88 +1953,145 @@ function drawSceneContent(dt, time) {
     ctx.strokeStyle = arbColor + Math.round(arbPulse * (isHovArb ? 230 : 160)).toString(16).padStart(2,'0');
     ctx.lineWidth = isHovArb ? 2 : 1.5; ctx.stroke();
 
-    // Subtle glow when active
     if (arbiterState.active) {
-      ctx.save();
-      ctx.shadowColor = '#f59e0b'; ctx.shadowBlur = 12;
+      ctx.save(); ctx.shadowColor = '#f59e0b'; ctx.shadowBlur = 14;
       rrect(arb.x, arb.y, arb.w, arb.h, 8);
-      ctx.strokeStyle = '#f59e0b20'; ctx.lineWidth = 3; ctx.stroke();
+      ctx.strokeStyle = '#f59e0b25'; ctx.lineWidth = 3; ctx.stroke();
       ctx.restore();
     }
 
     // Header strip
-    ctx.fillStyle = '#f59e0b14';
-    rrect(arb.x+1, arb.y+1, arb.w-2, 16, 7);
-    ctx.fill();
+    ctx.fillStyle = '#f59e0b16';
+    rrect(arb.x+1, arb.y+1, arb.w-2, 17, 7); ctx.fill();
 
-    // Title + status
-    ctx.font = '700 8px "JetBrains Mono"'; ctx.fillStyle = '#f59e0b'; ctx.textAlign = 'left';
-    ctx.fillText('⚖ ATOMIC ARBITER', arb.x + 10, arb.y + 12);
+    ctx.font = '700 8.5px "JetBrains Mono"'; ctx.fillStyle = '#f59e0b'; ctx.textAlign = 'left';
+    ctx.fillText('⚖ ATOMIC ARBITER', arb.x + 12, arb.y + 13);
     var statusText = arbiterState.queue.length >= 4 ? 'SATURATED' : arbiterState.active ? 'ACTIVE' : 'IDLE';
     var statusColor = arbiterState.queue.length >= 4 ? '#ff6b6b' : arbiterState.active ? '#fbbf24' : '#4a5080';
     ctx.font = '600 7px "JetBrains Mono"'; ctx.fillStyle = statusColor; ctx.textAlign = 'right';
-    ctx.fillText(statusText, arb.x + arb.w - 10, arb.y + 12);
+    ctx.fillText('● ' + statusText, arb.x + arb.w - 12, arb.y + 13);
 
-    // ── Queue slots (left section) ──
-    var slotW = 22, slotH = 14, slotGap = 4;
-    var qStartX = arb.x + 10;
-    var qY = arb.y + 21;
-    ctx.font = '500 6.5px "JetBrains Mono"'; ctx.textAlign = 'left';
-    ctx.fillStyle = '#6b7090'; ctx.fillText('QUEUE', qStartX, qY + 11);
-    var qSlotsX = qStartX + 38;
-    for (var qs = 0; qs < 6; qs++) {
-      var sx = qSlotsX + qs * (slotW + slotGap);
-      var qe = qs < arbiterState.queue.length ? arbiterState.queue[qs] : null;
-      ctx.fillStyle = qe ? '#f59e0b22' : '#1a1c28';
-      ctx.strokeStyle = qe ? '#f59e0b90' : '#2a2d3a';
-      ctx.lineWidth = qe ? 1 : 0.7;
-      rrect(sx, qY, slotW, slotH, 3); ctx.fill(); ctx.stroke();
-      ctx.font = '600 5.5px "JetBrains Mono"'; ctx.textAlign = 'center';
-      ctx.fillStyle = qe ? '#fbbf24' : '#3a3d55';
-      ctx.fillText(qe ? '#'+qe.seq : '—', sx + slotW/2, qY + 9);
-    }
+    // ── Layout: divide arbiter into left (QUEUE) and right (HOLD BUFFER / ROB) ──
+    var divX = arb.x + arb.w * 0.48;  // vertical divider x
+    var innerY = arb.y + 21;
+    var slotH2 = 15, slotGap2 = 4;
 
-    // ── ROB slots (right of queue) ──
-    var robX = qSlotsX + 6*(slotW+slotGap) + 12;
-    ctx.font = '500 6.5px "JetBrains Mono"'; ctx.textAlign = 'left';
-    ctx.fillStyle = '#6b7090'; ctx.fillText('ROB', robX, qY + 11);
-    var robSlotsX = robX + 26;
-    var robSlotW = Math.min(slotW, (arb.x + arb.w - 10 - robSlotsX) / 6 - slotGap);
-    for (var rs = 0; rs < 6; rs++) {
-      var rx2 = robSlotsX + rs * (robSlotW + slotGap);
-      if (rx2 + robSlotW > arb.x + arb.w - 8) break;
-      var robE = rs < arbiterState.rob.length ? arbiterState.rob[rs] : null;
-      var rBg = '#1a1c28', rBr = '#2a2d3a', rTxt = '#3a3d55';
-      if (robE) {
-        if (robE.state === 'pending')   { rBg='#f59e0b18'; rBr='#f59e0b60'; rTxt='#f59e0b'; }
-        if (robE.state === 'returning') { rBg='#339af018'; rBr='#339af060'; rTxt='#339af0'; }
-        if (robE.state === 'done')      { rBg='#51cf6618'; rBr='#51cf6660'; rTxt='#51cf66'; }
+    // Divider line
+    ctx.strokeStyle = '#f59e0b20'; ctx.lineWidth = 1;
+    ctx.setLineDash([3,3]);
+    ctx.beginPath(); ctx.moveTo(divX, arb.y + 18); ctx.lineTo(divX, arb.y + arb.h - 6); ctx.stroke();
+    ctx.setLineDash([]);
+
+    // ── LEFT: INCOMING QUEUE ──
+    var qLabelX = arb.x + 12;
+    ctx.font = '600 6px "JetBrains Mono"'; ctx.fillStyle = '#f59e0b60'; ctx.textAlign = 'left';
+    ctx.fillText('INCOMING QUEUE', qLabelX, innerY + 7);
+    var qSlotW2 = 24;
+    var qSlotStartX = qLabelX;
+    var qSlotY = innerY + 11;
+    var maxQSlots = Math.floor((divX - qLabelX - 12) / (qSlotW2 + slotGap2));
+    maxQSlots = Math.min(maxQSlots, 6);
+    for (var qs2 = 0; qs2 < maxQSlots; qs2++) {
+      var sx2 = qSlotStartX + qs2 * (qSlotW2 + slotGap2);
+      var qe2 = qs2 < arbiterState.queue.length ? arbiterState.queue[qs2] : null;
+      ctx.fillStyle = qe2 ? '#f59e0b22' : '#141620';
+      ctx.strokeStyle = qe2 ? '#f59e0baa' : '#252840'; ctx.lineWidth = qe2 ? 1.1 : 0.7;
+      rrect(sx2, qSlotY, qSlotW2, slotH2, 3); ctx.fill(); ctx.stroke();
+      ctx.font = '700 6px "JetBrains Mono"'; ctx.textAlign = 'center';
+      ctx.fillStyle = qe2 ? '#fbbf24' : '#2a2d45';
+      ctx.fillText(qe2 ? '#'+qe2.seq : '—', sx2 + qSlotW2/2, qSlotY + 10);
+      // SM label below slot
+      if (qe2) {
+        ctx.font = '500 5px "JetBrains Mono"'; ctx.fillStyle = '#f59e0b60';
+        ctx.fillText('SM'+qe2.smIdx, sx2 + qSlotW2/2, qSlotY + slotH2 + 6);
       }
-      ctx.fillStyle = rBg; ctx.strokeStyle = rBr; ctx.lineWidth = robE ? 1 : 0.7;
-      rrect(rx2, qY, robSlotW, slotH, 3); ctx.fill(); ctx.stroke();
-      ctx.font = '600 5.5px "JetBrains Mono"'; ctx.textAlign = 'center';
-      ctx.fillStyle = rTxt;
-      ctx.fillText(robE ? '#'+robE.seq : '—', rx2 + robSlotW/2, qY + 9);
     }
 
-    // ── Bottom row: SEQ counter + contention bar ──
-    var botY = qY + slotH + 7;
-    ctx.font = '500 6.5px "JetBrains Mono"'; ctx.fillStyle = '#f59e0b80'; ctx.textAlign = 'left';
-    ctx.fillText('SEQ#' + String(arbiterState.seqCounter).padStart(3,'0') + '  · Granted: ' + arbiterState.grantCount, arb.x + 10, botY);
+    // Queue depth indicator
+    var qBotY = qSlotY + slotH2 + 11;
+    ctx.font = '500 6px "JetBrains Mono"'; ctx.fillStyle = '#f59e0b50'; ctx.textAlign = 'left';
+    ctx.fillText('SEQ#' + String(arbiterState.seqCounter).padStart(3,'0'), qLabelX, qBotY);
 
-    // Contention bar (right side of bottom row)
-    var cBarX = arb.x + arb.w/2 + 20, cBarW = arb.w/2 - 30, cBarH = 5;
-    var cBarY = botY - 8;
-    ctx.fillStyle = '#1a1c28'; rrect(cBarX, cBarY, cBarW, cBarH, 2); ctx.fill();
-    if (latFrac > 0) {
-      var cGrad = ctx.createLinearGradient(cBarX, 0, cBarX+cBarW, 0);
-      cGrad.addColorStop(0, '#51cf66'); cGrad.addColorStop(0.5, '#f59e0b'); cGrad.addColorStop(1, '#ff6b6b');
-      ctx.fillStyle = cGrad;
-      rrect(cBarX, cBarY, cBarW * latFrac, cBarH, 2); ctx.fill();
+    // ── RIGHT: HOLD BUFFER (ROB) ──
+    var robLabelX = divX + 10;
+    ctx.font = '600 6px "JetBrains Mono"'; ctx.fillStyle = '#a78bfa90'; ctx.textAlign = 'left';
+    ctx.fillText('HOLD BUFFER  (ROB)', robLabelX, innerY + 7);
+    var robSlotW2 = Math.floor((arb.x + arb.w - robLabelX - 12) / 6) - slotGap2;
+    robSlotW2 = Math.max(robSlotW2, 18);
+    var robSlotY = innerY + 11;
+    for (var rs2 = 0; rs2 < 6; rs2++) {
+      var rx3 = robLabelX + rs2 * (robSlotW2 + slotGap2);
+      if (rx3 + robSlotW2 > arb.x + arb.w - 8) break;
+      var robE2 = rs2 < arbiterState.rob.length ? arbiterState.rob[rs2] : null;
+      var rBg2 = '#141620', rBr2 = '#252840', rTxt2 = '#2a2d45';
+      var rIcon = '';
+      if (robE2) {
+        if (robE2.state === 'pending')   { rBg2='#f59e0b18'; rBr2='#f59e0b70'; rTxt2='#f59e0b'; rIcon='⏳'; }
+        if (robE2.state === 'returning') { rBg2='#339af020'; rBr2='#339af080'; rTxt2='#339af0'; rIcon='↩'; }
+        if (robE2.state === 'done')      { rBg2='#51cf6620'; rBr2='#51cf6680'; rTxt2='#51cf66'; rIcon='✓'; }
+      }
+      ctx.fillStyle = rBg2; ctx.strokeStyle = rBr2; ctx.lineWidth = robE2 ? 1.1 : 0.7;
+      rrect(rx3, robSlotY, robSlotW2, slotH2, 3); ctx.fill(); ctx.stroke();
+      ctx.font = '700 5.5px "JetBrains Mono"'; ctx.textAlign = 'center';
+      ctx.fillStyle = rTxt2;
+      ctx.fillText(robE2 ? '#'+robE2.seq : '—', rx3 + robSlotW2/2, robSlotY + 7);
+      if (robE2) {
+        ctx.font = '500 5px "JetBrains Mono"'; ctx.fillStyle = rTxt2 + '90';
+        ctx.fillText(rIcon, rx3 + robSlotW2/2, robSlotY + 13);
+      }
     }
-    var cycleEst2 = Math.round(2 + latFrac * 30);
-    ctx.font = '600 6px "JetBrains Mono"'; ctx.fillStyle = '#f59e0b'; ctx.textAlign = 'right';
-    ctx.fillText('~'+cycleEst2+' cyc', arb.x + arb.w - 8, botY);
+
+    // ROB state legend
+    var robBotY = robSlotY + slotH2 + 11;
+    ctx.font = '500 5.5px "JetBrains Mono"'; ctx.textAlign = 'left';
+    ctx.fillStyle = '#f59e0b60'; ctx.fillText('⏳ pending', robLabelX, robBotY);
+    ctx.fillStyle = '#339af060'; ctx.fillText('↩ returning', robLabelX + 52, robBotY);
+    ctx.fillStyle = '#51cf6660'; ctx.fillText('✓ done', robLabelX + 112, robBotY);
+
+    // ── LEFT GUTTER ANNOTATION (side panel, left of arbiter) ──
+    var gutterX = arb.x - 8;
+    var gutterW = Math.max(gutterX - 10, 0);
+    if (gutterW > 40) {
+      var gx = 8, gw = gutterX - 12;
+      var gArbY = arb.y + 4;
+      ctx.font = '500 5.5px "JetBrains Mono"'; ctx.fillStyle = '#f59e0b40'; ctx.textAlign = 'right';
+      ctx.fillText('SERIALIZES', gx + gw, gArbY + 8);
+      ctx.fillText('ATOMICS', gx + gw, gArbY + 16);
+      ctx.fillStyle = '#f59e0b25'; ctx.textAlign = 'right';
+      ctx.fillText('SEQ# tags', gx + gw, gArbY + 26);
+      ctx.fillText('ROB order', gx + gw, gArbY + 34);
+      // Contention bar
+      var gbY = gArbY + 42;
+      ctx.font = '500 5px "JetBrains Mono"'; ctx.fillStyle = '#f59e0b40'; ctx.textAlign = 'right';
+      ctx.fillText('contention', gx + gw, gbY);
+      ctx.fillStyle = '#141620';
+      ctx.fillRect(gx + gw - 36, gbY + 2, 36, 4);
+      if (latFrac > 0) {
+        var gGrad = ctx.createLinearGradient(gx + gw - 36, 0, gx + gw, 0);
+        gGrad.addColorStop(0, '#51cf66'); gGrad.addColorStop(0.5, '#f59e0b'); gGrad.addColorStop(1, '#ff6b6b');
+        ctx.fillStyle = gGrad;
+        ctx.fillRect(gx + gw - 36, gbY + 2, 36 * latFrac, 4);
+      }
+      ctx.font = '600 5.5px "JetBrains Mono"'; ctx.fillStyle = '#f59e0b'; ctx.textAlign = 'right';
+      var cycEst3 = Math.round(2 + latFrac * 30);
+      ctx.fillText('~'+cycEst3+'cyc', gx + gw, gbY + 14);
+    }
+
+    // ── RIGHT GUTTER ANNOTATION (side panel, right of arbiter) ──
+    var rGutterX = arb.x + arb.w + 8;
+    var rGutterW = W - rGutterX - 8;
+    if (rGutterW > 40) {
+      var rgx = rGutterX + 4;
+      var rgArbY = arb.y + 4;
+      ctx.font = '500 5.5px "JetBrains Mono"'; ctx.fillStyle = '#f59e0b40'; ctx.textAlign = 'left';
+      ctx.fillText('GRANT policy:', rgx, rgArbY + 8);
+      ctx.fillStyle = '#f59e0b25';
+      ctx.fillText('round-robin', rgx, rgArbY + 17);
+      ctx.fillText('1 at a time', rgx, rgArbY + 26);
+      ctx.font = '500 5px "JetBrains Mono"';
+      ctx.fillStyle = '#f59e0b20';
+      ctx.fillText('Granted: '+arbiterState.grantCount, rgx, rgArbY + 37);
+    }
   }
 
   // ── cohDir drawn as sub-region INSIDE L2 block ──
@@ -2038,17 +2099,13 @@ function drawSceneContent(dt, time) {
     var cd = layout.cohDir;
     var isHovCd = hoveredBlock && hoveredBlock.type === 'cohDir';
     var cdPulse = Math.sin(Date.now()/900) * 0.2 + 0.8;
-    // Background sub-region
     rrect(cd.x, cd.y, cd.w, cd.h, 5);
     ctx.fillStyle = isHovCd ? '#22d3ee18' : '#22d3ee0a'; ctx.fill();
     ctx.strokeStyle = '#22d3ee' + Math.round(cdPulse * (isHovCd ? 200 : 100)).toString(16).padStart(2,'0');
     ctx.lineWidth = isHovCd ? 1.5 : 0.8; ctx.stroke();
-    // Label
     ctx.font = '700 6.5px "JetBrains Mono"'; ctx.fillStyle = '#22d3ee'; ctx.textAlign = 'center';
     ctx.fillText('COH. DIR', cd.x + cd.w/2, cd.y + 10);
-    // Sharer bit rows
-    var cdRowH = 5, cdRowGap = 2, cdRows = 3;
-    var cdBitCount = 4;
+    var cdRowH = 5, cdRowGap = 2, cdRows = 3, cdBitCount = 4;
     for (var dr2 = 0; dr2 < cdRows; dr2++) {
       var ry2 = cd.y + 15 + dr2 * (cdRowH + cdRowGap);
       var cdBitW = (cd.w - 14) / cdBitCount;
@@ -2061,6 +2118,28 @@ function drawSceneContent(dt, time) {
     }
     ctx.font = '500 5.5px "JetBrains Mono"'; ctx.fillStyle = '#22d3ee50'; ctx.textAlign = 'center';
     ctx.fillText('targeted', cd.x + cd.w/2, cd.y + cd.h - 3);
+
+    // ── L2 RIGHT GUTTER: bandwidth and state info ──
+    var l2 = layout.l2;
+    var l2RGutX = l2.x + l2.w + 8;
+    var l2RGutW = W - l2RGutX - 8;
+    if (l2RGutW > 40) {
+      var l2gx = l2RGutX + 4;
+      var l2gY = l2.y + 4;
+      ctx.font = '500 5.5px "JetBrains Mono"'; ctx.fillStyle = '#ffa94d40'; ctx.textAlign = 'left';
+      ctx.fillText('L2: 64MB', l2gx, l2gY + 8);
+      ctx.fillText('unified', l2gx, l2gY + 17);
+      ctx.fillStyle = '#22d3ee30';
+      ctx.fillText('coh. point', l2gx, l2gY + 28);
+    }
+    // ── L2 LEFT GUTTER: RMW annotation ──
+    var l2LGutW2 = l2.x - 12;
+    if (l2LGutW2 > 40) {
+      ctx.font = '500 5.5px "JetBrains Mono"'; ctx.fillStyle = '#ffa94d40'; ctx.textAlign = 'right';
+      ctx.fillText('RMW here', l2.x - 8, l2.y + 10);
+      ctx.fillStyle = '#ffa94d20';
+      ctx.fillText('~200 cyc', l2.x - 8, l2.y + 20);
+    }
   }
 
   for (var ci = 0; ci < layout.sms.length; ci++) {
@@ -2271,15 +2350,7 @@ function drawSceneContent(dt, time) {
 
   buildParticleLabelRects();
 
-  // Paused overlay indicator on canvas
-  if (paused) {
-    ctx.save();
-    ctx.font = '700 11px "JetBrains Mono"';
-    ctx.fillStyle = '#845ef760';
-    ctx.textAlign = 'right';
-    ctx.fillText('⏸ PAUSED', W - 10, H - 10);
-    ctx.restore();
-  }
+  // Paused indicator is shown in the HTML badge only — no canvas overlay needed
 }
 
 var lastTime=0;
@@ -2921,13 +2992,13 @@ function triggerAtomic() {
             var seq = arbiterEnqueue(idx, 'ATOM');
             logEvent('SM'+idx+': ATOM arrived → SEQ#'+seq, '#f59e0b');
             flash(layout.arbiter, '#f59e0b');
-            bubble(arbiterPos().x, arbiterPos().y, 'SEQ#'+seq, '#f59e0b', { sub:'queued', life:1.2 });
+            bubble(layout.arbiter.x + layout.arbiter.w * 0.22, arbiterPos().y - 8, 'SEQ#'+seq, '#f59e0b', { sub:'queued', life:1.2 });
 
             // Staggered grant — wait for queue position
             setTimeout(function() {
               arbiterGrant(seq);
               logEvent('ARBITER: GRANT SEQ#'+seq+' → SM'+idx, '#51cf66');
-              bubble(arbiterPos().x, arbiterPos().y, 'GRANT#'+seq, '#51cf66', { sub:'SM'+idx, life:1.4 });
+              bubble(layout.arbiter.x + layout.arbiter.w * 0.78, arbiterPos().y - 10, 'GRANT#'+seq, '#51cf66', { sub:'SM'+idx, life:1.4 });
               // GRANT travels back: arbiterTop → arbiterBusEntry → busP → L1
               spawnRoutedFromArbiter(idx, '#51cf66', 'GRANT', 2.8, function() {
                 // Phase: granted → rmw — SM dispatches the actual RMW to L2 via arbiter
@@ -2941,7 +3012,7 @@ function triggerAtomic() {
                     }
                   }
                   // RMW: arbiter bottom → L2 top (direct vertical — they are adjacent)
-                  particles.push(new Particle(arbiterBot(), l2Top(), '#f59e0b', 'ATOM', 2.5, function() {
+                  particles.push(new Particle(arbiterBot(), l2Top(), '#f59e0b', 'ATOM', 2.0, function() {
                     flash(layout.l2, '#f59e0b');
                     logEvent('L2: RMW complete → ACK SEQ#'+capturedSeq, '#ffa94d');
                     // Phase: rmw → ack
@@ -2953,8 +3024,9 @@ function triggerAtomic() {
                         break;
                       }
                     }
-                    // ACK returns: L2 top → arbiter bottom (direct vertical)
-                    particles.push(new Particle(l2Top(), arbiterBot(), '#ffa94d', 'ACK', 2.5, function() {
+                    // ACK returns: L2 top → arbiter bottom with prominent SEQ# label
+                    // Slower speed (2.0) so the travel through the gap is clearly visible
+                    particles.push(new Particle(l2Top(), arbiterBot(), '#ffa94d', 'ACK#'+capturedSeq, 2.0, function() {
                       flash(layout.arbiter, '#ffa94d');
                       // Phase: ack → retiring
                       for (var pc = 0; pc < arbiterState.activeOps.length; pc++) {
@@ -2966,7 +3038,7 @@ function triggerAtomic() {
                         }
                       }
                       arbiterRetire(capturedSeq);
-                      bubble(arbiterPos().x, arbiterPos().y, 'ACK#'+capturedSeq+' retired', '#ffa94d', { sub:'ROB done', life:1.3 });
+                      bubble(arbiterPos().x, layout.arbiter.y + layout.arbiter.h + 6, 'ACK#'+capturedSeq+' retired', '#ffa94d', { sub:'ROB done', life:1.3 });
                       // DATA back to SM: routed via bus
                       spawnRoutedFromArbiter(capturedIdx, '#ffa94d', 'DATA', 2.2, function() {
                         arbiterState.activeOps = arbiterState.activeOps.filter(function(e){ return e.seq !== capturedSeq; });
