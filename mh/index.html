@@ -90,6 +90,35 @@ canvas { width:100%; height:520px; background:var(--surface); border-radius:12px
 }
 #block-tooltip .tt-hint::before { content:'◉'; font-size:.7rem; }
 
+/* ── Instruction tooltip ── */
+#instr-tooltip {
+  position:fixed; pointer-events:none; z-index:200;
+  background:#080a10; border:1px solid var(--border);
+  border-radius:12px; padding:14px 16px; max-width:310px; min-width:240px;
+  box-shadow: 0 12px 40px rgba(0,0,0,.85);
+  opacity:0; transition:opacity .15s, transform .15s;
+  transform:translateY(4px);
+  font-size:.75rem; line-height:1.6;
+}
+#instr-tooltip.visible { opacity:1; transform:translateY(0); }
+#instr-tooltip .it-name {
+  font-family:'JetBrains Mono',monospace; font-weight:700; font-size:.82rem;
+  margin-bottom:8px; display:flex; align-items:center; gap:8px;
+}
+#instr-tooltip .it-dot { width:8px; height:8px; border-radius:2px; flex-shrink:0; }
+#instr-tooltip .it-section { margin-bottom:8px; }
+#instr-tooltip .it-label {
+  font-family:'JetBrains Mono',monospace; font-size:.55rem; font-weight:700;
+  text-transform:uppercase; letter-spacing:1.5px; color:#6b7094; margin-bottom:3px;
+}
+#instr-tooltip .it-text { color:#c8cce0; font-size:.74rem; line-height:1.55; }
+#instr-tooltip .it-why-box {
+  background:#0f1a12; border:1px solid #51cf6625; border-radius:7px;
+  padding:8px 10px; margin-top:6px;
+}
+#instr-tooltip .it-why-box .it-label { color:#51cf6699; }
+#instr-tooltip .it-why-box .it-text { color:#a0dbb0; }
+
 /* ── Selection panel ── */
 #sel-panel {
   background:var(--surface); border:1px solid var(--border); border-radius:10px;
@@ -118,6 +147,17 @@ canvas { width:100%; height:520px; background:var(--surface); border-radius:12px
 .info-panel { width:360px; flex-shrink:0; display:flex; flex-direction:column; gap:12px; }
 .info-card { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:14px; }
 .info-card h3 { font-size:.65rem; font-family:'JetBrains Mono',monospace; text-transform:uppercase; letter-spacing:2px; color:var(--dim); margin-bottom:10px; }
+
+/* Instruction reference chips */
+.instr-section { margin-top:0; }
+.instr-chips { display:flex; flex-wrap:wrap; gap:8px; }
+.instr-chip {
+  font-family:'JetBrains Mono',monospace; font-size:.72rem; font-weight:700;
+  padding:5px 11px; border-radius:6px; cursor:pointer;
+  border:1px solid transparent; transition:all .15s;
+  user-select:none;
+}
+.instr-chip:hover { transform:translateY(-1px); box-shadow:0 4px 14px rgba(0,0,0,.4); }
 
 .bottom-section { max-width:1200px; margin:0 auto; padding:0 20px 30px; }
 .bottom-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
@@ -262,7 +302,7 @@ position:absolute; top:-12px; width:100%; text-align:center; white-space:nowrap;
 <div class="main-container">
   <div class="viz-area">
     <canvas id="canvas"></canvas>
-    <!-- Tooltip -->
+    <!-- Block tooltip -->
     <div id="block-tooltip">
       <div class="tt-title"><div class="tt-dot" id="tt-dot"></div><span id="tt-name"></span></div>
       <div class="tt-desc" id="tt-desc"></div>
@@ -340,33 +380,37 @@ position:absolute; top:-12px; width:100%; text-align:center; white-space:nowrap;
         <div class="easy-body"><p>Instead of keeping a dirty copy in L1, the SM <strong>drops the L1 copy entirely</strong> and writes straight to L2. Simpler than CPU write-back but more L2 traffic.</p></div>
       </div>
     </div>
-    <div class="info-card perf-card">
-      <h3>Performance Across Architectures</h3>
-      <div id="perf-chart"></div>
-      <div class="perf-legend">
-        <div class="perf-legend-item"><div class="perf-legend-dot" style="background:#51cf66"></div>Pascal</div>
-        <div class="perf-legend-item"><div class="perf-legend-dot" style="background:#339af0"></div>Volta</div>
-        <div class="perf-legend-item"><div class="perf-legend-dot" style="background:#ffa94d"></div>Ampere</div>
-        <div class="perf-legend-item"><div class="perf-legend-dot" style="background:#845ef7"></div>Hopper</div>
-      </div>
-    </div>
   </div>
 </div>
 
+<div class="bottom-section instr-section">
+  <div class="bottom-grid">
+    <div class="info-card" id="instr-ref-card">
+      <h3>Instruction Reference <span style="font-size:.6rem;color:var(--dim);font-weight:400;font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:1px">— hover any chip</span></h3>
+      <div class="instr-chips" id="instr-chips"></div>
+    </div>
+  </div>
+</div>
 <script>
 var canvas = document.getElementById('canvas');
 var ctx = canvas.getContext('2d');
 var W, H, dpr;
 var initialized = false;
+
 function resize() {
   dpr = window.devicePixelRatio || 1;
   var r = canvas.getBoundingClientRect();
-  W = r.width; H = r.height;
-  canvas.width = W * dpr; canvas.height = H * dpr;
+  var newW = r.width || canvas.offsetWidth || 640;
+  var newH = r.height || canvas.offsetHeight || 520;
+  if (newW === W && newH === H) return; // nothing changed
+  W = newW; H = newH;
+  canvas.width  = Math.round(W * dpr);
+  canvas.height = Math.round(H * dpr);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   if (initialized) buildLayout();
 }
-resize();
+
+// Resize will be called by the deferred init block below
 window.addEventListener('resize', resize);
 
 function rrect(x, y, w, h, r) {
@@ -392,6 +436,53 @@ var BLOCK_INFO = {
   l2Persist: { name:'L2 Persistence Window', color:'#ffa94d', desc:'Ampere+ feature. You can pin a set of addresses to always stay in L2. Useful for weights or lookup tables accessed repeatedly across many kernels. Set via cudaAccessPolicyWindow.', chips:[{t:'Ampere+',c:'#ffa94d'},{t:'software ctrl',c:'#51cf66'}], connects:[{to:'l2',arrow:'↔',why:'A sub-region of the L2 pinned via CUDA API policy'},{to:'globalMem',arrow:'←',why:'Persistently caches frequently-read global data in L2'}] },
   globalMem: { name:'Global Memory Interface', color:'#339af0', desc:'The on-chip logic (memory controllers + NoC) that bridges L2 to physical DRAM. Handles address translation, ECC, and row/bank scheduling. Multiple controllers run in parallel for bandwidth.', chips:[{t:'memory ctrl',c:'#339af0'},{t:'multi-channel',c:'#845ef7'}], connects:[{to:'l2',arrow:'↔',why:'Receives evictions from L2; returns fetched DRAM data to L2'},{to:'hbm',arrow:'↔',why:'Issues actual read/write commands to HBM stacks'}] },
   hbm:       { name:'HBM / GDDR (DRAM)', color:'#845ef7', desc:'Off-chip high-bandwidth memory. HBM stacks dies vertically connected via micro-bumps. Hopper HBM3 = 3.35 TB/s. Slowest in the hierarchy but largest — all GPU memory ultimately lives here.', chips:[{t:'~400 cycles',c:'#ff6b6b'},{t:'off-chip',c:'#845ef7'},{t:'largest',c:'#6b7094'}], connects:[{to:'globalMem',arrow:'↔',why:'Memory controllers read/write HBM banks via wide parallel buses'}] },
+};
+
+// ── Instruction tooltips ─────────────────────────────────────────────────────
+// Shown when hovering a flying particle label OR the micro-code chips in the explainer
+var INSTRUCTION_INFO = {
+  'LD.E':   { name:'LD.E  (global load)', color:'#ff6b6b',
+    what:'Load from global memory into registers. The .E suffix = "extended addressing" (64-bit). Each thread in the warp loads from its own address — if addresses are contiguous the hardware coalesces them into one wide transaction.',
+    why:'You need this any time you read from a __device__ pointer or cudaMalloc\'d buffer. It\'s the bread-and-butter read path for all GPGPU work — matrix rows, activation tensors, weight arrays, etc.' },
+  'ST.E':   { name:'ST.E  (global store)', color:'#51cf66',
+    what:'Store from registers to global memory. On Pascal, bypasses L1 entirely (write-through). On Volta+ it evicts the L1 line and writes to L2 (write-evict), then broadcasts INV to other SMs.',
+    why:'Writing results back to global memory after a kernel computation — output matrices, reduction results, feature maps. Write-evict keeps coherency cheap: only one SM "owns" a dirty line at a time.' },
+  'LDS':    { name:'LDS  (load from shared)', color:'#51cf66',
+    what:'Load from shared memory (SMEM) into registers. ~20 cycles — far cheaper than global. Hardware checks 32 memory banks; accesses to the same bank by different threads in a warp are serialised (bank conflict).',
+    why:'The classic CUDA optimization: load a tile from global into SMEM once, then all threads reuse it from LDS repeatedly. MatMul tiling, stencil kernels, and reductions all rely on this.' },
+  'STS':    { name:'STS  (store to shared)', color:'#51cf66',
+    what:'Store from registers to shared memory. Same 32-bank structure as LDS. Used to cooperatively build a shared tile that other threads in the block will then read via LDS.',
+    why:'Tiling patterns: one thread loads from global, stores into SMEM with STS, then all threads read with LDS. Also used for warp-level reductions — each thread stores its partial sum then reads neighbours.' },
+  'ST.S':   { name:'ST.S  (store to shared, alt form)', color:'#51cf66',
+    what:'Alternate encoding for shared memory store. Functionally equivalent to STS — same 20-cycle latency, same 32-bank conflict rules.',
+    why:'Same use cases as STS — cooperative data staging, tiling, reductions. The assembler may emit either form.' },
+  'RdReq':  { name:'RdReq  (read request packet)', color:'#ff6b6b',
+    what:'Not an ISA instruction — a cache coherency protocol message sent from an SM\'s L1 to the L2 on a cache miss. Carries the missed cache line address. The L2 either serves it or forwards it to DRAM.',
+    why:'Every L1 cache miss generates one. High miss rates flood the coherency bus and stall warps waiting for data — the root cause of memory-bound kernel performance.' },
+  'INV':    { name:'INV  (invalidation message)', color:'#f06595',
+    what:'Coherency protocol message broadcast from the L2 to all SMs after a write. Any SM holding a Shared or Modified copy of the written cache line must drop it (set to Invalid). Happens on every write in Volta+ write-evict policy.',
+    why:'Essential for correctness in multi-SM workloads sharing the same address. Without invalidation, SM 0 could read a stale cached copy of data that SM 1 just wrote. The cost is bus bandwidth — atomic-heavy kernels saturate the bus with INVs.' },
+  'DATA':   { name:'DATA  (cache line fill)', color:'#ffa94d',
+    what:'The response to an RdReq — the actual 128-byte cache line payload travelling back from L2 (or DRAM) to the requesting SM\'s L1. On arrival, the L1 fills the line and transitions its state to Shared.',
+    why:'This latency is what the GPU hides with warp switching (latency tolerance). If a warp stalls on DATA, the scheduler immediately runs another ready warp. More resident warps = more latency hiding.' },
+  'WR':     { name:'WR  (write request)', color:'#51cf66',
+    what:'Cache-level write packet flowing from L1 down to L2 on a write-evict event, or from L2 down to the memory controller. Carries both the address and dirty data payload.',
+    why:'Part of the write-evict chain: thread writes to L1 → L1 drops the dirty line → WR packet carries it to L2. If L2 is also full, another WR goes all the way to DRAM. Write-heavy kernels generate a constant stream of these.' },
+  'WB':     { name:'WB  (write-back)', color:'#ffa94d',
+    what:'Write-Back — a dirty L1 line is being evicted and its contents written back to L2. Different from a regular write in that it\'s triggered by cache capacity pressure, not the thread actively storing. Carries Modified → Shared state transition.',
+    why:'Happens automatically when the L1 is full and a new line must enter. Frequent write-backs indicate working sets larger than L1 — a sign you should either reduce data reuse distances or tune the SMEM/L1 split.' },
+  'EVICT':  { name:'EVICT  (L2 victim eviction)', color:'#339af0',
+    what:'An L2 cache line is being evicted to DRAM because L2 is full. The victim line (chosen by LRU policy) travels through the NoC to the memory controller. Ampere\'s persistence window lets you protect chosen lines from eviction.',
+    why:'L2 evictions to DRAM are slow (~400+ cycles). If your kernel constantly evicts from L2 it\'s DRAM-bandwidth-bound. Ampere\'s cudaAccessPolicyWindow lets you pin hot data (e.g., a weight matrix) to resist eviction.' },
+  'STORE':  { name:'STORE  (DRAM write)', color:'#845ef7',
+    what:'The final write command issued from a memory controller to an HBM/GDDR bank. At this point data leaves the on-chip world entirely. Row-activation (tRCD), column write (tCL), and precharge (tRP) timing all apply.',
+    why:'DRAM writes are the slowest path in the hierarchy. You want kernels to rarely reach here — maximize L2 residency and use cp.async or TMA to overlap DRAM reads with compute rather than blocking on them.' },
+  'DSMEM':  { name:'DSMEM  (distributed shared memory)', color:'#22d3ee',
+    what:'Hopper-only packet. An SM reads from another SM\'s shared memory within the same Thread Block Cluster. The request travels the cluster bus — but stays entirely on-chip, never touching L2 or DRAM. ~20 cycle latency.',
+    why:'Enables sub-L2 communication between cooperating SMs: e.g., overlapping tiles in FlashAttention-style kernels, or producer-consumer pipelines where one SM generates data another immediately consumes.' },
+  'cp.async':{ name:'cp.async  (async global→shared copy)', color:'#22d3ee',
+    what:'Ampere instruction. Initiates a DMA-style transfer from global memory directly into SMEM — without allocating registers, without stalling the issuing warp. Multiple cp.async loads can be in flight simultaneously.',
+    why:'The key to software pipelining (double-buffering) on Ampere+: issue cp.async for tile N+1 while computing on tile N. Completely hides DRAM latency. Critical for reaching peak FLOPS on matrix multiply kernels.' },
 };
 
 var ARCHS = {
@@ -670,6 +761,18 @@ canvas.addEventListener('mousemove', function(e) {
   mouseY = e.clientY - r.top;
   lastClientX = e.clientX;
   lastClientY = e.clientY;
+
+  // Check particle label hover first (higher priority when labels are near)
+  var pHit = hitTestParticleLabels(mouseX, mouseY);
+  if (pHit && INSTRUCTION_INFO[pHit.key]) {
+    showInstrTooltip(pHit.key, pHit.clientX, pHit.clientY - 20);
+    hoveredBlock = null;
+    hideTooltip();
+    canvas.style.cursor = 'help';
+    return;
+  }
+  hideInstrTooltip();
+
   var hit = hitTest(mouseX, mouseY);
   hoveredBlock = hit;
   canvas.style.cursor = hit ? 'pointer' : 'default';
@@ -679,6 +782,7 @@ canvas.addEventListener('mousemove', function(e) {
 canvas.addEventListener('mouseleave', function() {
   hoveredBlock = null;
   hideTooltip();
+  hideInstrTooltip();
 });
 
 canvas.addEventListener('click', function(e) {
@@ -746,6 +850,83 @@ var ttDot = document.getElementById('tt-dot');
 var ttDesc = document.getElementById('tt-desc');
 var ttMeta = document.getElementById('tt-meta');
 var ttHint = document.getElementById('tt-hint');
+
+// ── Instruction tooltip ──────────────────────────────────────────────────────
+var instrTooltipEl = null;
+var instrHovered = null;
+
+function getInstrEl() {
+  if (!instrTooltipEl) instrTooltipEl = document.getElementById('instr-tooltip');
+  return instrTooltipEl;
+}
+
+function showInstrTooltip(key, clientX, clientY) {
+  var info = INSTRUCTION_INFO[key];
+  if (!info) return;
+  var el = getInstrEl();
+  if (!el) return;
+  if (instrHovered === key) { positionInstrTooltip(clientX, clientY); return; }
+  instrHovered = key;
+  document.getElementById('it-dot').style.background = info.color;
+  el.style.borderColor = info.color + '40';
+  document.getElementById('it-name').textContent = info.name;
+  document.getElementById('it-what').textContent = info.what;
+  document.getElementById('it-why').textContent = info.why;
+  el.querySelector('.it-why-box').style.borderColor = info.color + '30';
+  positionInstrTooltip(clientX, clientY);
+  el.classList.add('visible');
+}
+
+function hideInstrTooltip() {
+  instrHovered = null;
+  var el = getInstrEl();
+  if (el) el.classList.remove('visible');
+}
+
+function positionInstrTooltip(clientX, clientY) {
+  var el = getInstrEl();
+  if (!el) return;
+  var tw = 320, th = 220;
+  var vw = window.innerWidth, vh = window.innerHeight;
+  var tx = clientX + 18;
+  var ty = clientY - 24;
+  if (tx + tw > vw - 10) tx = clientX - tw - 18;
+  if (ty + th > vh - 10) ty = clientY - th + 10;
+  if (ty < 8) ty = 8;
+  el.style.left = tx + 'px';
+  el.style.top  = ty + 'px';
+}
+
+// Particle label hit-rects rebuilt each frame for hover detection
+var particleLabelRects = [];
+
+function buildParticleLabelRects() {
+  particleLabelRects = [];
+  var cr = canvas.getBoundingClientRect();
+  for (var i = 0; i < particles.length; i++) {
+    var p = particles[i];
+    if (!p.label || !p.alive) continue;
+    var cx2 = p.from.x + (p.to.x - p.from.x) * p.t;
+    var cy2 = p.from.y + (p.to.y - p.from.y) * p.t;
+    // Also store absolute client coords for tooltip positioning
+    var clientX = cr.left + cx2;
+    var clientY = cr.top  + cy2;
+    particleLabelRects.push({ key: p.label, cx: cx2, cy: cy2, clientX: clientX, clientY: clientY });
+  }
+}
+
+// mx/my in canvas CSS-pixel coords
+function hitTestParticleLabels(mx, my) {
+  var HIT_R = 36; // large radius — particles move fast
+  for (var i = 0; i < particleLabelRects.length; i++) {
+    var r = particleLabelRects[i];
+    var dx = mx - r.cx;
+    var dy = my - (r.cy - 12); // label drawn 12px above dot
+    if (dx*dx + dy*dy < HIT_R*HIT_R) return r;
+  }
+  return null;
+}
+// ─────────────────────────────────────────────────────────────────────────────
 
 function updateTooltip(hit, clientX, clientY) {
   if (!hit) { hideTooltip(); return; }
@@ -943,7 +1124,7 @@ function switchArch(arch) {
   updateDiffBanner();
   updateKeyCard();
   updateArchIntro();
-  updatePerfChart();
+  
   logEvent('Switched to ' + ARCHS[arch].name + ' (' + ARCHS[arch].gen + ')', ARCHS[arch].color);
 }
 
@@ -952,37 +1133,10 @@ function updateArchIntro() {
   document.getElementById('arch-intro').innerHTML = '<div class="arch-intro-badge" style="background:' + arch.color + '20;color:' + arch.color + '">' + arch.name + ' · ' + arch.example + '</div><div class="arch-intro-text">' + arch.intro + '</div>';
 }
 
-function updatePerfChart() {
-  var metrics = [
-    { key:'l1Size', label:'L1/SM', unit:'KB', maxVal:256 },
-    { key:'smemSize', label:'SMEM', unit:'KB', maxVal:228 },
-    { key:'l2Size', label:'L2', unit:'MB', divBy:1024, maxVal:50 },
-    { key:'bw', label:'BW', unit:'GB/s', maxVal:3352 },
-    { key:'smCount', label:'SMs', unit:'', maxVal:132 },
-    { key:'flops', label:'TFLOPS', unit:'', maxVal:67 },
-    { key:'vram', label:'VRAM', unit:'GB', maxVal:80 }
-  ];
-  var archKeys = ['pascal','volta','ampere','hopper'];
-  var colors = { pascal:'#51cf66', volta:'#339af0', ampere:'#ffa94d', hopper:'#845ef7' };
-  var html = '';
-  for (var m = 0; m < metrics.length; m++) {
-    var met = metrics[m];
-    html += '<div class="perf-row"><span class="perf-label">' + met.label + '</span><div class="perf-bars">';
-    for (var a = 0; a < archKeys.length; a++) {
-      var ak = archKeys[a];
-      var raw = ARCHS[ak].perf[met.key];
-      var display = met.divBy ? Math.round(raw/met.divBy) : (raw%1===0 ? raw : raw.toFixed(1));
-      var effectiveMax = met.divBy ? met.maxVal*met.divBy : met.maxVal;
-      var pct = Math.max(8, (raw/effectiveMax)*100);
-      var isActive = ak === currentArch;
-      html += '<div class="perf-bar' + (isActive ? ' active' : '') + '" style="height:' + pct + '%;background:' + colors[ak] + (isActive ? '' : '50') + '"><span class="perf-bar-val" style="color:' + colors[ak] + (isActive ? '' : '70') + '">' + display + (met.unit||'') + '</span></div>';
-    }
-    html += '</div></div>';
-  }
-  document.getElementById('perf-chart').innerHTML = html;
-}
+
 
 function buildLayout() {
+  if (!W || !H) return;
   var cx = W/2;
   var mob = W < 500;
   var arch = ARCHS[currentArch];
@@ -1056,7 +1210,7 @@ function buildLayout() {
 
   var gmW = Math.min(totalSmW*0.85, usable*0.82);
   var gmY = cbY + (mob ? 28 : 38);
-  var gmH = mob ? 42 : 52;
+  var gmH = mob ? 52 : 62;
   layout.globalMem = { x:cx-gmW/2, y:gmY, w:gmW, h:gmH };
 
   var mcCount = mob ? 2 : (currentArch==='pascal' ? 3 : 4);
@@ -1064,7 +1218,7 @@ function buildLayout() {
   var mcGap2 = (gmW - mcCount*mcW)/(mcCount+1);
   layout.mcs = [];
   for (var mi = 0; mi < mcCount; mi++) {
-    layout.mcs.push({ x:layout.globalMem.x+mcGap2+mi*(mcW+mcGap2), y:gmY+12, w:mcW, h:14 });
+    layout.mcs.push({ x:layout.globalMem.x+mcGap2+mi*(mcW+mcGap2), y:gmY+24, w:mcW, h:14 });
   }
 
   var hbmY = gmY+gmH+(mob ? 16 : 22);
@@ -1192,6 +1346,7 @@ function drawSelectionHighlight() {
 }
 
 function drawFrame(time) {
+  if (!initialized || !layout.sms) { requestAnimationFrame(drawFrame); return; }
   var dt = Math.min((time - lastTime)/1000, 0.05);
   lastTime = time;
   ctx.clearRect(0, 0, W, H);
@@ -1392,19 +1547,22 @@ function drawFrame(time) {
   rrect(gm.x,gm.y,gm.w,gm.h,7);
   ctx.fillStyle='#0d1320'; ctx.fill();
   ctx.strokeStyle='#339af050'; ctx.lineWidth=1.5; ctx.stroke();
+  // Title — top of box, clear of MCs
   ctx.font='700 '+Math.max(10,10*fs)+'px "Outfit"';
   ctx.fillStyle='#5ab0f8'; ctx.textAlign='center';
-  ctx.fillText('Global Memory Interface', gm.x+gm.w/2, gm.y+16*fs);
+  ctx.fillText('Global Memory Interface', gm.x+gm.w/2, gm.y+14);
+  // MC blocks — pushed to middle row (y+26 set in layout)
   for (var mci=0;mci<layout.mcs.length;mci++) {
     var mc=layout.mcs[mci];
     ctx.fillStyle='hsl(210,50%,'+(14+Math.sin(Date.now()/500+mci)*3)+'%)';
     ctx.fillRect(mc.x,mc.y,mc.w,mc.h);
     ctx.font='600 '+Math.max(6.5,6.5*fs)+'px "JetBrains Mono"';
     ctx.fillStyle='#339af090'; ctx.textAlign='center';
-    ctx.fillText('MC'+mci, mc.x+mc.w/2, mc.y+mc.h/2+2);
+    ctx.fillText('MC'+mci, mc.x+mc.w/2, mc.y+mc.h/2+2.5);
   }
+  // Footer label — bottom of box
   ctx.font='500 '+Math.max(6.5,6.5*fs)+'px "JetBrains Mono"';
-  ctx.fillStyle='#8890a8';
+  ctx.fillStyle='#8890a8'; ctx.textAlign='center';
   ctx.fillText('MC → '+arch.blocks.hbm.label, gm.x+gm.w/2, gm.y+gm.h-5);
 
   ctx.beginPath(); ctx.moveTo(W/2,gm.y+gm.h); ctx.lineTo(W/2,layout.hbm.y);
@@ -1519,6 +1677,9 @@ function drawFrame(time) {
   particles.forEach(function(p) { p.update(dt); p.draw(ctx); });
   particles = particles.filter(function(p) { return p.alive; });
 
+  // Rebuild particle label hit zones for mouse hover
+  buildParticleLabelRects();
+
   // ── Live tooltip refresh for cache blocks ──────────────────────────────
   if (hoveredBlock && (hoveredBlock.type === 'l1' || hoveredBlock.type === 'smem')) {
     refreshTooltipCacheData(hoveredBlock, BLOCK_INFO[hoveredBlock.type]);
@@ -1536,7 +1697,7 @@ function drawFrame(time) {
   requestAnimationFrame(drawFrame);
 }
 var lastTime=0;
-requestAnimationFrame(drawFrame);
+// animation loop started after init below
 
 function Particle(from, to, color, label, speed, onDone) {
   this.from={x:from.x,y:from.y}; this.to={x:to.x,y:to.y}; this.color=color; this.label=label||'';
@@ -1561,8 +1722,24 @@ Particle.prototype.draw = function(ctx) {
   ctx.beginPath(); ctx.arc(cx,cy,4,0,Math.PI*2); ctx.fillStyle=this.color; ctx.fill();
   ctx.beginPath(); ctx.arc(cx,cy,7,0,Math.PI*2); ctx.fillStyle=this.color+'28'; ctx.fill();
   if (this.label) {
-    ctx.font='500 8px "JetBrains Mono"'; ctx.fillStyle=this.color; ctx.textAlign='center';
-    ctx.fillText(this.label, cx, cy-10);
+    var hasInfo = !!INSTRUCTION_INFO[this.label];
+    var lFont = (hasInfo ? '700' : '500') + ' 9px "JetBrains Mono"';
+    ctx.font = lFont;
+    var lw = ctx.measureText(this.label).width;
+    var lx = cx, ly = cy - 12;
+
+    if (hasInfo) {
+      // Draw pill background so label is obviously hoverable
+      var pw = lw + 10, ph = 13;
+      rrect(lx - pw/2, ly - ph + 3, pw, ph, 3);
+      ctx.fillStyle = this.color + '28'; ctx.fill();
+      ctx.strokeStyle = this.color + '70'; ctx.lineWidth = 0.8; ctx.stroke();
+    }
+
+    ctx.font = lFont;
+    ctx.fillStyle = this.color;
+    ctx.textAlign = 'center';
+    ctx.fillText(this.label, lx, ly);
   }
 };
 
@@ -1648,7 +1825,12 @@ function showExplanation(type) {
   var sumEl=document.getElementById('explainer-summary'); sumEl.textContent=''; sumEl.classList.remove('visible');
   exp.steps.forEach(function(s,i) {
     var li=document.createElement('li');
-    li.innerHTML='<span class="step-num" style="background:'+exp.color+'20;color:'+exp.color+'">'+(i+1)+'</span><span class="step-text">'+s.text+'<span class="micro">'+s.micro+'</span></span>';
+    // Parse micro text to find instruction keywords and make them hoverable
+    var microText = s.micro;
+    var microHtml = microText.replace(/\b(LD\.E|ST\.E|LDS|STS|ST\.S|RdReq|INV|DATA|WR|WB|EVICT|STORE|DSMEM|cp\.async)\b/g, function(m) {
+      return '<span class="micro-instr" data-instr="'+m+'" style="cursor:help;text-decoration:underline dotted;text-decoration-color:rgba(255,255,255,0.3)">'+m+'</span>';
+    });
+    li.innerHTML='<span class="step-num" style="background:'+exp.color+'20;color:'+exp.color+'">'+(i+1)+'</span><span class="step-text">'+s.text+'<span class="micro">'+microHtml+'</span></span>';
     listEl.appendChild(li);
     stepTimers.push(setTimeout(function() {
       var actives=listEl.querySelectorAll('li.active');
@@ -1841,11 +2023,74 @@ function resetAll(silent) {
   if(!silent) logEvent('Reset — all caches invalidated','#6b7094');
 }
 
-buildLayout();
-initialized=true;
-updateKeyCard();
-updateArchIntro();
-updatePerfChart();
+// ── Build instruction reference chips ────────────────────────────────────────
+function buildInstrChips() {
+  var container = document.getElementById('instr-chips');
+  if (!container) return;
+  container.innerHTML = '';
+  var keys = Object.keys(INSTRUCTION_INFO);
+  keys.forEach(function(key) {
+    var info = INSTRUCTION_INFO[key];
+    var chip = document.createElement('span');
+    chip.className = 'instr-chip';
+    chip.textContent = key;
+    chip.style.background = info.color + '18';
+    chip.style.color = info.color;
+    chip.style.borderColor = info.color + '50';
+    chip.addEventListener('mouseenter', function(e) {
+      showInstrTooltip(key, e.clientX, e.clientY);
+    });
+    chip.addEventListener('mousemove', function(e) {
+      positionInstrTooltip(e.clientX, e.clientY);
+    });
+    chip.addEventListener('mouseleave', function() {
+      hideInstrTooltip();
+    });
+    container.appendChild(chip);
+  });
+}
+
+// ── Single entry point ────────────────────────────────────────────────────────
+function startApp() {
+  resize();
+  // If canvas still has no size (e.g. hidden tab), retry next frame
+  if (!W || !H) { requestAnimationFrame(startApp); return; }
+  buildLayout();
+  initialized = true;
+  updateKeyCard();
+  updateArchIntro();
+  buildInstrChips();
+  
+  lastTime = performance.now();
+  requestAnimationFrame(drawFrame);
+}
+requestAnimationFrame(startApp);
+
+// ── Micro-instruction hover in explainer panel ───────────────────────────────
+var explainerEl = document.getElementById('step-list');
+explainerEl.addEventListener('mousemove', function(e) {
+  var target = e.target.closest('.micro-instr');
+  if (target) {
+    var key = target.getAttribute('data-instr');
+    showInstrTooltip(key, e.clientX, e.clientY);
+  } else {
+    hideInstrTooltip();
+  }
+});
+explainerEl.addEventListener('mouseleave', function() { hideInstrTooltip(); });
 </script>
+<!-- Instruction tooltip at body level so fixed positioning works correctly -->
+<div id="instr-tooltip">
+  <div class="it-name"><div class="it-dot" id="it-dot"></div><span id="it-name"></span></div>
+  <div class="it-section">
+    <div class="it-label">What it does</div>
+    <div class="it-text" id="it-what"></div>
+  </div>
+  <div class="it-why-box">
+    <div class="it-label">Why you need this op</div>
+    <div class="it-text" id="it-why"></div>
+  </div>
+</div>
+
 </body>
 </html>
