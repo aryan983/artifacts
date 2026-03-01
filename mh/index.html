@@ -75,7 +75,50 @@ position:relative;
 .controls button.atomic-btn:hover { background:#f59e0b18; border-color:#f59e0b; color:#fbbf24; }
 .controls button.atomic-btn.apex-only { display:none; }
 
-/* ── Wide tooltip mode for Arbiter block ── */
+/* ── Rich block info panel (arbiter etc.) ── */
+.arb-section { margin-bottom: 10px; }
+.arb-section-title {
+  font-family: 'JetBrains Mono', monospace; font-size: .6rem;
+  text-transform: uppercase; letter-spacing: 1.5px;
+  color: #f59e0b; margin-bottom: 5px; padding-bottom: 3px;
+  border-bottom: 1px solid #f59e0b22;
+}
+.arb-section-title.green { color: #51cf66; border-bottom-color: #51cf6622; }
+.arb-section-title.blue  { color: #339af0; border-bottom-color: #339af022; }
+.arb-section-title.purple{ color: #a78bfa; border-bottom-color: #a78bfa22; }
+.arb-section-title.pink  { color: #ffa94d; border-bottom-color: #ffa94d22; }
+.arb-pipeline {
+  display: flex; align-items: center; gap: 0; margin: 6px 0 8px;
+  font-family: 'JetBrains Mono', monospace; font-size: .58rem;
+}
+.arb-step {
+  background: #1a1d26; border: 1px solid #2a2d3a; border-radius: 4px;
+  padding: 3px 6px; color: #aaa; white-space: nowrap; position: relative;
+}
+.arb-step.amber { border-color: #f59e0b50; color: #f59e0b; background: #f59e0b0a; }
+.arb-step.green { border-color: #51cf6650; color: #51cf66; background: #51cf660a; }
+.arb-step.blue  { border-color: #339af050; color: #339af0; background: #339af00a; }
+.arb-step.orange{ border-color: #ffa94d50; color: #ffa94d; background: #ffa94d0a; }
+.arb-step.purple{ border-color: #a78bfa50; color: #a78bfa; background: #a78bfa0a; }
+.arb-arrow { color: #3a3d55; font-size: .65rem; padding: 0 2px; }
+.arb-row { display: flex; gap: 6px; margin-bottom: 4px; font-size: .73rem; line-height: 1.5; }
+.arb-row-label {
+  font-family: 'JetBrains Mono', monospace; font-size: .6rem;
+  color: #f59e0b; min-width: 60px; flex-shrink: 0; padding-top: 1px;
+}
+.arb-row-val { color: #c0c4d8; flex: 1; }
+.arb-note { font-size: .7rem; color: #6b7094; line-height: 1.55; margin-bottom: 6px; font-style: italic; }
+.arb-tag {
+  display: inline-block; font-family: 'JetBrains Mono', monospace;
+  font-size: .55rem; padding: 1px 5px; border-radius: 3px; margin: 1px 2px;
+  border: 1px solid; vertical-align: middle;
+}
+.arb-tag.amber { color: #f59e0b; border-color: #f59e0b50; background: #f59e0b10; }
+.arb-tag.green { color: #51cf66; border-color: #51cf6650; background: #51cf6610; }
+.arb-tag.blue  { color: #339af0; border-color: #339af050; background: #339af010; }
+.arb-tag.purple{ color: #a78bfa; border-color: #a78bfa50; background: #a78bfa10; }
+.arb-tag.orange{ color: #ffa94d; border-color: #ffa94d50; background: #ffa94d10; }
+.arb-divider { border: none; border-top: 1px solid #1e2030; margin: 8px 0; }
 .tt-wide {
   max-width: 380px !important;
   min-width: 340px !important;
@@ -259,6 +302,7 @@ canvas { width:100%; height:640px; background:var(--surface); border-radius:12px
   background:var(--surface); border:1px solid var(--border); border-radius:10px;
   padding:14px; display:none; margin-top:12px;
 }
+#sel-panel { max-height: 70vh; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #2a2d3a transparent; }
 #sel-panel.visible { display:block; }
 #sel-panel h4 { font-size:.65rem; font-family:'JetBrains Mono',monospace; text-transform:uppercase; letter-spacing:2px; color:var(--dim); margin-bottom:10px; }
 #sel-panel .sel-name { font-weight:700; font-size:.95rem; margin-bottom:6px; }
@@ -707,7 +751,126 @@ var BLOCK_INFO = {
   l2Persist: { name:'L2 Persistence Window', color:'#ffa94d', desc:'Ampere+ feature. You can pin a set of addresses to always stay in L2. Useful for weights or lookup tables accessed repeatedly across many kernels. Set via cudaAccessPolicyWindow.', chips:[{t:'Ampere+',c:'#ffa94d'},{t:'software ctrl',c:'#51cf66'}], connects:[{to:'l2',arrow:'↔',why:'A sub-region of the L2 pinned via CUDA API policy'},{to:'globalMem',arrow:'←',why:'Persistently caches frequently-read global data in L2'}] },
   globalMem: { name:'Global Memory Interface', color:'#339af0', desc:'The on-chip logic (memory controllers + NoC) that bridges L2 to physical DRAM. Handles address translation, ECC, and row/bank scheduling. Multiple controllers run in parallel for bandwidth.', chips:[{t:'memory ctrl',c:'#339af0'},{t:'multi-channel',c:'#845ef7'}], connects:[{to:'l2',arrow:'↔',why:'Receives evictions from L2; returns fetched DRAM data to L2'},{to:'hbm',arrow:'↔',why:'Issues actual read/write commands to HBM stacks'}] },
   hbm:       { name:'HBM / GDDR (DRAM)', color:'#845ef7', desc:'Off-chip high-bandwidth memory. HBM stacks dies vertically connected via micro-bumps. Hopper HBM3 = 3.35 TB/s. Slowest in the hierarchy but largest — all GPU memory ultimately lives here.', chips:[{t:'~400 cycles',c:'#ff6b6b'},{t:'off-chip',c:'#845ef7'},{t:'largest',c:'#6b7094'}], connects:[{to:'globalMem',arrow:'↔',why:'Memory controllers read/write HBM banks via wide parallel buses'}] },
-  arbiter:   { name:'Atomic Arbiter', color:'#f59e0b', desc:'Hardware serialization unit for atomic operations. Every atomicAdd, atomicCAS, etc. passes through here. Assigns a monotonically increasing sequence number (SEQ#) to each incoming request, queues up to 6 at once, and grants them round-robin to L2. A Reorder Buffer (ROB) holds responses until they can be retired in the original request order — because L2 banks respond at different speeds.', chips:[{t:'NEW: Apex',c:'#f59e0b'},{t:'seq-numbered',c:'#339af0'},{t:'ROB ordered',c:'#51cf66'}], connects:[{to:'bus',arrow:'←',why:'Receives all atomic requests from SMs via the coherency bus'},{to:'l2',arrow:'↔',why:'Dispatches one atomic at a time to L2; receives return data out of order'},{to:'l2',arrow:'→',why:'Reorder buffer retires data in original SEQ order before returning to SM'}] },
+  arbiter: {
+    name: 'Atomic Arbiter',
+    color: '#f59e0b',
+    desc: 'Hardware serialization unit for atomic operations.',
+    descHTML: `
+<div class="arb-section">
+  <div class="arb-section-title">What it does</div>
+  <div class="arb-note">Every <code>atomicAdd</code>, <code>atomicCAS</code>, <code>atomicExch</code> etc. passes through this block. Without it, multiple SMs race to L2 and corrupt each other's read-modify-write. The arbiter serializes them with zero programmer effort.</div>
+</div>
+
+<div class="arb-section">
+  <div class="arb-section-title">Full pipeline</div>
+  <div class="arb-pipeline">
+    <span class="arb-step amber">ATOM arrives</span><span class="arb-arrow">→</span>
+    <span class="arb-step amber">SEQ#</span><span class="arb-arrow">→</span>
+    <span class="arb-step amber">QUEUE</span><span class="arb-arrow">→</span>
+    <span class="arb-step green">GRANT</span><span class="arb-arrow">→</span>
+    <span class="arb-step blue">RMW@L2</span><span class="arb-arrow">→</span>
+    <span class="arb-step orange">ACK</span><span class="arb-arrow">→</span>
+    <span class="arb-step purple">ROB retire</span><span class="arb-arrow">→</span>
+    <span class="arb-step green">DATA→SM</span>
+  </div>
+</div>
+
+<hr class="arb-divider">
+
+<div class="arb-section">
+  <div class="arb-section-title">① SEQ# tagging</div>
+  <div class="arb-row">
+    <span class="arb-row-label">What:</span>
+    <span class="arb-row-val">Each incoming ATOM gets a monotonically increasing sequence number stamped on arrival. <span class="arb-tag amber">SEQ#000</span> <span class="arb-tag amber">SEQ#001</span> …</span>
+  </div>
+  <div class="arb-row">
+    <span class="arb-row-label">Why:</span>
+    <span class="arb-row-val">L2 banks respond out-of-order. Without a SEQ#, we can't tell which result belongs to which request. The tag is the anchor for the ROB to re-order at the end.</span>
+  </div>
+</div>
+
+<div class="arb-section">
+  <div class="arb-section-title">② Incoming queue (hold up)</div>
+  <div class="arb-row">
+    <span class="arb-row-label">What:</span>
+    <span class="arb-row-val">Up to <strong>6 requests</strong> wait here in arrival order. New arrivals beyond 6 cause back-pressure (the SM stalls).</span>
+  </div>
+  <div class="arb-row">
+    <span class="arb-row-label">Policy:</span>
+    <span class="arb-row-val"><strong>Round-robin grant</strong> — front-of-queue SM gets exclusive access. One at a time, no exceptions.</span>
+  </div>
+  <div class="arb-row">
+    <span class="arb-row-label">Cost:</span>
+    <span class="arb-row-val">~2 cycles idle, up to ~32 cycles fully contended (8 SMs × ~4 cyc each). This is the serialization penalty you pay for correctness.</span>
+  </div>
+</div>
+
+<div class="arb-section">
+  <div class="arb-section-title green">③ Grant</div>
+  <div class="arb-row">
+    <span class="arb-row-label">What:</span>
+    <span class="arb-row-val">Arbiter sends a <span class="arb-tag green">GRANT</span> back to the winning SM. Only that SM may now proceed with the read-modify-write. All others wait in queue.</span>
+  </div>
+  <div class="arb-row">
+    <span class="arb-row-label">Why:</span>
+    <span class="arb-row-val">Mutual exclusion on the cache line. Without a grant, two SMs could both read the old value before either writes back — classic lost-update bug.</span>
+  </div>
+</div>
+
+<div class="arb-section">
+  <div class="arb-section-title blue">④ RMW at L2</div>
+  <div class="arb-row">
+    <span class="arb-row-label">What:</span>
+    <span class="arb-row-val">The granted SM dispatches <span class="arb-tag blue">ATOM</span> → L2. L2 performs the Read-Modify-Write atomically: read old value, apply op (add/cas/exch), write new value, all in one locked step.</span>
+  </div>
+  <div class="arb-row">
+    <span class="arb-row-label">Latency:</span>
+    <span class="arb-row-val">~200 cycles round-trip to L2 for the RMW. This is why atomics are expensive — you pay full L2 latency per operation, serialized.</span>
+  </div>
+</div>
+
+<div class="arb-section">
+  <div class="arb-section-title orange">⑤ ACK ← L2</div>
+  <div class="arb-row">
+    <span class="arb-row-label">What:</span>
+    <span class="arb-row-val">L2 sends <span class="arb-tag orange">ACK#N</span> back to the arbiter with the result value and the original SEQ# tag.</span>
+  </div>
+  <div class="arb-row">
+    <span class="arb-row-label">Out-of-order:</span>
+    <span class="arb-row-val">Multiple L2 banks may complete in any order. <span class="arb-tag orange">ACK#5</span> might arrive before <span class="arb-tag orange">ACK#3</span> if they hit different banks. The ROB handles this.</span>
+  </div>
+</div>
+
+<div class="arb-section">
+  <div class="arb-section-title purple">⑥ Hold Buffer (ROB)</div>
+  <div class="arb-row">
+    <span class="arb-row-label">What:</span>
+    <span class="arb-row-val">Reorder Buffer. Holds all in-flight ACKs by SEQ#. Waits until the <em>next expected</em> SEQ# arrives before retiring — ensures DATA is returned to SMs in the original request order.</span>
+  </div>
+  <div class="arb-row">
+    <span class="arb-row-label">States:</span>
+    <span class="arb-row-val">
+      <span class="arb-tag amber">⏳ pending</span> — dispatched to L2, ACK not yet back<br>
+      <span class="arb-tag blue">↩ returning</span> — ACK received, waiting for in-order slot<br>
+      <span class="arb-tag green">✓ done</span> — retired, DATA sent to SM
+    </span>
+  </div>
+  <div class="arb-row">
+    <span class="arb-row-label">Why order?</span>
+    <span class="arb-row-val">The SM that issued atomicAdd expects the old value back. If we returned results out of order, SM1 might get SM3's result. ROB prevents this: you always get your own old value.</span>
+  </div>
+</div>
+
+<hr class="arb-divider">
+<div class="arb-note">Without this arbiter, atomics serialize inside L2 invisibly — you get correctness but zero visibility into latency or contention. Apex exposes the full mechanism.</div>`,
+    chips: [{t:'NEW: Apex',c:'#f59e0b'},{t:'seq-numbered',c:'#339af0'},{t:'ROB ordered',c:'#51cf66'}],
+    connects: [
+      {to:'bus',   arrow:'←', why:'Receives all atomic requests from SMs via the coherency bus'},
+      {to:'l2',    arrow:'→', why:'Dispatches one granted atomic at a time down to L2 for RMW'},
+      {to:'l2',    arrow:'←', why:'Receives ACK with result value back from L2 (possibly out of order)'},
+      {to:'bus',   arrow:'→', why:'Returns DATA to originating SM after ROB retires in SEQ order'}
+    ]
+  },
   cohDir:    { name:'Coherency Directory', color:'#22d3ee', desc:'A hardware table tracking which SMs hold a copy of each cache line. When a write occurs, instead of broadcasting INV to all SMs (O(n) traffic), the directory sends INV only to the SMs listed as sharers — O(sharers). At 256+ SMs this is a massive bus bandwidth saving. CPUs have used directories for decades; GPUs are still mostly broadcast-based.', chips:[{t:'NEW: Apex',c:'#22d3ee'},{t:'targeted INV',c:'#f06595'},{t:'O(sharers)',c:'#51cf66'}], connects:[{to:'l2',arrow:'↔',why:'Directory lives alongside L2 — each L2 set has an associated sharer vector'},{to:'bus',arrow:'→',why:'Sends targeted INV only to SMs in the sharer list'}] },
   warpScheduler:{ name:'Warp Scheduler', color:'#a78bfa', desc:'The SM sub-unit that decides which warp runs each clock cycle. When a warp stalls (waiting for L2 data, a dependency, or a barrier), the scheduler instantly switches to another ready warp. With enough resident warps, the stall is completely hidden by useful work from other warps — this is GPU latency tolerance. In Apex this becomes an explicit visible block with per-warp stall reason tracking.', chips:[{t:'NEW: Apex',c:'#a78bfa'},{t:'per-SM',c:'#339af0'},{t:'latency hiding',c:'#51cf66'}], connects:[{to:'l1',arrow:'↔',why:'When a warp misses L1, scheduler marks it stalled; when DATA arrives, marks it ready'},{to:'regs',arrow:'↔',why:'Stalled warp context (registers, PC) is swapped out when another warp runs'}] },
 };
@@ -1113,7 +1276,12 @@ function updateSelPanel(hit) {
   var panel = document.getElementById('sel-panel');
   panel.classList.add('visible');
   document.getElementById('sel-name').innerHTML = '<span style="color:' + info.color + '">' + info.name + '</span>';
-  document.getElementById('sel-desc').textContent = info.desc;
+  var descEl = document.getElementById('sel-desc');
+  if (info.descHTML) {
+    descEl.innerHTML = info.descHTML;
+  } else {
+    descEl.textContent = info.desc;
+  }
   var connList = document.getElementById('conn-list');
   connList.innerHTML = '';
   if (!info.connects || info.connects.length === 0) {
