@@ -2969,8 +2969,6 @@ var arbiterState = {
   seqCounter: 0,
   queue: [],       // pending requests waiting for grant (arrival order = grant order)
   rob: [],         // reorder buffer: [{seq, smIdx, state:'pending'|'complete'|'retiring'|'done'}]
-  robHead: 0,      // next SEQ# that must retire before anything else can
-  pendingRetire: [],// completed SEQs waiting for robHead to catch up
   activeOps: [],   // [{seq, smIdx, phase, phaseName, phaseStart}] — live phase tracking
   grantCount: 0,
   contentionLevel: 0,
@@ -2983,8 +2981,6 @@ function resetArbiter() {
   arbiterState.seqCounter = 0;
   arbiterState.queue = [];
   arbiterState.rob = [];
-  arbiterState.robHead = 0;
-  arbiterState.pendingRetire = [];
   arbiterState.activeOps = [];
   arbiterState.grantCount = 0;
   arbiterState.contentionLevel = 0;
@@ -3230,12 +3226,17 @@ function triggerAtomic() {
     var enqueuedSeqs = {};
     var enqueuedCount = 0;
     var grantQueue = []; // pending grant requests waiting for enqueue
+    // grantInFlight: true while a grant's RMW is traversing the arbiter block (legs 1-3).
+    // Enforces arbiter serialization — only one RMW may be inside the arbiter at a time.
+    var grantInFlight = false;
 
-    // Try to process the next pending grant — called whenever a new enqueue happens
+    // Try to process the next pending grant — called on enqueue or when previous leg3 completes
     function tryNextGrant() {
+      if (grantInFlight) return;           // previous RMW still in arbiter block, wait
       if (grantQueue.length === 0) return;
       var next = grantQueue[0];
-      if (enqueuedSeqs[next.seq] === undefined) return; // not enqueued yet, wait
+      if (enqueuedSeqs[next.seq] === undefined) return; // not yet arrived at arbiter, wait
+      grantInFlight = true;
       grantQueue.shift();
       issueGrant(next.seq, next.smIdx, next.onGrantComplete);
     }
@@ -3265,7 +3266,8 @@ function triggerAtomic() {
           particles.push(new Particle(smBusJunct, busAbove, '#f59e0b', 'RMW', 2.5, function() {
             particles.push(new Particle(busAbove, arbEntry, '#f59e0b', 'RMW', 2.2, function() {
               particles.push(new Particle(arbEntry, arbExit, '#f59e0b', 'ATOM', 2.0, function() {
-                if (onGrantComplete) onGrantComplete(); // unblock next grant
+                grantInFlight = false;                  // RMW through arbiter, next grant can proceed
+                if (onGrantComplete) onGrantComplete();
                 particles.push(new Particle(arbExit, l2dest, '#f59e0b', 'ATOM', 2.0, function() {
                   flash(layout.l2, '#f59e0b');
                   logEvent('L2: RMW SEQ#'+capturedSeq+' complete', '#ffa94d');
