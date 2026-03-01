@@ -196,7 +196,7 @@
   }
   .preset-btn:hover { border-color: var(--green); color: var(--green); background: rgba(0,255,136,0.05); }
 
-  .reg-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; }
+  .reg-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; min-height: 0; }
   .reg-item {
     background: var(--bg2);
     border: 1px solid var(--border);
@@ -228,7 +228,7 @@
     padding: 8px 4px;
     position: relative;
     transition: all 0.3s;
-    min-width: 70px;
+    min-width: 55px;
   }
   .stage.occupied { border-color: var(--accent); background: var(--glow2); box-shadow: 0 0 15px var(--glow); }
   .stage.stall { border-color: var(--red); background: rgba(255,51,85,0.08); animation: stall-pulse 0.5s infinite; }
@@ -555,9 +555,259 @@
 
   /* Glossary */
   #tab-glossary { flex-direction: column; overflow: hidden; }
+
+
+  /* ============================================================
+     VERBOSE PIPELINE REGISTER CARDS
+     ============================================================ */
+  .pr-card {
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    transition: background 0.3s;
+  }
+  .pr-card.active { background: rgba(0,136,255,0.04); }
+  .pr-card.stalled { background: rgba(255,51,85,0.05); }
+  .pr-card.bubble { background: rgba(255,51,85,0.03); }
+
+  .pr-card-header {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 5px 10px;
+    background: var(--bg3);
+    border-bottom: 1px solid var(--border);
+    cursor: default;
+  }
+  .pr-reg-badge {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 8px;
+    letter-spacing: 1px;
+    padding: 2px 6px;
+    border: 1px solid;
+    flex-shrink: 0;
+  }
+  .pr-badge-if  { border-color: var(--accent2); color: var(--accent2); }
+  .pr-badge-id  { border-color: var(--purple);  color: var(--purple); }
+  .pr-badge-ex  { border-color: var(--yellow);  color: var(--yellow); }
+  .pr-badge-mem { border-color: var(--orange);  color: var(--orange); }
+
+  .pr-reg-name {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .pr-stage-label {
+    font-size: 9px;
+    color: var(--text3);
+    flex-shrink: 0;
+    font-family: 'Share Tech Mono', monospace;
+  }
+
+  .pr-card-body {
+    padding: 6px 10px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .pr-empty-msg {
+    font-size: 10px;
+    color: var(--text3);
+    font-style: italic;
+  }
+
+  .pr-what {
+    font-size: 11.5px;
+    color: var(--text);
+    line-height: 1.55;
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 500;
+  }
+  .pr-what .pr-instr { color: var(--yellow); font-family: 'Share Tech Mono', monospace; font-size: 11px; }
+  .pr-what .pr-reg   { color: var(--green);  font-family: 'Share Tech Mono', monospace; font-size: 10px; }
+  .pr-what .pr-val   { color: var(--accent); font-family: 'Share Tech Mono', monospace; font-size: 10px; }
+  .pr-what .pr-addr  { color: var(--orange); font-family: 'Share Tech Mono', monospace; font-size: 10px; }
+  .pr-what .pr-stall { color: var(--red);    font-weight: 600; }
+  .pr-what .pr-fwd   { color: var(--accent); font-weight: 600; }
+  .pr-what .pr-ok    { color: var(--green);  font-weight: 600; }
+
+  .pr-detail {
+    font-size: 10px;
+    color: var(--text2);
+    line-height: 1.5;
+    margin-top: 2px;
+  }
+
+  .pr-tags {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    margin-top: 3px;
+  }
+  .pr-tag {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 8px;
+    padding: 1px 5px;
+    border: 1px solid;
+    border-radius: 1px;
+  }
+  .pr-tag-ok   { border-color: var(--green);  color: var(--green); }
+  .pr-tag-warn { border-color: var(--red);    color: var(--red); }
+  .pr-tag-fwd  { border-color: var(--accent); color: var(--accent); }
+  .pr-tag-info { border-color: var(--text3);  color: var(--text3); }
+  .pr-tag-mem  { border-color: var(--orange); color: var(--orange); }
+
+  /* ============================================================
+     VERBOSE EXECUTION LOG ENTRIES
+     ============================================================ */
+  .xlog-entry {
+    border-left: 3px solid var(--border2);
+    background: var(--bg2);
+    padding: 6px 10px 7px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    animation: xlogIn 0.25s ease;
+    flex-shrink: 0;
+  }
+  @keyframes xlogIn { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:translateY(0); } }
+
+  .xlog-entry.xl-fetch   { border-color: var(--accent2); }
+  .xlog-entry.xl-decode  { border-color: var(--purple); }
+  .xlog-entry.xl-execute { border-color: var(--yellow); }
+  .xlog-entry.xl-memory  { border-color: var(--orange); }
+  .xlog-entry.xl-wb      { border-color: var(--green); }
+  .xlog-entry.xl-stall   { border-color: var(--red); background: rgba(255,51,85,0.04); }
+  .xlog-entry.xl-fwd     { border-color: var(--accent); background: rgba(0,212,255,0.03); }
+  .xlog-entry.xl-branch  { border-color: var(--yellow); }
+  .xlog-entry.xl-prog    { border-color: var(--text3); }
+
+  .xlog-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .xlog-cycle {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    color: var(--text3);
+    flex-shrink: 0;
+    min-width: 28px;
+  }
+  .xlog-stage-pill {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 8px;
+    padding: 1px 6px;
+    border: 1px solid;
+    flex-shrink: 0;
+  }
+  .xlog-stage-pill.xl-fetch   { border-color: var(--accent2); color: var(--accent2); }
+  .xlog-stage-pill.xl-decode  { border-color: var(--purple);  color: var(--purple); }
+  .xlog-stage-pill.xl-execute { border-color: var(--yellow);  color: var(--yellow); }
+  .xlog-stage-pill.xl-memory  { border-color: var(--orange);  color: var(--orange); }
+  .xlog-stage-pill.xl-wb      { border-color: var(--green);   color: var(--green); }
+  .xlog-stage-pill.xl-stall   { border-color: var(--red);     color: var(--red); }
+  .xlog-stage-pill.xl-fwd     { border-color: var(--accent);  color: var(--accent); }
+  .xlog-stage-pill.xl-branch  { border-color: var(--yellow);  color: var(--yellow); }
+  .xlog-stage-pill.xl-prog    { border-color: var(--text3);   color: var(--text3); }
+
+  .xlog-instr {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--yellow);
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .xlog-headline {
+    font-size: 11.5px;
+    color: var(--text);
+    line-height: 1.5;
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 500;
+  }
+  .xlog-headline b { color: var(--text); font-weight: 700; }
+  .xlog-headline .xl-r { color: var(--green);  font-family: 'Share Tech Mono', monospace; font-size: 10px; }
+  .xlog-headline .xl-v { color: var(--accent); font-family: 'Share Tech Mono', monospace; font-size: 10px; }
+  .xlog-headline .xl-a { color: var(--orange); font-family: 'Share Tech Mono', monospace; font-size: 10px; }
+  .xlog-headline .xl-w { color: var(--red);    font-weight: 700; }
+  .xlog-headline .xl-g { color: var(--green);  font-weight: 700; }
+  .xlog-detail {
+    font-size: 10px;
+    color: var(--text2);
+    line-height: 1.5;
+  }
+
+  /* ============================================================
+     TOOLTIP SYSTEM
+     ============================================================ */
+  [data-tip] {
+    cursor: help;
+    border-bottom: 1px dashed rgba(0,212,255,0.3);
+    transition: border-color 0.15s, color 0.15s;
+  }
+  [data-tip]:hover { border-color: var(--accent); }
+
+  .tip-box {
+    display: none;
+    position: fixed;
+    z-index: 9999;
+    max-width: 310px;
+    min-width: 190px;
+    background: #04090f;
+    border: 1px solid var(--accent);
+    box-shadow: 0 0 30px rgba(0,212,255,0.18), 0 6px 28px rgba(0,0,0,0.9);
+    padding: 10px 13px 12px;
+    pointer-events: none;
+  }
+  .tip-box.show { display: block; animation: tipIn 0.1s ease; }
+  @keyframes tipIn { from { opacity:0; transform:translateY(3px); } to { opacity:1; transform:translateY(0); } }
+  .tip-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid var(--border);
+  }
+  .tip-body {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 12.5px;
+    color: var(--text2);
+    line-height: 1.55;
+  }
+  .tip-body b { color: var(--text); font-weight: 600; }
+  .tip-body code {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--yellow);
+    background: rgba(255,221,0,0.07);
+    padding: 1px 4px;
+  }
+  .tip-eg {
+    display: block;
+    margin-top: 6px;
+    padding-top: 5px;
+    border-top: 1px solid var(--border);
+    font-size: 10px;
+    color: var(--text3);
+    font-family: 'Share Tech Mono', monospace;
+  }
+  .tip-eg span { color: var(--green); }
 </style>
 </head>
 <body>
+
+<!-- GLOBAL TOOLTIP CARD -->
+<div class="tip-box" id="tipBox"><div class="tip-title" id="tipTitle"></div><div class="tip-body" id="tipBody"></div></div>
 
 <header>
   <div class="logo">
@@ -577,12 +827,12 @@
     <button class="btn" onclick="showHelp()">?</button>
   </div>
   <div class="clock-display">
-    <div class="clock-item"><div class="val" id="cycleCount">0</div><div class="lbl">Cycles</div></div>
-    <div class="clock-item"><div class="val" id="instrCount">0</div><div class="lbl">Instrs</div></div>
-    <div class="clock-item"><div class="val" id="cpiDisplay">—</div><div class="lbl">CPI</div></div>
-    <div class="clock-item"><div class="val" id="ipcDisplay">—</div><div class="lbl">IPC</div></div>
-    <div class="clock-item"><div class="val" id="stallCount">0</div><div class="lbl">Stalls</div></div>
-    <div class="clock-item"><div class="val" id="missCount">0</div><div class="lbl">Misses</div></div>
+    <div class="clock-item" data-tip="cycles|Clock Cycles|One <b>cycle</b> = one tick of the CPU clock (here: 3.2 GHz). Each pipeline stage consumes one cycle. More cycles = more time elapsed.<div class='tip-eg'>@ 3.2 GHz: 1 cycle ≈ 0.3 ns</div>"><div class="val" id="cycleCount">0</div><div class="lbl">Cycles</div></div>
+    <div class="clock-item" data-tip="instrs|Instructions Committed|Instructions that completed the full pipeline (reached <b>WB</b> stage). Does NOT count instructions still in-flight, NOP bubbles, or squashed speculative work.<div class='tip-eg'>Efficiency = Instrs ÷ Cycles × 100%</div>"><div class="val" id="instrCount">0</div><div class="lbl">Instrs</div></div>
+    <div class="clock-item" data-tip="cpi|CPI — Cycles Per Instruction|Average clock cycles per completed instruction. <b>Ideal = 1.0</b>. Every stall cycle and branch misprediction penalty pushes this above 1. Lower is better.<div class='tip-eg'>CPI = Total Cycles ÷ Instructions</div>"><div class="val" id="cpiDisplay">—</div><div class="lbl">CPI</div></div>
+    <div class="clock-item" data-tip="ipc|IPC — Instructions Per Cycle|The inverse of CPI. How many instructions retire per cycle. <b>Max = 1.0</b> for in-order pipelines (superscalar CPUs can exceed 1). Higher is better.<div class='tip-eg'>IPC = 1 ÷ CPI = Instrs ÷ Cycles</div>"><div class="val" id="ipcDisplay">—</div><div class="lbl">IPC</div></div>
+    <div class="clock-item" data-tip="stalls|Pipeline Stalls|Cycles where the pipeline is frozen to resolve a <b>hazard</b>. The stalled instruction stays in its stage doing nothing — wasted time. Load-use hazards cause exactly 1 stall each.<div class='tip-eg'>Each stall adds +1 to CPI</div>"><div class="val" id="stallCount">0</div><div class="lbl">Stalls</div></div>
+    <div class="clock-item" data-tip="misses|Cache Misses|Times data or an instruction wasn't in the fast L1 cache. The CPU stalls while fetching from slower memory: <b>L2 = +10 cycles</b>, DRAM = +200 cycles.<div class='tip-eg'>Miss rate = Misses ÷ Total Accesses</div>"><div class="val" id="missCount">0</div><div class="lbl">Misses</div></div>
   </div>
 </header>
 
@@ -610,25 +860,25 @@
         </div>
         <div style="display:flex; align-items:center; gap:3px; padding:7px 10px; border-left:1px solid var(--border); flex-shrink:0;">
           <span style="font-size:10px; color:var(--text3); letter-spacing:1px; text-transform:uppercase; margin-right:4px;">QUICK:</span>
-          <button class="preset-btn" onclick="queuePreset('ADD R1,R2,R3')">ADD</button>
-          <button class="preset-btn" onclick="queuePreset('SUB R4,R1,R2')">SUB</button>
-          <button class="preset-btn" onclick="queuePreset('MUL R5,R3,R4')">MUL</button>
-          <button class="preset-btn" onclick="queuePreset('LW R6,0(R1)')">LW</button>
-          <button class="preset-btn" onclick="queuePreset('SW R6,4(R2)')">SW</button>
-          <button class="preset-btn" onclick="queuePreset('AND R7,R1,R2')">AND</button>
-          <button class="preset-btn" onclick="queuePreset('OR R8,R3,R5')">OR</button>
-          <button class="preset-btn" onclick="queuePreset('XOR R9,R1,R7')">XOR</button>
-          <button class="preset-btn" onclick="queuePreset('BEQ R1,R2,8')">BEQ</button>
-          <button class="preset-btn" onclick="queuePreset('BNE R3,R4,12')">BNE</button>
-          <button class="preset-btn" onclick="queuePreset('ADDI R1,R2,5')">ADDI</button>
-          <button class="preset-btn" onclick="queuePreset('SLL R2,R1,3')">SLL</button>
+          <button class="preset-btn" data-tip="add|ADD Rd, Rs1, Rs2|Rd = Rs1 + Rs2. Integer addition. R-type instruction — 3 registers, no immediate. The most basic ALU operation; zero stalls if operands are ready." onclick="queuePreset('ADD R1,R2,R3')">ADD</button>
+          <button class="preset-btn" data-tip="sub|SUB Rd, Rs1, Rs2|Rd = Rs1 − Rs2. Integer subtraction. Same encoding slot as ADD but with funct7=0100000 to signal the ALU to subtract." onclick="queuePreset('SUB R4,R1,R2')">SUB</button>
+          <button class="preset-btn" data-tip="mul|MUL Rd, Rs1, Rs2|Rd = Rs1 × Rs2 (lower 32 bits). RV32M extension. Uses the multiply unit which may take more cycles on real hardware; here simulated as 1 cycle." onclick="queuePreset('MUL R5,R3,R4')">MUL</button>
+          <button class="preset-btn" data-tip="lw|LW Rd, offset(Rs1)|Load Word — reads 4 bytes from memory address Rs1+offset into Rd. The loaded value is only available after the MEM stage, causing a <b>load-use stall</b> if used immediately." onclick="queuePreset('LW R6,0(R1)')">LW</button>
+          <button class="preset-btn" data-tip="sw|SW Rs2, offset(Rs1)|Store Word — writes Rs2 to memory address Rs1+offset. Does NOT write a register (no rd). The value must be in Rs2 by the time SW reaches MEM." onclick="queuePreset('SW R6,4(R2)')">SW</button>
+          <button class="preset-btn" data-tip="and|AND Rd, Rs1, Rs2|Rd = Rs1 AND Rs2. Bitwise AND — each bit of the result is 1 only if both input bits are 1. Useful for masking (clearing specific bits)." onclick="queuePreset('AND R7,R1,R2')">AND</button>
+          <button class="preset-btn" data-tip="or|OR Rd, Rs1, Rs2|Rd = Rs1 OR Rs2. Bitwise OR — each bit is 1 if at least one input bit is 1. Useful for setting specific bits." onclick="queuePreset('OR R8,R3,R5')">OR</button>
+          <button class="preset-btn" data-tip="xor|XOR Rd, Rs1, Rs2|Rd = Rs1 XOR Rs2. Bitwise exclusive-OR — bit is 1 if inputs differ. Used in encryption, checksums, and toggling bits." onclick="queuePreset('XOR R9,R1,R7')">XOR</button>
+          <button class="preset-btn" data-tip="beq|BEQ Rs1, Rs2, offset|Branch if Equal — if Rs1 == Rs2, jump to PC+offset. Branch condition resolved in EX. A misprediction flushes 2 pipeline stages." onclick="queuePreset('BEQ R1,R2,8')">BEQ</button>
+          <button class="preset-btn" data-tip="bne|BNE Rs1, Rs2, offset|Branch if Not Equal — if Rs1 ≠ Rs2, jump to PC+offset. Same pipeline behavior as BEQ but inverts the condition." onclick="queuePreset('BNE R3,R4,12')">BNE</button>
+          <button class="preset-btn" data-tip="addi|ADDI Rd, Rs1, imm|Rd = Rs1 + sign_extend(imm). Add Immediate — adds a 12-bit constant directly embedded in the instruction. I-type format. No second source register." onclick="queuePreset('ADDI R1,R2,5')">ADDI</button>
+          <button class="preset-btn" data-tip="sll|SLL Rd, Rs1, Rs2|Shift Left Logical — shifts Rs1 left by Rs2 bits, filling with zeros. Equivalent to multiplying by 2^Rs2. Used for fast powers-of-two multiply." onclick="queuePreset('SLL R2,R1,3')">SLL</button>
         </div>
       </div>
 
       <div style="flex:1; display:grid; grid-template-columns:200px 1fr 220px; grid-template-rows:1fr 1fr; overflow:hidden;">
         <div class="panel span-2-rows" style="grid-row:span 2;">
           <div class="panel-header">
-            <div class="panel-title">REGISTER FILE</div>
+            <div class="panel-title" data-tip="regfile|Register File|32 general-purpose 32-bit registers (R0–R31). R0 is hardwired to 0 — writing to it is ignored. All arithmetic operates on these; values are loaded from memory (LW) and stored back (SW).">REGISTER FILE</div>
             <div class="panel-badge">32×32-bit</div>
           </div>
           <div class="panel-body">
@@ -641,125 +891,155 @@
             <div class="panel-title">PIPELINE STAGES</div>
             <div class="panel-badge">5-STAGE IN-ORDER</div>
             <div class="hazard-indicator" id="hazardIndicator" style="margin-left:8px;">
-              <div class="hazard-badge raw">RAW</div>
-              <div class="hazard-badge war">WAR</div>
-              <div class="hazard-badge waw">WAW</div>
-              <div class="hazard-badge structural">STRUCT</div>
-              <div class="hazard-badge control">CTRL</div>
+              <div class="hazard-badge raw" data-tip="raw|RAW — Read After Write|An instruction tries to READ a register before a previous instruction has finished WRITing it. The most common hazard. Solved by <b>forwarding</b> (usually) or a <b>1-cycle stall</b> for load-use cases.">RAW</div>
+              <div class="hazard-badge war" data-tip="war|WAR — Write After Read|An instruction tries to WRITE a register before an earlier instruction has READ it. Rare in in-order pipelines; mainly matters for <b>out-of-order</b> execution.">WAR</div>
+              <div class="hazard-badge waw" data-tip="waw|WAW — Write After Write|Two instructions both write the same register. The second write must happen after the first or the wrong value survives. In-order pipelines naturally handle this.">WAW</div>
+              <div class="hazard-badge structural" data-tip="structural|Structural Hazard|Two instructions need the <b>same hardware resource</b> at the same time (e.g. one memory port but both a load and an instruction fetch). Requires stalling one of them.">STRUCT</div>
+              <div class="hazard-badge control" data-tip="ctrl|Control Hazard|Caused by <b>branch instructions</b>. The pipeline doesn't know which instruction comes next until the branch is resolved in EX. Wrong guesses (mispredictions) waste 2–3 cycles.">CTRL</div>
             </div>
           </div>
-          <div class="pipeline-container" style="flex-direction:row; align-items:center; justify-content:center; padding:12px; gap:0;">
-            <div class="stage" id="stageIF">
+          <div class="pipeline-container" style="flex-direction:row; align-items:center; justify-content:flex-start; padding:8px 6px; gap:0; overflow-x:auto; overflow-y:hidden; flex-wrap:nowrap;">
+            <div class="stage" id="stageIF" data-tip="if|IF — Instruction Fetch|The CPU reads the next instruction from memory (or L1 I-cache) using the <b>Program Counter (PC)</b> as the address. Takes 1 cycle if it hits the cache. On a load-use stall, IF stays frozen — the same instruction waits here for one extra cycle.">
               <div class="stage-name">IF</div>
               <div style="font-size:8px; color:var(--text3); margin-top:2px;">FETCH</div>
               <div class="stage-instr" id="stageIF-instr">—</div>
             </div>
             <div class="stage-arrow">›</div>
-            <div class="stage" id="stageID">
+            <div class="stage" id="stageID" data-tip="id|ID — Instruction Decode|The fetched bits are decoded: What operation is this? Which registers does it read/write? The <b>hazard detection unit</b> checks here whether a stall is needed. A NOP bubble in this slot means a stall was inserted.">
               <div class="stage-name">ID</div>
               <div style="font-size:8px; color:var(--text3); margin-top:2px;">DECODE</div>
               <div class="stage-instr" id="stageID-instr">—</div>
             </div>
             <div class="stage-arrow">›</div>
-            <div class="stage" id="stageEX">
+            <div class="stage" id="stageEX" data-tip="ex|EX — Execute|The <b>ALU</b> does the computation: arithmetic, logic, address calculation for loads/stores, or branch condition evaluation. Forwarding paths deliver register values directly here, bypassing the register file.">
               <div class="stage-name">EX</div>
               <div style="font-size:8px; color:var(--text3); margin-top:2px;">EXECUTE</div>
               <div class="stage-instr" id="stageEX-instr">—</div>
             </div>
             <div class="stage-arrow">›</div>
-            <div class="stage" id="stageMEM">
+            <div class="stage" id="stageMEM" data-tip="mem|MEM — Memory Access|Only <b>LW/SW</b> instructions actually use this stage. Loads read a value from the D-cache; stores write one. ALU instructions pass through unchanged. Load results become available here — too late for the immediately following instruction (hence load-use stalls).">
               <div class="stage-name">MEM</div>
               <div style="font-size:8px; color:var(--text3); margin-top:2px;">MEMORY</div>
               <div class="stage-instr" id="stageMEM-instr">—</div>
             </div>
             <div class="stage-arrow">›</div>
-            <div class="stage" id="stageWB">
+            <div class="stage" id="stageWB" data-tip="wb|WB — Write Back|The final stage. Results are written back into the <b>register file</b> so future instructions can use them. Once an instruction reaches WB it is considered <b>committed</b> — counted in the Instrs counter.">
               <div class="stage-name">WB</div>
               <div style="font-size:8px; color:var(--text3); margin-top:2px;">WRITEBACK</div>
               <div class="stage-instr" id="stageWB-instr">—</div>
             </div>
           </div>
           <div style="padding:0 12px 8px;">
-            <div class="bus-label"><span>INSTRUCTION BUS (32-bit)</span><span id="instrBusVal" class="mono c-accent">—</span></div>
+            <div class="bus-label"><span data-tip="ibus|Instruction Bus (32-bit)|Carries the raw 32-bit encoded instruction word from I-cache → IF/ID pipeline register. The encoding contains opcode, register numbers, and immediate values packed into specific bit fields.">INSTRUCTION BUS (32-bit)</span><span id="instrBusVal" class="mono c-accent">—</span></div>
             <div class="bus-visual"><div class="bus-packet"></div></div>
-            <div class="bus-label" style="margin-top:4px;"><span>DATA BUS (32-bit)</span><span id="dataBusVal" class="mono c-green">—</span></div>
+            <div class="bus-label" style="margin-top:4px;"><span data-tip="dbus|Data Bus (32-bit)|Carries values between the ALU, data cache, and registers. Shows the current ALU result or load/store data. 32 bits wide — matches the RISC-V RV32I register width.">DATA BUS (32-bit)</span><span id="dataBusVal" class="mono c-green">—</span></div>
             <div class="bus-visual"><div class="bus-packet" style="background:linear-gradient(90deg,transparent,var(--green),transparent);"></div></div>
-            <div class="bus-label" style="margin-top:4px;"><span>CONTROL BUS</span><span id="ctrlBusVal" class="mono c-purple">—</span></div>
+            <div class="bus-label" style="margin-top:4px;"><span data-tip="cbus|Control Bus|Carries control signals that tell each stage what to do: RegWrite, MemRead, Branch, ALUSrc, etc. These are derived during decode and travel with the instruction through the pipeline registers.">CONTROL BUS</span><span id="ctrlBusVal" class="mono c-purple">—</span></div>
             <div class="bus-visual"><div class="bus-packet" style="background:linear-gradient(90deg,transparent,var(--purple),transparent); animation-delay:0.7s;"></div></div>
           </div>
         </div>
 
         <div class="panel" style="border-right:none;">
           <div class="panel-header">
-            <div class="panel-title">INSTR QUEUE</div>
+            <div class="panel-title" data-tip="iqueue|Instruction Queue|Instructions waiting to be fetched into the pipeline. Acts like a FIFO buffer. In a real CPU this corresponds to the L1 instruction cache and fetch buffer. Programs are loaded here before running.">INSTR QUEUE</div>
             <div class="panel-badge" id="queueBadge">0/16</div>
           </div>
           <div class="panel-body" id="instrQueueDisplay" style="overflow:auto; display:flex; flex-direction:column; gap:2px;"></div>
         </div>
 
-        <div class="panel">
-          <div class="panel-header"><div class="panel-title">PC / CONTROL</div></div>
-          <div class="panel-body">
-            <div style="text-align:center; margin-bottom:12px;">
-              <div style="font-size:9px; color:var(--text3); letter-spacing:1px; text-transform:uppercase; margin-bottom:4px;">PROGRAM COUNTER</div>
-              <div id="pcDisplay" style="font-family:'Share Tech Mono',monospace; font-size:22px; color:var(--yellow); text-shadow:0 0 15px rgba(255,221,0,0.6);">0x00000000</div>
-              <div style="font-size:9px; color:var(--text3); margin-top:2px;" id="pcPlusDisplay">PC+4: 0x00000004</div>
+        <div class="panel" style="overflow:hidden;">
+          <div class="panel-header">
+            <div class="panel-title" data-tip="pc|Program Counter (PC)|A special register that always holds the address of the next instruction to fetch. Increments by 4 each cycle. Frozen during load-use stalls.">PC / PIPELINE REGISTERS</div>
+            <div id="pcDisplay" style="font-family:'Share Tech Mono',monospace; font-size:13px; color:var(--yellow); text-shadow:0 0 8px rgba(255,221,0,0.5); margin-left:auto;">0x00000000</div>
+          </div>
+          <div class="panel-body" style="padding:0; overflow-y:auto; display:flex; flex-direction:column; gap:0;">
+            <div class="pr-card" id="prCard-IFID">
+              <div class="pr-card-header">
+                <div class="pr-reg-badge pr-badge-if">IF/ID</div>
+                <div class="pr-reg-name" id="prIF_ID_val">EMPTY</div>
+                <div class="pr-stage-label">Fetch → Decode</div>
+              </div>
+              <div class="pr-card-body" id="prCard-IFID-body">
+                <div class="pr-empty-msg">No instruction in the pipeline yet. Click STEP or AUTO RUN to begin.</div>
+              </div>
             </div>
-            <div class="section-title">PIPELINE REGISTERS</div>
-            <div style="display:flex; flex-direction:column; gap:3px;">
-              <div class="decode-field">
-                <div class="df-label">IF/ID</div>
-                <div class="df-val mono" id="prIF_ID_val">EMPTY</div>
+            <div class="pr-card" id="prCard-IDEX">
+              <div class="pr-card-header">
+                <div class="pr-reg-badge pr-badge-id">ID/EX</div>
+                <div class="pr-reg-name" id="prID_EX_val">EMPTY</div>
+                <div class="pr-stage-label">Decode → Execute</div>
               </div>
-              <div class="decode-field">
-                <div class="df-label">ID/EX</div>
-                <div class="df-val mono" id="prID_EX_val">EMPTY</div>
+              <div class="pr-card-body" id="prCard-IDEX-body">
+                <div class="pr-empty-msg">Waiting for an instruction to decode.</div>
               </div>
-              <div class="decode-field">
-                <div class="df-label">EX/MEM</div>
-                <div class="df-val mono" id="prEX_MEM_val">EMPTY</div>
+            </div>
+            <div class="pr-card" id="prCard-EXMEM">
+              <div class="pr-card-header">
+                <div class="pr-reg-badge pr-badge-ex">EX/MEM</div>
+                <div class="pr-reg-name" id="prEX_MEM_val">EMPTY</div>
+                <div class="pr-stage-label">Execute → Memory</div>
               </div>
-              <div class="decode-field">
-                <div class="df-label">MEM/WB</div>
-                <div class="df-val mono" id="prMEM_WB_val">EMPTY</div>
+              <div class="pr-card-body" id="prCard-EXMEM-body">
+                <div class="pr-empty-msg">Waiting for an instruction to execute.</div>
               </div>
+            </div>
+            <div class="pr-card" id="prCard-MEMWB">
+              <div class="pr-card-header">
+                <div class="pr-reg-badge pr-badge-mem">MEM/WB</div>
+                <div class="pr-reg-name" id="prMEM_WB_val">EMPTY</div>
+                <div class="pr-stage-label">Memory → Writeback</div>
+              </div>
+              <div class="pr-card-body" id="prCard-MEMWB-body">
+                <div class="pr-empty-msg">Waiting for a memory stage result.</div>
+              </div>
+            </div>
+            <div style="padding:6px 10px; border-top:1px solid var(--border); flex-shrink:0; background:var(--bg3);">
+              <div style="font-size:9px; color:var(--text3); margin-bottom:2px; letter-spacing:1px;">NEXT INSTRUCTION AT</div>
+              <div id="pcPlusDisplay" style="font-family:'Share Tech Mono',monospace; font-size:11px; color:var(--text2);">PC+4: 0x00000004</div>
             </div>
           </div>
         </div>
 
-        <div class="panel" style="border-right:none; border-bottom:none;">
-          <div class="panel-header"><div class="panel-title">EXECUTION LOG</div><button class="btn" style="font-size:9px; padding:2px 8px;" onclick="clearLog()">CLR</button></div>
-          <div class="panel-body" id="execLog" style="overflow-y:auto; display:flex; flex-direction:column; gap:2px;"></div>
-        </div>
-
-        <div class="panel" style="border-bottom:none;">
-          <div class="panel-header"><div class="panel-title">PERFORMANCE</div></div>
-          <div class="panel-body">
-            <div class="section-title">HAZARD STATS</div>
-            <div class="stat-bar">
-              <div class="stat-bar-label"><span class="name c-red">RAW Hazards</span><span class="val" id="rawStat">0</span></div>
-              <div class="stat-bar-track"><div class="stat-bar-fill" id="rawBar" style="width:0%;background:linear-gradient(90deg,var(--red),#ff6677);"></div></div>
+        <div class="panel" style="border-bottom:none; display:flex; flex-direction:column; overflow:hidden;">
+          <!-- EXECUTION LOG -->
+          <div style="display:flex; flex-direction:column; flex:1; min-height:0; border-bottom:1px solid var(--border);">
+            <div class="panel-header">
+              <div class="panel-title">EXECUTION LOG</div>
+              <div id="logVerboseBadge" style="font-family:'Share Tech Mono',monospace; font-size:9px; padding:1px 6px; border:1px solid var(--border2); color:var(--text3); margin-left:6px;">PLAIN ENGLISH</div>
+              <button class="btn" style="font-size:9px; padding:2px 8px; margin-left:auto;" onclick="clearLog()">CLR</button>
             </div>
-            <div class="stat-bar">
-              <div class="stat-bar-label"><span class="name c-orange">Stall Cycles</span><span class="val" id="stallStat">0</span></div>
-              <div class="stat-bar-track"><div class="stat-bar-fill" id="stallBar" style="width:0%;background:linear-gradient(90deg,var(--orange),#ffaa44);"></div></div>
-            </div>
-            <div class="stat-bar">
-              <div class="stat-bar-label"><span class="name c-yellow">Branch Mispredict</span><span class="val" id="branchMispredStat">0</span></div>
-              <div class="stat-bar-track"><div class="stat-bar-fill" id="branchBar" style="width:0%;background:linear-gradient(90deg,var(--yellow),#ffee66);"></div></div>
-            </div>
-            <div class="stat-bar">
-              <div class="stat-bar-label"><span class="name c-accent">Fwd Paths Used</span><span class="val" id="fwdStat">0</span></div>
-              <div class="stat-bar-track"><div class="stat-bar-fill" id="fwdBar" style="width:0%;"></div></div>
-            </div>
-            <div class="section-title" style="margin-top:8px;">THROUGHPUT</div>
-            <div class="stat-bar">
-              <div class="stat-bar-label"><span class="name">Pipeline Efficiency</span><span class="val c-green" id="effStat">0%</span></div>
-              <div class="stat-bar-track"><div class="stat-bar-fill" id="effBar" style="width:0%;"></div></div>
-            </div>
-            <div class="stat-bar">
-              <div class="stat-bar-label"><span class="name">Forwarding Rate</span><span class="val c-accent" id="fwdRateStat">0%</span></div>
-              <div class="stat-bar-track"><div class="stat-bar-fill" id="fwdRateBar" style="width:0%;"></div></div>
+            <div class="panel-body" id="execLog" style="overflow-y:auto; display:flex; flex-direction:column; gap:4px; padding:6px 8px; flex:1; min-height:0;"></div>
+          </div>
+          <!-- PERFORMANCE -->
+          <div style="display:flex; flex-direction:column; flex-shrink:0; max-height:260px; overflow-y:auto;">
+            <div class="panel-header"><div class="panel-title">PERFORMANCE</div></div>
+            <div class="panel-body">
+              <div class="section-title">HAZARD STATS</div>
+              <div class="stat-bar">
+                <div class="stat-bar-label"><span class="name c-red" data-tip="raw-stat|RAW Hazard Count|Total Read-After-Write hazards detected. Each one is a case where an instruction needed a value before the previous instruction finished computing it. Includes both forwarded cases and stall cases.">RAW Hazards</span><span class="val" id="rawStat">0</span></div>
+                <div class="stat-bar-track"><div class="stat-bar-fill" id="rawBar" style="width:0%;background:linear-gradient(90deg,var(--red),#ff6677);"></div></div>
+              </div>
+              <div class="stat-bar">
+                <div class="stat-bar-label"><span class="name c-orange" data-tip="stall-stat|Stall Cycles|Number of cycles the pipeline was frozen. Each stall = +1 CPI. Load-use hazards always cost exactly 1 stall. Branch mispredictions cost 2–3. Structural hazards are rare.">Stall Cycles</span><span class="val" id="stallStat">0</span></div>
+                <div class="stat-bar-track"><div class="stat-bar-fill" id="stallBar" style="width:0%;background:linear-gradient(90deg,var(--orange),#ffaa44);"></div></div>
+              </div>
+              <div class="stat-bar">
+                <div class="stat-bar-label"><span class="name c-yellow" data-tip="mispred-stat|Branch Mispredictions|Times the branch predictor guessed wrong. Each misprediction flushes 2–3 instructions and costs 2–3 wasted cycles.">Branch Mispredict</span><span class="val" id="branchMispredStat">0</span></div>
+                <div class="stat-bar-track"><div class="stat-bar-fill" id="branchBar" style="width:0%;background:linear-gradient(90deg,var(--yellow),#ffee66);"></div></div>
+              </div>
+              <div class="stat-bar">
+                <div class="stat-bar-label"><span class="name c-accent" data-tip="fwd-stat|Forwarding Paths Used|Times the forwarding unit routed a value directly from EX/MEM or MEM/WB back to EX, avoiding a stall.">Fwd Paths Used</span><span class="val" id="fwdStat">0</span></div>
+                <div class="stat-bar-track"><div class="stat-bar-fill" id="fwdBar" style="width:0%;"></div></div>
+              </div>
+              <div class="section-title" style="margin-top:6px;">THROUGHPUT</div>
+              <div class="stat-bar">
+                <div class="stat-bar-label"><span class="name" data-tip="eff-stat|Pipeline Efficiency|Percentage of cycles doing useful work: Instrs ÷ Cycles × 100%. 100% is ideal. Stalls and bubbles reduce this.">Pipeline Efficiency</span><span class="val c-green" id="effStat">0%</span></div>
+                <div class="stat-bar-track"><div class="stat-bar-fill" id="effBar" style="width:0%;"></div></div>
+              </div>
+              <div class="stat-bar">
+                <div class="stat-bar-label"><span class="name" data-tip="fwdrate-stat|Forwarding Rate|Percentage of instructions that received their input via the forwarding unit instead of waiting.">Forwarding Rate</span><span class="val c-accent" id="fwdRateStat">0%</span></div>
+                <div class="stat-bar-track"><div class="stat-bar-fill" id="fwdRateBar" style="width:0%;"></div></div>
+              </div>
             </div>
           </div>
         </div>
@@ -771,7 +1051,7 @@
   <div class="tab-panel" id="tab-fetch">
     <div class="fetch-layout" style="width:100%;">
       <div class="panel" style="border-bottom:none;">
-        <div class="panel-header"><div class="panel-title">INSTRUCTION MEMORY</div><div class="panel-badge">RV32I</div></div>
+        <div class="panel-header"><div class="panel-title" data-tip="imem|Instruction Memory|Shows all instructions loaded into the simulated CPU, with their addresses, hex encoding, mnemonic, and operands. The highlighted row is the current PC — the next instruction to be fetched.">INSTRUCTION MEMORY</div><div class="panel-badge">RV32I</div></div>
         <div class="panel-body">
           <div style="padding:6px 8px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px;">
             <div class="pc-label">PC →</div>
@@ -784,7 +1064,7 @@
         </div>
       </div>
       <div class="panel" style="border-bottom:none;">
-        <div class="panel-header"><div class="panel-title">INSTRUCTION DECODE</div><div class="panel-badge" id="decodeBadge">NO INSTR</div></div>
+        <div class="panel-header"><div class="panel-title" data-tip="idecode|Instruction Decode Unit|Breaks the 32-bit instruction word into its fields: <b>opcode</b>, register numbers, function codes, and immediate values. Shows the active control signals generated for the current instruction in the ID stage.">INSTRUCTION DECODE</div><div class="panel-badge" id="decodeBadge">NO INSTR</div></div>
         <div class="decode-visual">
           <div class="section-title">32-BIT INSTRUCTION WORD</div>
           <div class="instr-bits">
@@ -801,15 +1081,15 @@
           </div>
           <div class="section-title">CONTROL SIGNALS</div>
           <div class="ctrl-signals" id="ctrlSignals">
-            <div class="ctrl-sig" id="cs-regwrite">RegWrite</div>
-            <div class="ctrl-sig" id="cs-memread">MemRead</div>
-            <div class="ctrl-sig" id="cs-memwrite">MemWrite</div>
-            <div class="ctrl-sig" id="cs-branch">Branch</div>
-            <div class="ctrl-sig" id="cs-jump">Jump</div>
-            <div class="ctrl-sig" id="cs-alusrc">ALUSrc</div>
-            <div class="ctrl-sig" id="cs-memtoreg">MemToReg</div>
-            <div class="ctrl-sig" id="cs-aluzero">ALUZero</div>
-            <div class="ctrl-sig" id="cs-unsigned">Unsigned</div>
+            <div class="ctrl-sig" id="cs-regwrite" data-tip="regwrite|RegWrite|When ON: the result of this instruction will be written to the destination register (rd) in the WB stage. OFF for stores (SW) and branches — they don't write a register.">RegWrite</div>
+            <div class="ctrl-sig" id="cs-memread" data-tip="memread|MemRead|When ON: the MEM stage reads a value from data memory at the computed address. Only active for <b>load instructions</b> (LW, LH, LB). This flag is what triggers load-use hazard detection.">MemRead</div>
+            <div class="ctrl-sig" id="cs-memwrite" data-tip="memwrite|MemWrite|When ON: the MEM stage writes a value to data memory. Only active for <b>store instructions</b> (SW, SH, SB). The value stored comes from rs2.">MemWrite</div>
+            <div class="ctrl-sig" id="cs-branch" data-tip="branch|Branch Control Signal|When ON: this instruction is a conditional branch (BEQ, BNE, BLT, etc.). The ALU evaluates the condition in EX; if taken, the PC is redirected and 2 in-flight instructions are flushed.">Branch</div>
+            <div class="ctrl-sig" id="cs-jump" data-tip="jump|Jump Control Signal|When ON: this is an unconditional jump (JAL, JALR). Always redirects the PC. Saves the return address (PC+4) in the destination register rd.">Jump</div>
+            <div class="ctrl-sig" id="cs-alusrc" data-tip="alusrc|ALUSrc — ALU Source Mux|Selects what the <b>second operand</b> to the ALU is: OFF = register rs2; ON = sign-extended immediate. R-type uses a register; I-type, loads, stores use an immediate.">ALUSrc</div>
+            <div class="ctrl-sig" id="cs-memtoreg" data-tip="memtoreg|MemToReg — Result Source Mux|Selects what gets written to rd in WB: OFF = ALU result; ON = value loaded from memory. Only ON for load instructions.">MemToReg</div>
+            <div class="ctrl-sig" id="cs-aluzero" data-tip="aluzero|ALUZero Flag|The ALU's zero-detection flag. Goes ON when the ALU result equals zero. Branches use this to decide whether to take the jump: BEQ takes if zero is 1, BNE takes if zero is 0.">ALUZero</div>
+            <div class="ctrl-sig" id="cs-unsigned" data-tip="unsigned|Unsigned Comparison|When ON: comparisons (SLT, BLT, BGE) treat register values as <b>unsigned integers</b> (0 to 4,294,967,295 range) instead of signed (-2^31 to 2^31-1). Affects SLTU and BLTU instructions.">Unsigned</div>
           </div>
           <div class="section-title">IMMEDIATE GENERATION</div>
           <div style="background:var(--bg2); border:1px solid var(--border); padding:8px; font-family:'Share Tech Mono',monospace; font-size:11px;">
@@ -820,9 +1100,9 @@
         </div>
       </div>
       <div class="panel" style="border-right:none; border-bottom:none;">
-        <div class="panel-header"><div class="panel-title">HAZARD DETECTION</div></div>
+        <div class="panel-header"><div class="panel-title" data-tip="hazdetect|Hazard Detection Unit|Continuously monitors adjacent pipeline stages for data dependencies. If it detects a load-use hazard (LW in ID, dependent instruction in IF), it inserts a stall bubble and freezes IF and PC for one cycle.">HAZARD DETECTION</div></div>
         <div class="panel-body">
-          <div class="section-title">FORWARDING PATHS</div>
+          <div class="section-title" data-tip="fwdpaths|Forwarding (Bypassing)|Instead of waiting for WB to write the register file, the forwarding unit detects when an in-flight instruction has the value a later instruction needs, and routes it directly. <b>EX/MEM→EX</b> is the fastest path (1-cycle lag); <b>MEM/WB→EX</b> handles 2-cycle lags.">FORWARDING PATHS</div>
           <div id="fwdPaths">
             <div class="fwd-path" id="fwd-EX_MEM"><span class="c-text3">EX/MEM</span><span class="fwd-arrow">→</span><span class="c-text3">EX</span><span style="flex:1;"></span><span id="fwd-EX_MEM-val" class="mono c-text3">—</span></div>
             <div class="fwd-path" id="fwd-MEM_WB"><span class="c-text3">MEM/WB</span><span class="fwd-arrow">→</span><span class="c-text3">EX</span><span style="flex:1;"></span><span id="fwd-MEM_WB-val" class="mono c-text3">—</span></div>
@@ -949,7 +1229,7 @@
   <div class="tab-panel" id="tab-memory">
     <div class="mem-layout" style="width:100%;">
       <div class="panel">
-        <div class="panel-header"><div class="panel-title">L1 I-CACHE</div><div class="panel-badge">32KB · 8-WAY · 64B LINE</div></div>
+        <div class="panel-header"><div class="panel-title" data-tip="icache|L1 Instruction Cache|A small, fast cache holding recently fetched instructions. <b>32KB, 8-way set-associative, 64-byte cache lines</b>. A hit costs 1 cycle; a miss stalls the pipeline and fetches from L2 (10 cycles). Indexed by the low bits of the PC.">L1 I-CACHE</div><div class="panel-badge">32KB · 8-WAY · 64B LINE</div></div>
         <div class="panel-body">
           <div style="display:flex; gap:12px; margin-bottom:8px;">
             <div><div style="font-size:9px; color:var(--text3);">HIT RATE</div><div style="font-family:'Share Tech Mono',monospace; font-size:16px; color:var(--green);" id="icacheHitRate">100%</div></div>
@@ -960,7 +1240,7 @@
         </div>
       </div>
       <div class="panel" style="border-right:none;">
-        <div class="panel-header"><div class="panel-title">L1 D-CACHE</div><div class="panel-badge">32KB · 8-WAY · 64B LINE</div></div>
+        <div class="panel-header"><div class="panel-title" data-tip="dcache|L1 Data Cache|Holds recently accessed data values. Same structure as I-cache: <b>32KB, 8-way set-associative</b>. LW reads and SW writes go here. Write-back policy: dirty lines are written to memory only when evicted (replaced by a new cache line).">L1 D-CACHE</div><div class="panel-badge">32KB · 8-WAY · 64B LINE</div></div>
         <div class="panel-body">
           <div style="display:flex; gap:12px; margin-bottom:8px;">
             <div><div style="font-size:9px; color:var(--text3);">HIT RATE</div><div style="font-family:'Share Tech Mono',monospace; font-size:16px; color:var(--green);" id="dcacheHitRate">100%</div></div>
@@ -972,7 +1252,7 @@
         </div>
       </div>
       <div class="panel" style="border-bottom:none;">
-        <div class="panel-header"><div class="panel-title">L2 CACHE + TLB</div><div class="panel-badge">256KB UNIFIED</div></div>
+        <div class="panel-header"><div class="panel-title" data-tip="l2|L2 Cache + TLB|<b>L2 Cache (256KB unified)</b>: shared instruction+data cache, slower but larger than L1. Catches L1 misses with ~10 cycle latency. <b>TLB</b>: Translation Lookaside Buffer — caches virtual→physical address translations so the MMU doesn't need to walk the page table every access.">L2 CACHE + TLB</div><div class="panel-badge">256KB UNIFIED</div></div>
         <div class="panel-body">
           <div class="section-title">L2 CACHE</div>
           <div style="display:flex; gap:12px; margin-bottom:8px;">
@@ -1045,7 +1325,7 @@
   <div class="tab-panel" id="tab-branch">
     <div class="branch-layout" style="width:100%;">
       <div class="panel" style="border-bottom:none;">
-        <div class="panel-header"><div class="panel-title">BRANCH TARGET BUFFER</div><div class="panel-badge">64-ENTRY</div></div>
+        <div class="panel-header"><div class="panel-title" data-tip="btb|Branch Target Buffer (BTB)|A small cache that remembers the <b>target address</b> of recently seen branches. When the CPU fetches a branch instruction, it looks it up here to speculatively fetch the predicted target — before the branch condition is even evaluated.">BRANCH TARGET BUFFER</div><div class="panel-badge">64-ENTRY</div></div>
         <div class="panel-body">
           <div style="display:flex; gap:12px; margin-bottom:8px;">
             <div><div style="font-size:9px; color:var(--text3);">ACCURACY</div><div style="font-family:'Share Tech Mono',monospace; font-size:16px; color:var(--green);" id="btbAccuracy">—</div></div>
@@ -1060,7 +1340,7 @@
         </div>
       </div>
       <div class="panel" style="border-right:none; border-bottom:none;">
-        <div class="panel-header"><div class="panel-title">2-BIT SATURATING COUNTER FSM</div></div>
+        <div class="panel-header"><div class="panel-title" data-tip="2bit|2-Bit Saturating Counter|A simple branch predictor. 4 states: <b>Strongly Not Taken → Weakly Not Taken → Weakly Taken → Strongly Taken</b>. One correct prediction moves toward the extreme; one wrong one moves toward the middle. More robust than 1-bit: a loop exit only mispredicts twice.">2-BIT SATURATING COUNTER FSM</div></div>
         <div class="panel-body">
           <div class="fsm-visual">
             <div style="font-size:10px; color:var(--text3); letter-spacing:1px; text-transform:uppercase; margin-bottom:8px;">PREDICTOR STATE MACHINE</div>
@@ -1070,7 +1350,7 @@
               <div class="fsm-state wt" id="fsm-WT"><div style="font-family:'Share Tech Mono',monospace; font-size:13px; color:var(--yellow);">WT</div><div class="fsm-state-label">Weakly Taken</div><div class="fsm-predict taken">TAKEN</div></div>
               <div class="fsm-state st" id="fsm-ST"><div style="font-family:'Share Tech Mono',monospace; font-size:13px; color:var(--green);">ST</div><div class="fsm-state-label">Strongly Taken</div><div class="fsm-predict taken">TAKEN</div></div>
             </div>
-            <div style="font-size:10px; color:var(--text3); margin-top:8px;">Current State: <span id="currentFSMState" style="font-family:'Share Tech Mono',monospace; color:var(--accent);">WT</span></div>
+            <div style="font-size:10px; color:var(--text3); margin-top:8px;">Current State: <span id="currentFSMState" data-tip="fsmstate|Current Predictor State|SN=Strongly Not Taken, WN=Weakly Not Taken, WT=Weakly Taken, ST=Strongly Taken. The predictor predicts TAKEN if in WT or ST states." style="font-family:'Share Tech Mono',monospace; color:var(--accent);">WT</span></div>
             <div style="display:flex; gap:8px; margin-top:12px;">
               <button class="btn green" onclick="fsmTaken()" style="flex:1;">BRANCH TAKEN</button>
               <button class="btn orange" onclick="fsmNotTaken()" style="flex:1;">NOT TAKEN</button>
@@ -1093,11 +1373,11 @@
   <div class="tab-panel" id="tab-ooo">
     <div class="ooo-layout" style="width:100%;">
       <div class="panel" style="border-bottom:none;">
-        <div class="panel-header"><div class="panel-title">RESERVATION STATIONS</div><div class="panel-badge">16 ENTRIES</div></div>
+        <div class="panel-header"><div class="panel-title" data-tip="rs|Reservation Stations|Buffers where instructions wait until their <b>operands are ready</b>. An out-of-order CPU can issue instructions in any order — as soon as both inputs are available, it goes to a functional unit. Enables bypassing stalls that would block an in-order pipeline.">RESERVATION STATIONS</div><div class="panel-badge">16 ENTRIES</div></div>
         <div class="panel-body"><div id="rsDisplay"></div></div>
       </div>
       <div class="panel" style="border-bottom:none;">
-        <div class="panel-header"><div class="panel-title">REORDER BUFFER</div><div class="panel-badge">32 ENTRIES</div></div>
+        <div class="panel-header"><div class="panel-title" data-tip="rob|Reorder Buffer (ROB)|Tracks in-flight instructions in their <b>original program order</b>. Out-of-order CPUs execute instructions in any order, but the ROB ensures results are <b>committed</b> (made permanent) in order. This preserves correct program behavior and makes exceptions precise.">REORDER BUFFER</div><div class="panel-badge">32 ENTRIES</div></div>
         <div class="panel-body">
           <div style="display:flex; gap:8px; margin-bottom:8px; font-family:'Share Tech Mono',monospace; font-size:10px;">
             <div><span class="c-text3">HEAD: </span><span class="c-accent2" id="robHead">0</span></div>
@@ -1129,7 +1409,7 @@
               <div style="display:flex; justify-content:space-between;"><span class="c-text3">LAST COMMIT:</span><span id="oooLastCommit" class="c-yellow">—</span></div>
             </div>
           </div>
-          <div class="section-title">REGISTER ALIAS TABLE (RAT)</div>
+          <div class="section-title" data-tip="rat|Register Alias Table (RAT)|Maps architectural registers (R0–R31) to <b>ROB entries</b> holding their most recent in-flight value. Enables <b>register renaming</b> — multiple instructions can have different "versions" of the same architectural register, eliminating false WAR/WAW hazards.">REGISTER ALIAS TABLE (RAT)</div>
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:2px;" id="ratDisplay"></div>
         </div>
       </div>
@@ -1743,7 +2023,7 @@ function executeMEM(instr) {
     instr._loadVal = memory[key] !== undefined ? memory[key] : 0;
     instr._result = instr._loadVal;
     simulateCacheAccess('dcache', addr);
-    addLog(totalCycles, 'MEM', `Load: ${key} → ${instr._loadVal}`, 'memory');
+    addLog(totalCycles, 'MEM', `Load@${key}: loaded value ${instr._loadVal} into R${instr.rd}`, 'memory');
     logMemAccess('LW', addr, instr._loadVal);
 
     if (sortOverlayActive && sortProgramType === 'bubble' && instr._sortMeta) {
@@ -1774,7 +2054,7 @@ function executeMEM(instr) {
     if (fwdData.forward) storeVal = fwdData.value;
     memory[key] = storeVal;
     simulateCacheAccess('dcache', addr, true);
-    addLog(totalCycles, 'MEM', `Store: ${key} ← ${storeVal}`, 'memory');
+    addLog(totalCycles, 'MEM', `Store@${key}: wrote value ${storeVal} from R${instr.rs2}`, 'memory');
     logMemAccess('SW', addr, storeVal);
     initDataMem();
 
@@ -2004,13 +2284,140 @@ function updatePipelineStages() {
     }
   });
 
-  // Pipeline register displays
-  const content = [['IF','IF_ID'],['ID','ID_EX'],['EX','EX_MEM'],['MEM','MEM_WB']];
-  content.forEach(([stage, reg]) => {
-    let instr = pipeline[stage];
-    let el = document.getElementById('pr'+reg+'_val');
-    if (el) el.textContent = instr ? (instr.isBubble ? 'NOP/BUBBLE' : instr.raw) : 'EMPTY';
-  });
+  // Verbose pipeline register cards
+  updatePRCard('IFID',  pipeline.IF,  'IF',  'prIF_ID_val');
+  updatePRCard('IDEX',  pipeline.ID,  'ID',  'prID_EX_val');
+  updatePRCard('EXMEM', pipeline.EX,  'EX',  'prEX_MEM_val');
+  updatePRCard('MEMWB', pipeline.MEM, 'MEM', 'prMEM_WB_val');
+}
+
+// ─── HUMAN-READABLE REGISTER NAMES ─────────────────────────────────────────
+const REG_ABI = ['zero','ra','sp','gp','tp','t0','t1','t2','s0/fp','s1','a0','a1','a2','a3','a4','a5','a6','a7','s2','s3','s4','s5','s6','s7','s8','s9','s10','s11','t3','t4','t5','t6'];
+function rn(r) { return `R${r}<span style="font-size:8px;opacity:0.6;">(${REG_ABI[r]||'?'})</span>`; }
+function hex(v) { return '0x'+(v>>>0).toString(16).padStart(8,'0').toUpperCase(); }
+function dec(v) { return (v|0).toString(); }
+
+// ─── PLAIN-ENGLISH DESCRIPTION PER INSTRUCTION+STAGE ────────────────────────
+function describeInstr(instr, stage) {
+  if (!instr || !instr.def) return { what: '—', detail: '' };
+  const m = instr.mnem;
+  const rd = instr.rd, rs1 = instr.rs1, rs2 = instr.rs2, imm = instr.imm;
+  const vrd  = registers[rd]  || 0;
+  const vrs1 = registers[rs1] || 0;
+  const vrs2 = registers[rs2] || 0;
+
+  // Check forwarding state
+  const fwdA = checkForward(rs1);
+  const fwdB = checkForward(rs2);
+
+  let what = '', detail = '', tags = [];
+
+  if (stage === 'IF') {
+    what = `CPU is <b>fetching</b> <span class="pr-instr">${instr.raw}</span> from instruction memory at address <span class="pr-val">${hex(pc - (instrQueue.length >= 0 ? 0 : 4))}</span>.`;
+    detail = `This is the first step — the CPU reads the binary encoding of the instruction. No computation yet. The instruction will be decoded in the next cycle.`;
+    tags = [{cls:'pr-tag-info', l:'FETCH'}];
+  } else if (stage === 'ID') {
+    if (m === 'NOP' || instr.isBubble) {
+      what = `A <span class="pr-stall">NOP bubble</span> is sitting here. This is a <b>placeholder</b> — not a real instruction.`;
+      detail = `A bubble was inserted to create a one-cycle gap between a load instruction and the instruction that needs its result. The CPU is essentially doing nothing useful this cycle in the Decode stage.`;
+      tags = [{cls:'pr-tag-warn', l:'BUBBLE'}, {cls:'pr-tag-warn', l:'STALL ARTIFACT'}];
+    } else if (instr.def.type === 'R') {
+      what = `<b>Decoding</b> <span class="pr-instr">${instr.raw}</span>: add/combine <span class="pr-reg">${rn(rs1)}</span> (currently <span class="pr-val">${dec(vrs1)}</span>) and <span class="pr-reg">${rn(rs2)}</span> (currently <span class="pr-val">${dec(vrs2)}</span>), write result to <span class="pr-reg">${rn(rd)}</span>.`;
+      detail = `The CPU identifies this as an R-type instruction — it uses two source registers. The register file is being read right now to get the input values.`;
+      tags = [{cls:'pr-tag-info', l:'R-TYPE'}, {cls:'pr-tag-info', l:'ALU OP'}];
+    } else if (instr.def.memRead) {
+      what = `<b>Decoding</b> <span class="pr-instr">${instr.raw}</span>: load a value from memory address <span class="pr-reg">${rn(rs1)}</span>+<span class="pr-val">${imm}</span> into <span class="pr-reg">${rn(rd)}</span>.`;
+      detail = `⚠ If the instruction after this one needs register ${rn(rd)}, a 1-cycle stall will be inserted — the load result won't be available until after the Memory stage.`;
+      tags = [{cls:'pr-tag-mem', l:'LOAD'}, {cls:'pr-tag-warn', l:'STALL RISK'}];
+    } else if (instr.def.memWrite) {
+      what = `<b>Decoding</b> <span class="pr-instr">${instr.raw}</span>: store the value of <span class="pr-reg">${rn(rs2)}</span> (currently <span class="pr-val">${dec(vrs2)}</span>) into memory at address <span class="pr-reg">${rn(rs1)}</span>+<span class="pr-val">${imm}</span>.`;
+      detail = `Store instructions don't write to a register — they write to memory. The address calculation happens in Execute next cycle.`;
+      tags = [{cls:'pr-tag-mem', l:'STORE'}, {cls:'pr-tag-info', l:'S-TYPE'}];
+    } else if (instr.def.branch) {
+      what = `<b>Decoding</b> <span class="pr-instr">${instr.raw}</span>: compare <span class="pr-reg">${rn(rs1)}</span> and <span class="pr-reg">${rn(rs2)}</span>. If the condition is true, jump ${imm > 0 ? 'forward' : 'backward'} by <span class="pr-val">${imm}</span> bytes.`;
+      detail = `Branch instructions don't know if they'll be taken until Execute. The branch predictor has already guessed — if it was wrong, 2 instructions will be flushed.`;
+      tags = [{cls:'pr-tag-warn', l:'BRANCH'}, {cls:'pr-tag-info', l:'B-TYPE'}];
+    } else {
+      what = `<b>Decoding</b> <span class="pr-instr">${instr.raw}</span>: compute <span class="pr-reg">${rn(rs1)}</span> ${m} <span class="pr-val">${imm}</span>, result → <span class="pr-reg">${rn(rd)}</span>.`;
+      detail = `I-type instruction — uses one source register and an immediate constant embedded in the instruction word.`;
+      tags = [{cls:'pr-tag-info', l:'I-TYPE'}];
+    }
+  } else if (stage === 'EX') {
+    if (instr.isBubble) {
+      what = `A <span class="pr-stall">NOP bubble</span> is passing through Execute. Nothing is computed.`;
+      detail = `This bubble was inserted earlier to prevent a data hazard. It's harmless — it won't change any registers or memory.`;
+      tags = [{cls:'pr-tag-warn', l:'BUBBLE'}];
+    } else {
+      const fwdNote = fwdA.forward ? ` (value forwarded from ${fwdA.source} — no stall needed!)` : fwdB.forward ? ` (value forwarded from ${fwdB.source})` : '';
+      const result = instr._result !== undefined ? dec(instr._result) : '?';
+      if (instr.def.memRead) {
+        what = `<b>Executing</b> <span class="pr-instr">${instr.raw}</span>: the ALU computes the memory address = <span class="pr-reg">${rn(rs1)}</span> + <span class="pr-val">${imm}</span>${fwdNote}. Result address is being passed to the Memory stage.`;
+        detail = `Load instructions use the ALU only to calculate the address. The actual data fetch happens in the next stage (MEM).`;
+        tags = [{cls:'pr-tag-mem', l:'ADDR CALC'}, fwdA.forward ? {cls:'pr-tag-fwd', l:'FORWARDED'} : {cls:'pr-tag-info', l:'REG READ'}];
+      } else if (instr.def.memWrite) {
+        what = `<b>Executing</b> <span class="pr-instr">${instr.raw}</span>: computing store address = <span class="pr-reg">${rn(rs1)}</span> + <span class="pr-val">${imm}</span>. Will write value <span class="pr-val">${dec(vrs2)}</span> to that address next cycle.`;
+        detail = `The ALU calculates where in memory to write. The actual write happens in the MEM stage.`;
+        tags = [{cls:'pr-tag-mem', l:'ADDR CALC'}, {cls:'pr-tag-info', l:'STORE PREP'}];
+      } else if (instr.def.branch) {
+        what = `<b>Executing</b> <span class="pr-instr">${instr.raw}</span>: comparing <span class="pr-reg">${rn(rs1)}</span> and <span class="pr-reg">${rn(rs2)}</span>. Branch target would be <span class="pr-addr">${hex(pc + imm - 4)}</span>.`;
+        detail = instr._branchTaken !== undefined ? `Branch outcome: ${instr._branchTaken ? '✓ TAKEN — jumping to target' : '✗ NOT TAKEN — continuing to next instruction'}.` : `Branch condition being evaluated this cycle.`;
+        tags = [{cls:'pr-tag-warn', l:'BRANCH EVAL'}];
+      } else {
+        what = '<b>Executing</b> <span class="pr-instr">' + instr.raw + '</span>: the ALU computes the result = <span class="pr-val">' + result + '</span>' + (fwdA.forward ? ' <span class="pr-fwd">(operand forwarded from ' + fwdA.source + ')</span>' : '') + (fwdB.forward ? ' <span class="pr-fwd">(operand B forwarded from ' + fwdB.source + ')</span>' : '') + '.';
+        detail = `This result will be saved to register <span class="pr-reg">${rn(rd)}</span> when the instruction reaches the Writeback stage. If the next instruction needs this value, the forwarding unit will supply it directly — no stall needed.`;
+        tags = [fwdA.forward||fwdB.forward ? {cls:'pr-tag-fwd', l:'FORWARDING ACTIVE'} : {cls:'pr-tag-ok', l:'READY'}, {cls:'pr-tag-info', l:instr.def.aluOp}];
+      }
+    }
+  } else if (stage === 'MEM') {
+    if (instr.isBubble) {
+      what = `A <span class="pr-stall">NOP bubble</span> passing through the Memory stage. No memory access.`;
+      detail = `Nothing to do — this was a stall placeholder.`;
+      tags = [{cls:'pr-tag-warn', l:'BUBBLE'}];
+    } else if (instr.def.memRead) {
+      const addr = instr._memAddr !== null && instr._memAddr !== undefined ? hex(instr._memAddr) : `${rn(rs1)}+${imm}`;
+      const loaded = instr._loadVal !== undefined ? dec(instr._loadVal) : '?';
+      what = `<b>Memory access</b>: reading from address <span class="pr-addr">${addr}</span>. Value loaded: <span class="pr-val">${loaded}</span>. This value will be written to <span class="pr-reg">${rn(rd)}</span> next cycle.`;
+      detail = `The data cache is being queried. If it's a cache hit (1 cycle), the value is available immediately. This loaded value can be forwarded directly to any instruction in Execute that needs it — resolving the earlier load-use stall.`;
+      tags = [{cls:'pr-tag-mem', l:'D-CACHE READ'}, {cls:'pr-tag-fwd', l:'MEM/WB FORWARD READY'}];
+    } else if (instr.def.memWrite) {
+      const addr = instr._memAddr !== null && instr._memAddr !== undefined ? hex(instr._memAddr) : `${rn(rs1)}+${imm}`;
+      const storeVal = registers[rs2] || 0;
+      what = `<b>Memory write</b>: storing <span class="pr-val">${dec(storeVal)}</span> (from <span class="pr-reg">${rn(rs2)}</span>) → address <span class="pr-addr">${addr}</span> in the data cache.`;
+      detail = `The value is written to the cache now. If this cache line was recently loaded, it's marked "dirty" and will eventually be written back to main memory.`;
+      tags = [{cls:'pr-tag-mem', l:'D-CACHE WRITE'}];
+    } else {
+      const result = instr._result !== undefined ? dec(instr._result) : '?';
+      what = `<b>Passing through</b> Memory stage: <span class="pr-instr">${instr.raw}</span> — no memory access needed. Result <span class="pr-val">${result}</span> is held in the EX/MEM register, ready for writeback.`;
+      detail = `Most ALU instructions (ADD, SUB, AND, etc.) don't touch memory. They simply pass through this stage unchanged.`;
+      tags = [{cls:'pr-tag-ok', l:'PASS-THROUGH'}, {cls:'pr-tag-info', l:'NO MEM ACCESS'}];
+    }
+  }
+
+  return { what, detail, tags };
+}
+
+// ─── UPDATE ONE PIPELINE REGISTER CARD ──────────────────────────────────────
+function updatePRCard(cardId, instr, stage, nameId) {
+  const card = document.getElementById('prCard-' + cardId);
+  const nameEl = document.getElementById(nameId);
+  const bodyEl = document.getElementById('prCard-' + cardId + '-body');
+  if (!card || !bodyEl) return;
+
+  if (!instr) {
+    if (nameEl) nameEl.textContent = 'EMPTY';
+    card.className = 'pr-card';
+    bodyEl.innerHTML = `<div class="pr-empty-msg">This slot is empty — no instruction is here right now.</div>`;
+    return;
+  }
+
+  if (nameEl) nameEl.textContent = instr.isBubble ? 'NOP BUBBLE' : instr.raw;
+
+  card.className = 'pr-card ' + (instr.isBubble ? 'bubble' : 'active');
+
+  const { what, detail, tags } = describeInstr(instr, stage);
+
+  var tagsHtml = (tags && tags.length) ? '<div class="pr-tags">' + tags.filter(Boolean).map(function(t){ return '<div class="pr-tag ' + t.cls + '">' + t.l + '</div>'; }).join('') + '</div>' : '';
+  bodyEl.innerHTML = '<div class="pr-what">' + what + '</div>' + (detail ? '<div class="pr-detail">' + detail + '</div>' : '') + tagsHtml;
 }
 
 function updateDecode(instr) {
@@ -2350,15 +2757,111 @@ function updateInstrQueueDisplay() {
   setText('queueBadge', instrQueue.length+'/16');
 }
 
+// ─── VERBOSE EXECUTION LOG ────────────────────────────────────────────────────
+// Maps terse internal messages to plain-English explanations
 function addLog(cycle, stage, msg, cls = 'fetch') {
   let log = document.getElementById('execLog');
   if (!log) return;
-  let entry = document.createElement('div');
-  entry.className = `log-entry ${cls}`;
-  entry.innerHTML = `<span class="log-tick">C${cycle}</span><span class="log-stage ${cls}">${stage}</span><span class="log-msg">${msg}</span>`;
+
+  // Build the verbose explanation
+  const xlCls = ({
+    fetch:'xl-fetch', decode:'xl-decode', execute:'xl-execute', memory:'xl-memory', writeback:'xl-wb', hazard:'xl-stall', forward:'xl-fwd', branch:'xl-branch',
+  })[cls] || 'xl-prog';
+
+  const stageLabels = {
+    'IF': 'FETCH', 'ID': 'DECODE', 'EX': 'EXECUTE', 'MEM': 'MEMORY',
+    'WB': 'WRITEBACK', 'STALL': 'STALL', 'FWD': 'FORWARD',
+    'BRANCH': 'BRANCH', 'PROG': 'LOAD', 'SIM': 'SIM', 'QUEUE':'QUEUE'
+  };
+  const stageDisplay = stageLabels[stage] || stage;
+
+  // Build headline + detail based on the stage and message content
+  let headline = '', detail = '';
+
+  if (stage === 'IF') {
+    // msg: "Fetch: LW R2,8(R9) @ 0x00000038"
+    const parts = msg.replace('Fetch: ', '').split(' @ ');
+    const instrPart = parts[0] || msg;
+    const addrPart = parts[1] || '';
+    headline = 'The CPU just <b>fetched</b> instruction <span class="xl-r">' + instrPart + '</span> from memory' + (addrPart ? ' at address <span class="xl-v">' + addrPart + '</span>' : '') + '.';
+    detail = `Fetching = reading the raw binary of the instruction from the instruction cache. Nothing is computed yet. This instruction will move to Decode next cycle.`;
+  } else if (stage === 'ID') {
+    // msg: "Decode: LW R2,8(R9)"
+    const instrPart = msg.replace('Decode: ', '');
+    headline = `<b>Decoding</b> <span class="xl-r">${instrPart}</span>: the CPU identifies what operation this is and which registers it needs.`;
+    detail = `The instruction's binary bits are split into fields: opcode (what to do), source registers (where to get input), destination register (where to put the result). The register file is read here.`;
+  } else if (stage === 'EX') {
+    // msg: "Execute: LW R2,8(R9) → 4168 (ADD)"  or  "Execute: ADD R15,R15,R3 → 5 (ADD)"
+    const inner = msg.replace('Execute: ', '');
+    const arrowIdx = inner.lastIndexOf(' → ');
+    const instrPart = arrowIdx >= 0 ? inner.slice(0, arrowIdx) : inner;
+    const resultPart = arrowIdx >= 0 ? inner.slice(arrowIdx + 3) : '';
+    if (resultPart.includes('ADD') && instrPart.includes('LW')) {
+      headline = `<b>Execute</b>: <span class="xl-r">${instrPart}</span> — the ALU computed the <b>memory address</b> = <span class="xl-v">${resultPart.split(' ')[0]}</span>.`;
+      detail = `For a load (LW), the ALU's only job is computing where in memory to look: base register + offset. The actual data fetch happens in the Memory stage next.`;
+    } else {
+      headline = `<b>Execute</b>: <span class="xl-r">${instrPart}</span> — ALU result = <span class="xl-v">${resultPart}</span>.`;
+      detail = `The arithmetic/logic unit computed the answer. This result travels to the Memory stage (or directly to Writeback for non-memory instructions).`;
+    }
+  } else if (stage === 'MEM') {
+    if (msg.startsWith('Load@')) {
+      // "Load@0xADDR: loaded value X into RN"
+      const m = msg.match(/Load@(0x\w+): loaded value (-?\d+) into R(\d+)/);
+      if (m) {
+        headline = `<b>Memory read</b> from address <span class="xl-a">${m[1]}</span> returned value <span class="xl-v">${m[2]}</span> → will write to <span class="xl-r">R${m[3]}</span>.`;
+        detail = `The data cache was queried. On a hit (most of the time), the result comes back in 1 cycle. This loaded value is now available in the MEM/WB pipeline register — the forwarding unit can supply it directly to any Execute-stage instruction that needs it.`;
+      } else { headline = msg; }
+    } else if (msg.startsWith('Store@')) {
+      const m = msg.match(/Store@(0x\w+): wrote value (-?\d+) from R(\d+)/);
+      if (m) {
+        headline = `<b>Memory write</b>: stored value <span class="xl-v">${m[2]}</span> (from <span class="xl-r">R${m[3]}</span>) into address <span class="xl-a">${m[1]}</span>.`;
+        detail = `The value is now in the data cache (marked "dirty"). It will eventually be written back to main DRAM when the cache line is evicted. No register is updated — store instructions don't write to the register file.`;
+      } else { headline = msg; }
+    } else {
+      headline = msg;
+    }
+  } else if (stage === 'WB') {
+    // msg: "Committed: ADD R15,R15,R3"
+    const instrPart = msg.replace('Committed: ', '');
+    // Figure out what register was written
+    const instrObj = [pipeline.WB].filter(Boolean).find(i => i && !i.isBubble && i.raw === instrPart);
+    const rdPart = instrObj ? ` → <span class="xl-r">R${instrObj.rd}</span> = <span class="xl-v">${dec(registers[instrObj.rd] || 0)}</span>` : '';
+    headline = `<span class="xl-g">✓ Committed</span>: <span class="xl-r">${instrPart}</span>${rdPart} — <b>instruction is complete</b>.`;
+    detail = `Writing the final result back into the register file. From this point, any subsequent instruction reading this register will get the new value. The instruction counter goes up by 1.`;
+  } else if (stage === 'STALL' || cls === 'hazard') {
+    // msg: "Load-Use: LW R2 needed by MUL — 1 cycle bubble"
+    if (msg.startsWith('Load-Use:')) {
+      const inner = msg.replace('Load-Use: ', '');
+      headline = `<span class="xl-w">⚠ STALL</span>: ${inner}`;
+      detail = `The load instruction (LW) won't have its result ready until after the Memory stage — but the following instruction needs it right now in Execute. Solution: freeze the consumer in Fetch for 1 cycle, insert a NOP bubble into Decode, and let the load advance. Next cycle the value is forwarded directly from Memory → Execute. Cost: exactly 1 wasted cycle.`;
+    } else if (msg.startsWith('MISPREDICTION')) {
+      headline = `<span class="xl-w">⚠ BRANCH MISPREDICTION</span>: ${msg}`;
+      detail = `The branch predictor guessed wrong. 2 instructions that were speculatively fetched must be thrown away (flushed). The CPU restarts from the correct path. Cost: ~2–3 wasted cycles.`;
+    } else {
+      headline = `<span class="xl-w">⚠ STALL</span>: ${msg}`;
+      detail = `The pipeline is frozen to resolve a hazard.`;
+    }
+  } else if (stage === 'BRANCH' || cls === 'branch') {
+    headline = `<b>Branch resolved</b>: ${msg}`;
+    detail = msg.includes('MISPRED')
+      ? `The predictor was wrong — pipeline must be flushed and restarted from the correct address.`
+      : `The predictor was correct — no penalty cycles wasted.`;
+  } else if (stage === 'PROG') {
+    headline = `<b>Program loaded</b>: ${msg}`;
+    detail = `Instructions queued in the instruction buffer, ready for the pipeline to begin fetching.`;
+  } else {
+    headline = msg;
+    detail = '';
+  }
+
+  const entry = document.createElement('div');
+  entry.className = `xlog-entry ${xlCls}`;
+  entry.innerHTML = '<div class="xlog-meta"><span class="xlog-cycle">C' + cycle + '</span><span class="xlog-stage-pill ' + xlCls + '">' + stageDisplay + '</span></div><div class="xlog-headline">' + headline + '</div>' + (detail ? '<div class="xlog-detail">' + detail + '</div>' : '');
   log.insertBefore(entry, log.firstChild);
-  while (log.children.length > 80) log.removeChild(log.lastChild);
+  while (log.children.length > 60) log.removeChild(log.lastChild);
 }
+
+// dec() defined above near describeInstr
 
 function logMemAccess(type, addr, val) {
   let el = document.getElementById('memAccessLog');
@@ -2991,11 +3494,73 @@ function renderGlossary() {
 // ============================================================
 // INIT
 // ============================================================
-window.addEventListener('load', () => {
+// ============================================================
+// TOOLTIP ENGINE
+// ============================================================
+(function() {
+  const box   = document.getElementById('tipBox');
+  const title = document.getElementById('tipTitle');
+  const body  = document.getElementById('tipBody');
+  let cur = null;
+
+  const TIPS = {};  // populated from data-tip attributes at runtime
+
+  function parseTip(raw) {
+    // Format: "key|Title|Body HTML"
+    const parts = raw.split('|');
+    return { key: parts[0], title: parts[1] || '', body: parts[2] || '' };
+  }
+
+  function show(el, e) {
+    const t = parseTip(el.dataset.tip);
+    title.textContent = t.title;
+    body.innerHTML = t.body;
+    box.classList.add('show');
+    position(e);
+    cur = el;
+  }
+
+  function hide() {
+    box.classList.remove('show');
+    cur = null;
+  }
+
+  function position(e) {
+    const pad = 14;
+    const bw = box.offsetWidth  || 280;
+    const bh = box.offsetHeight || 120;
+    let x = e.clientX + pad;
+    let y = e.clientY + pad;
+    if (x + bw > window.innerWidth  - 8) x = e.clientX - bw - pad;
+    if (y + bh > window.innerHeight - 8) y = e.clientY - bh - pad;
+    box.style.left = x + 'px';
+    box.style.top  = y + 'px';
+  }
+
+  document.addEventListener('mouseover', function(e) {
+    const el = e.target.closest('[data-tip]');
+    if (el && el !== cur) show(el, e);
+    else if (!el && cur) hide();
+  });
+
+  document.addEventListener('mousemove', function(e) {
+    if (cur) position(e);
+  });
+
+  document.addEventListener('mouseout', function(e) {
+    if (!e.relatedTarget || !e.relatedTarget.closest('[data-tip]')) {
+      // small delay so tooltip doesn't flicker on child elements
+      setTimeout(() => { if (!document.querySelector('[data-tip]:hover')) hide(); }, 80);
+    }
+  });
+
+  // Hide on scroll / tab switch
+  document.addEventListener('scroll', hide, true);
+})();
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
   init();
-  loadProgram('hazards');
-  document.getElementById('tab-overview').style.display = 'flex';
-  document.getElementById('tab-overview').style.flexDirection = 'column';
 });
 
 </script>
