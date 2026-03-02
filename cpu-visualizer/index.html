@@ -1066,6 +1066,10 @@
       <div class="panel" style="border-bottom:none;">
         <div class="panel-header"><div class="panel-title" data-tip="idecode|Instruction Decode Unit|Breaks the 32-bit instruction word into its fields: <b>opcode</b>, register numbers, function codes, and immediate values. Shows the active control signals generated for the current instruction in the ID stage.">INSTRUCTION DECODE</div><div class="panel-badge" id="decodeBadge">NO INSTR</div></div>
         <div class="decode-visual">
+          <div id="instrEnglishBox" style="background:linear-gradient(135deg,rgba(0,212,255,0.05),rgba(0,0,0,0)); border:1px solid var(--accent2); border-radius:3px; padding:8px 10px; margin-bottom:8px; display:none;">
+            <div style="font-size:8px; color:var(--accent2); letter-spacing:1px; text-transform:uppercase; margin-bottom:3px;">WHAT THIS INSTRUCTION DOES</div>
+            <div id="instrEnglishText" style="font-size:11px; color:var(--text1); line-height:1.5;"></div>
+          </div>
           <div class="section-title">32-BIT INSTRUCTION WORD</div>
           <div class="instr-bits">
             <div class="bits-row" id="bitsRow"></div>
@@ -1107,6 +1111,10 @@
             <div class="fwd-path" id="fwd-EX_MEM"><span class="c-text3">EX/MEM</span><span class="fwd-arrow">→</span><span class="c-text3">EX</span><span style="flex:1;"></span><span id="fwd-EX_MEM-val" class="mono c-text3">—</span></div>
             <div class="fwd-path" id="fwd-MEM_WB"><span class="c-text3">MEM/WB</span><span class="fwd-arrow">→</span><span class="c-text3">EX</span><span style="flex:1;"></span><span id="fwd-MEM_WB-val" class="mono c-text3">—</span></div>
             <div class="fwd-path" id="fwd-WB"><span class="c-text3">WB</span><span class="fwd-arrow">→</span><span class="c-text3">ID</span><span style="flex:1;"></span><span id="fwd-WB-val" class="mono c-text3">—</span></div>
+          </div>
+          <div id="hazardEnglishBox" style="background:linear-gradient(135deg,rgba(255,51,85,0.04),rgba(0,0,0,0)); border:1px solid rgba(255,51,85,0.15); border-radius:3px; padding:8px 10px; margin-bottom:8px;">
+            <div style="font-size:8px; color:var(--text3); letter-spacing:1px; text-transform:uppercase; margin-bottom:3px;">HAZARD STATUS</div>
+            <div id="hazardEnglishText" style="font-size:11px; color:var(--text2); line-height:1.5;">Pipeline is flowing normally. No hazards detected this cycle.</div>
           </div>
           <div class="section-title" style="margin-top:10px;">LOAD-USE HAZARD</div>
           <div style="background:var(--bg2); border:1px solid var(--border); padding:8px; font-family:'Share Tech Mono',monospace; font-size:10px;">
@@ -1196,6 +1204,10 @@
               <div class="decode-field" style="border-color:var(--yellow);"><div class="df-label">OPERATION</div><div class="df-val" style="color:var(--yellow);" id="execOp">—</div></div>
             </div>
           </div>
+          <div id="aluEnglishBox" style="background:linear-gradient(135deg,rgba(0,255,136,0.04),rgba(0,0,0,0)); border:1px solid rgba(0,255,136,0.2); border-radius:3px; padding:8px 10px; margin-bottom:8px; display:none;">
+            <div style="font-size:8px; color:var(--green); letter-spacing:1px; text-transform:uppercase; margin-bottom:3px;">IN PLAIN ENGLISH</div>
+            <div id="aluEnglishText" style="font-size:11px; color:var(--text1); line-height:1.5;"></div>
+          </div>
           <div class="section-title">ALU OPERATIONS</div>
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:3px; margin-bottom:10px;">
             <div class="ctrl-sig" id="alu-add">ADD/ADDI</div>
@@ -1276,6 +1288,10 @@
       <div class="panel" style="border-right:none; border-bottom:none;">
         <div class="panel-header"><div class="panel-title">MEMORY HIERARCHY</div></div>
         <div class="panel-body">
+          <div id="memEnglishBox" style="background:linear-gradient(135deg,rgba(255,136,0,0.04),rgba(0,0,0,0)); border:1px solid rgba(255,136,0,0.2); border-radius:3px; padding:8px 10px; margin-bottom:8px;">
+            <div style="font-size:8px; color:var(--orange); letter-spacing:1px; text-transform:uppercase; margin-bottom:3px;">MEMORY STATUS</div>
+            <div id="memEnglishText" style="font-size:11px; color:var(--text2); line-height:1.5;">Waiting for memory accesses. When a LW or SW instruction runs, you will see which cache level it hit and how many cycles it cost.</div>
+          </div>
           <div class="section-title">LATENCY COMPARISON</div>
           <div style="display:flex; flex-direction:column; gap:4px; margin-bottom:10px;">
             <div class="stat-bar"><div class="stat-bar-label"><span class="name c-green">L1 Cache (32KB)</span><span class="val">1 cycle</span></div><div class="stat-bar-track"><div class="stat-bar-fill" style="width:8%;"></div></div></div>
@@ -1300,6 +1316,7 @@
   <div class="tab-panel" id="tab-timing">
     <div style="padding:8px; border-bottom:1px solid var(--border); background:var(--bg2); display:flex; gap:8px; align-items:center; flex-shrink:0;">
       <div style="font-size:10px; color:var(--text3); letter-spacing:1px; text-transform:uppercase;">PIPELINE TIMING DIAGRAM</div>
+      <div style="font-size:10px; color:var(--text2); max-width:500px;">Each row = one instruction. Each column = one clock cycle. Read left to right to see an instruction move through IF→ID→EX→MEM→WB. <span style="color:var(--red);">Red STALL</span> = wasted cycle. A diagonal staircase pattern = ideal pipeline — every stage busy every cycle.</div>
       <div style="margin-left:auto; display:flex; gap:8px; align-items:center;">
         <div style="display:flex; gap:4px;">
           <div style="display:flex; align-items:center; gap:3px; font-size:10px; color:var(--accent2);"><div style="width:12px; height:8px; background:rgba(0,136,255,0.3); border:1px solid rgba(0,136,255,0.5);"></div>IF</div>
@@ -1350,6 +1367,10 @@
               <div class="fsm-state wt" id="fsm-WT"><div style="font-family:'Share Tech Mono',monospace; font-size:13px; color:var(--yellow);">WT</div><div class="fsm-state-label">Weakly Taken</div><div class="fsm-predict taken">TAKEN</div></div>
               <div class="fsm-state st" id="fsm-ST"><div style="font-family:'Share Tech Mono',monospace; font-size:13px; color:var(--green);">ST</div><div class="fsm-state-label">Strongly Taken</div><div class="fsm-predict taken">TAKEN</div></div>
             </div>
+            <div id="branchEnglishBox" style="background:linear-gradient(135deg,rgba(255,221,0,0.04),rgba(0,0,0,0)); border:1px solid rgba(255,221,0,0.2); border-radius:3px; padding:8px 10px; margin-top:8px; margin-bottom:4px;">
+              <div style="font-size:8px; color:var(--yellow); letter-spacing:1px; text-transform:uppercase; margin-bottom:3px;">WHAT THE PREDICTOR IS DOING</div>
+              <div id="branchEnglishText" style="font-size:11px; color:var(--text1); line-height:1.5;">No branches seen yet. The predictor starts in the <b>Weakly Taken (WT)</b> state — it will guess "taken" for the first branch it sees.</div>
+            </div>
             <div style="font-size:10px; color:var(--text3); margin-top:8px;">Current State: <span id="currentFSMState" data-tip="fsmstate|Current Predictor State|SN=Strongly Not Taken, WN=Weakly Not Taken, WT=Weakly Taken, ST=Strongly Taken. The predictor predicts TAKEN if in WT or ST states." style="font-family:'Share Tech Mono',monospace; color:var(--accent);">WT</span></div>
             <div style="display:flex; gap:8px; margin-top:12px;">
               <button class="btn green" onclick="fsmTaken()" style="flex:1;">BRANCH TAKEN</button>
@@ -1379,6 +1400,10 @@
       <div class="panel" style="border-bottom:none;">
         <div class="panel-header"><div class="panel-title" data-tip="rob|Reorder Buffer (ROB)|Tracks in-flight instructions in their <b>original program order</b>. Out-of-order CPUs execute instructions in any order, but the ROB ensures results are <b>committed</b> (made permanent) in order. This preserves correct program behavior and makes exceptions precise.">REORDER BUFFER</div><div class="panel-badge">32 ENTRIES</div></div>
         <div class="panel-body">
+          <div style="background:linear-gradient(135deg,rgba(0,212,255,0.04),rgba(0,0,0,0)); border:1px solid rgba(0,212,255,0.15); border-radius:3px; padding:8px 10px; margin-bottom:8px; font-size:10px; color:var(--text2); line-height:1.5;">
+            <span style="color:var(--accent); font-size:8px; letter-spacing:1px; text-transform:uppercase; display:block; margin-bottom:3px;">HOW THE ROB WORKS</span>
+            Instructions enter at the <b>TAIL</b> (newest) and leave at the <b>HEAD</b> (oldest). Even if an instruction finishes early, it can only <b>commit</b> (become permanent) when everything before it in program order has already committed. This preserves correct behaviour — the CPU can execute out of order, but the world sees results in order.
+          </div>
           <div style="display:flex; gap:8px; margin-bottom:8px; font-family:'Share Tech Mono',monospace; font-size:10px;">
             <div><span class="c-text3">HEAD: </span><span class="c-accent2" id="robHead">0</span></div>
             <div><span class="c-text3">TAIL: </span><span class="c-orange" id="robTail">0</span></div>
@@ -1456,6 +1481,7 @@
   <div class="status-item"><div class="status-label">INSTR</div><div class="status-val c-yellow" id="currentInstrVal">—</div></div>
   <div class="status-item"><div class="status-label">CACHE</div><div class="status-val" id="cacheStatusVal">WARM</div></div>
   <div class="status-item"><div class="status-label">BRANCH</div><div class="status-val" id="branchStatusVal">—</div></div>
+  <div class="status-item" id="goalStatusItem" style="flex:1; max-width:420px; display:none; border-left:1px solid var(--border2); border-right:1px solid var(--border2);"><div class="status-label">GOAL</div><div class="status-val" id="goalStatusVal" style="color:var(--text1); font-size:10px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:380px;">—</div></div>
   <div class="status-item" style="margin-left:auto;"><div class="status-label">FREQ</div><div class="status-val c-accent">3.2 GHz</div></div>
   <div class="status-item"><div class="status-label">TEMP</div><div class="status-val" id="tempVal">42°C</div></div>
   <div class="status-item"><div class="status-label">POWER</div><div class="status-val" id="powerVal">12W</div></div>
@@ -1528,6 +1554,8 @@ const STAGES = ['IF','ID','EX','MEM','WB'];
 const REG_NAMES = ['zero','ra','sp','gp','tp','t0','t1','t2','s0','s1','a0','a1','a2','a3','a4','a5','a6','a7','s2','s3','s4','s5','s6','s7','s8','s9','s10','s11','t3','t4','t5','t6'];
 
 let autoRunInterval = null;
+let currentProgramGoal = '';   // plain-English description of what is currently running
+let programCompleteFired = false;  // true once the done instruction commits
 let speedMs = 800;
 let totalCycles = 0;
 let totalInstrs = 0;
@@ -1586,6 +1614,7 @@ let power = 12;
 let sortOverlayActive = false;
 let pendingBranchFlush = false;   // set by executeEX on misprediction, consumed by step()
 let pendingBranchTarget = null;   // instruction index to restart from
+let lastMemAccess = null;         // {type, addr, val, hit, level} - for plain-English memory display
 let sortArray = [];
 let sortArrayInitial = [];
 let sortCmpCount = 0;
@@ -1826,6 +1855,8 @@ function step() {
     highlightHazard('raw');
     addLog(totalCycles, 'STALL',
       `Load-Use: ${loadInstr.mnem} R${loadInstr.rd} needed by ${consumerInstr.mnem} — 1 cycle bubble`, 'hazard');
+    const hEngEl = document.getElementById('hazardEnglishText');
+    if (hEngEl) hEngEl.innerHTML = `<span style="color:var(--red);">⚠ Load-Use Stall detected!</span> <b>${loadInstr.raw}</b> is a Load instruction — it needs to visit memory before it knows its result. But <b>${consumerInstr.raw}</b> needs that result right now. The CPU inserts a 1-cycle bubble (do-nothing gap) to wait. Next cycle, the loaded value is forwarded directly and execution continues. <b>Cost: exactly 1 wasted cycle.</b>`;
     setText('loadUseDetect', 'YES');
     setText('loadUseStalls', totalStalls);
     setText('loadUseBubble', `into ID after ${loadInstr.mnem}`);
@@ -1930,6 +1961,16 @@ function step() {
     }
 
     setText('loadUseDetect', 'NO');
+    // Update hazard status English
+    const hEngNormal = document.getElementById('hazardEnglishText');
+    if (hEngNormal) {
+      const fwdAny = (pipeline.EX && !pipeline.EX.isBubble) ? (checkForward(pipeline.EX.rs1).forward || checkForward(pipeline.EX.rs2).forward) : false;
+      if (fwdAny) {
+        hEngNormal.innerHTML = '<span style="color:var(--green);">✓ Forwarding active.</span> A register value needed by the instruction in Execute was produced by an earlier in-flight instruction. The forwarding unit routes it directly — no stall needed. This is the pipeline running at full efficiency.';
+      } else {
+        hEngNormal.innerHTML = '<span style="color:var(--green);">✓ Pipeline flowing normally.</span> No hazards detected this cycle. Every instruction has access to the values it needs, either from the register file or via forwarding.';
+      }
+    }
   }
 
   // ── BRANCH FLUSH ──────────────────────────────────────────────────────────
@@ -1983,6 +2024,7 @@ function executeEX(instr) {
     }
     if (m.type === 'done') {
       sortSortedUpTo = 0;
+      programCompleteFired = true;
     }
     // Display updates only when overlay is open
     if (sortOverlayActive) {
@@ -1997,10 +2039,12 @@ function executeEX(instr) {
       }
       if (m.type === 'pass_end') {
         renderSortBars(-1, -1, -1, -1, sortSortedUpTo);
+        const remaining = sortPassTotal - sortPass;
+        const sortedCount = sortArray.length - sortSortedUpTo;
         pushNarrative('info',
-          `<b>Pass ${m.pass+1} complete</b> — element bubbled to final position [${sortSortedUpTo}]`,
-          `${sortPassTotal - sortPass} more passes needed.`,
-          [{cls:'nswap', label:`PASS ${m.pass+1} DONE`}]
+          `<b>Pass ${m.pass+1} of ${sortPassTotal} complete</b> — largest unsorted element has bubbled to its final position`,
+          `Array so far: [${sortArray.join(', ')}]. Last ${sortedCount} element${sortedCount!==1?'s are':' is'} now in their correct place (shown in green). ${remaining > 0 ? remaining+' pass'+(remaining!==1?'es':'')+' remain.' : 'All done!'}`,
+          [{cls:'nswap', label:`PASS ${m.pass+1} DONE`}, {cls:'load', label:`${sortedCount} SORTED`}]
         );
       }
       if (m.type === 'done') {
@@ -2010,8 +2054,34 @@ function executeEX(instr) {
           `All ${sortPassTotal} passes done. ${sortCmpCount} comparisons, ${sortSwapCount} swaps.`,
           [{cls:'nswap', label:'SORTED ✓'}]
         );
+        // Stop immediately - clear queue so auto-repeat can't restart
+        instrQueue = [];
+        const doneMsg = sortProgramType === 'bubble'
+          ? 'Bubble Sort complete — [' + sortArray.join(', ') + '] sorted in ' + totalCycles + ' cycles, ' + totalStalls + ' stalls'
+          : 'Program complete in ' + totalCycles + ' cycles';
+        stopAutoRun(doneMsg);
       }
     }
+  }
+
+  // Universal program-done detection (works for all program types with _sortMeta)
+  if (instr._sortMeta && instr._sortMeta.type === 'done' && sortProgramType && sortProgramType !== 'bubble') {
+    programCompleteFired = true;
+    const doneMsg = sortProgramType === 'dot'
+      ? 'Dot Product complete in ' + totalCycles + ' cycles — result in R15'
+      : sortProgramType === 'xor'
+        ? 'XOR Cipher complete in ' + totalCycles + ' cycles'
+        : 'Program complete in ' + totalCycles + ' cycles';
+    if (sortOverlayActive) {
+      renderSortBars(-1,-1,-1,-1,0);
+      pushNarrative('info',
+        '<b>PROGRAM COMPLETE</b>',
+        doneMsg,
+        [{cls:'nswap', label:'DONE ✓'}]
+      );
+    }
+    instrQueue = [];
+    stopAutoRun(doneMsg);
   }
 
   // Branch handling
@@ -2037,7 +2107,9 @@ function executeEX(instr) {
       btbMispred++;
       addLog(totalCycles, 'BRANCH', `MISPREDICTION! Predicted:${predicted?'T':'N'} Actual:${taken?'T':'N'}`, 'hazard');
       highlightHazard('control');
-      pendingBranchFlush = true;  // signal step() to flush IF and ID next
+      // Note: pipeline flush only needed when branch IS taken (wrong sequential path in pipeline).
+      // When branch is NOT taken, IF/ID already have the correct sequential instructions.
+      // Flush on taken is handled by the `if (taken)` block above.
     } else {
       btbCorrect++;
     }
@@ -2057,6 +2129,9 @@ function executeMEM(instr) {
     simulateCacheAccess('dcache', addr);
     addLog(totalCycles, 'MEM', `Load@${key}: loaded value ${instr._loadVal} into R${instr.rd}`, 'memory');
     logMemAccess('LW', addr, instr._loadVal);
+    lastMemAccess = { type:'LW', addr, val:instr._loadVal, hit:true, level:'L1' };
+    const mEngEl = document.getElementById('memEnglishText');
+    if (mEngEl) mEngEl.innerHTML = memToEnglish(lastMemAccess);
 
     // Sort state tracking - always runs
     if (sortProgramType === 'bubble' && instr._sortMeta) {
@@ -2092,6 +2167,9 @@ function executeMEM(instr) {
     simulateCacheAccess('dcache', addr, true);
     addLog(totalCycles, 'MEM', `Store@${key}: wrote value ${storeVal} from R${instr.rs2}`, 'memory');
     logMemAccess('SW', addr, storeVal);
+    lastMemAccess = { type:'SW', addr, val:storeVal, hit:true, level:'L1' };
+    const mEngEl2 = document.getElementById('memEnglishText');
+    if (mEngEl2) mEngEl2.innerHTML = memToEnglish(lastMemAccess);
     initDataMem();
 
     // Sort state tracking - always update sortArray from memory
@@ -2339,6 +2417,84 @@ function hex(v) { return '0x'+(v>>>0).toString(16).padStart(8,'0').toUpperCase()
 function dec(v) { return (v|0).toString(); }
 
 // ─── PLAIN-ENGLISH DESCRIPTION PER INSTRUCTION+STAGE ────────────────────────
+// ============================================================
+// PLAIN ENGLISH EXPLANATION GENERATORS
+// ============================================================
+
+function instrToEnglish(instr) {
+  if (!instr || !instr.def) return '';
+  const rd  = instr.rd  !== undefined ? 'R' + instr.rd  + (REG_NAMES[instr.rd]  ? ' ('+REG_NAMES[instr.rd]+')' : '') : '';
+  const rs1 = instr.rs1 !== undefined ? 'R' + instr.rs1 + (REG_NAMES[instr.rs1] ? ' ('+REG_NAMES[instr.rs1]+')' : '') : '';
+  const rs2 = instr.rs2 !== undefined ? 'R' + instr.rs2 + (REG_NAMES[instr.rs2] ? ' ('+REG_NAMES[instr.rs2]+')' : '') : '';
+  const imm = instr.imm !== undefined ? instr.imm : 0;
+  const rv1 = registers[instr.rs1] || 0;
+  const rv2 = registers[instr.rs2] || 0;
+
+  const m = instr.mnem;
+  if (m === 'ADD')  return `<b>Add:</b> Take the value in ${rs1} (currently <span class="c-accent">${rv1}</span>) and add it to ${rs2} (currently <span class="c-accent">${rv2}</span>). Store the result <span class="c-green">${rv1+rv2}</span> in ${rd}.`;
+  if (m === 'SUB')  return `<b>Subtract:</b> Take ${rs1} (<span class="c-accent">${rv1}</span>) and subtract ${rs2} (<span class="c-accent">${rv2}</span>). Store the result <span class="c-green">${rv1-rv2}</span> in ${rd}.`;
+  if (m === 'MUL')  return `<b>Multiply:</b> Multiply ${rs1} (<span class="c-accent">${rv1}</span>) × ${rs2} (<span class="c-accent">${rv2}</span>). Store the lower 32 bits of the result in ${rd}.`;
+  if (m === 'AND')  return `<b>Bitwise AND:</b> Compare each bit of ${rs1} and ${rs2}. A result bit is 1 only if <i>both</i> source bits are 1. Useful for masking — setting certain bits to zero.`;
+  if (m === 'OR')   return `<b>Bitwise OR:</b> Compare each bit of ${rs1} and ${rs2}. A result bit is 1 if <i>either</i> bit is 1. Useful for setting specific bits.`;
+  if (m === 'XOR')  return `<b>Bitwise XOR:</b> Compare each bit of ${rs1} and ${rs2}. A result bit is 1 if the two bits are <i>different</i>. XOR with all-1s flips all bits (bitwise NOT).`;
+  if (m === 'SLL')  return `<b>Shift Left:</b> Shift all bits in ${rs1} left by ${rs2 !== 'R0 (zero)' ? rs2 : imm} positions, filling with zeros on the right. Each left-shift by 1 doubles the value.`;
+  if (m === 'SRL')  return `<b>Logical Shift Right:</b> Shift all bits in ${rs1} right by ${imm} positions, filling with zeros on the left. Each right-shift by 1 halves the value (for unsigned numbers).`;
+  if (m === 'SRA')  return `<b>Arithmetic Shift Right:</b> Like SRL, but fills with the <i>sign bit</i> (leftmost bit) instead of zeros. Correctly divides signed numbers by powers of two.`;
+  if (m === 'SLT')  return `<b>Set Less Than:</b> Is ${rs1} (<span class="c-accent">${rv1}</span>) less than ${rs2} (<span class="c-accent">${rv2}</span>)? If yes, write <span class="c-green">1</span> into ${rd}. If no, write <span class="c-red">0</span>. Used to build if-then logic.`;
+  if (m === 'SLTU') return `<b>Set Less Than (Unsigned):</b> Same as SLT but treats both values as unsigned (no negatives). Is ${rv1>>>0} less than ${rv2>>>0}? Write 1 or 0 into ${rd}.`;
+  if (m === 'ADDI') return `<b>Add Immediate:</b> Take ${rs1} (<span class="c-accent">${rv1}</span>) and add the constant <span class="c-yellow">${imm}</span> directly (no second register needed). Store the result <span class="c-green">${rv1+imm}</span> in ${rd}. The constant is baked into the instruction.`;
+  if (m === 'ANDI') return `<b>AND Immediate:</b> Bitwise AND ${rs1} with the constant <span class="c-yellow">${imm}</span>. Useful for extracting specific bits from a value (masking).`;
+  if (m === 'ORI')  return `<b>OR Immediate:</b> Bitwise OR ${rs1} with the constant <span class="c-yellow">${imm}</span>. Useful for forcing specific bits to 1.`;
+  if (m === 'XORI') return `<b>XOR Immediate:</b> Bitwise XOR ${rs1} with the constant <span class="c-yellow">${imm}</span>. If the immediate is -1 (all 1s), this inverts every bit.`;
+  if (m === 'LW')   return `<b>Load Word:</b> Compute the memory address ${rs1} + ${imm} = <span class="c-accent">${rv1+imm}</span>. Go to that address in RAM and read 4 bytes. Put the value found there into ${rd}. This <i>always</i> causes a 1-cycle load-use stall if the next instruction needs ${rd}.`;
+  if (m === 'SW')   return `<b>Store Word:</b> Compute the address ${rs1} + ${imm} = <span class="c-accent">${rv1+imm}</span>. Write the current value of ${rs2} (<span class="c-accent">${rv2}</span>) to that address in memory. SW does <i>not</i> write any register — it only changes memory.`;
+  if (m === 'BEQ')  { const eq = rv1===rv2; return '<b>Branch if Equal:</b> Compare '+rs1+' ('+rv1+') and '+rs2+' ('+rv2+'). '+(eq ? '<span class="c-green">Equal &#8212; jumping forward '+imm+' bytes to the target.</span>' : '<span class="c-red">Not equal &#8212; no jump, continuing forward.</span>'); }
+  if (m === 'BNE')  { const ne = rv1!==rv2; return '<b>Branch if Not Equal:</b> Compare '+rs1+' ('+rv1+') and '+rs2+' ('+rv2+'). '+(ne ? '<span class="c-green">Different &#8212; jumping '+imm+' bytes.</span>' : '<span class="c-red">Equal &#8212; no jump.</span>'); }
+  if (m === 'BLT')  { const lt = rv1<rv2;  return '<b>Branch if Less Than:</b> Is '+rs1+' ('+rv1+') less than '+rs2+' ('+rv2+')? '+(lt ? '<span class="c-green">Yes &#8212; jumping '+imm+' bytes.</span>' : '<span class="c-red">No &#8212; no jump.</span>'); }
+  if (m === 'BGE')  { const ge = rv1>=rv2; return '<b>Branch if Greater/Equal:</b> Is '+rs1+' ('+rv1+') >= '+rs2+' ('+rv2+')? '+(ge ? '<span class="c-green">Yes &#8212; jumping '+imm+' bytes.</span>' : '<span class="c-red">No &#8212; no jump.</span>'); }
+
+  if (m === 'NOP' || (instr.isBubble)) return `<b>NOP / Bubble:</b> This is a "do nothing" placeholder. The CPU inserted it to create a 1-cycle gap in the pipeline — usually to resolve a load-use stall. No register is read or written.`;
+  return `<b>${m}:</b> ${instr.raw} — executing the ${m} operation on the current operands.`;
+}
+
+function aluToEnglish(instr, opA, opB, result, fwdA, fwdB) {
+  if (!instr || !instr.def) return '';
+  const m = instr.mnem;
+  const fwdNote = (fwdA.forward || fwdB.forward)
+    ? ' <span style="color:var(--green); font-size:10px;">(operand' + (fwdA.forward && fwdB.forward ? 's' : '') + ' forwarded — no stall needed)</span>'
+    : '';
+  const isLoad = instr.def.memRead;
+  const isStore = instr.def.memWrite;
+  const isBranch = instr.def.branch;
+
+  if (isLoad)  return `The ALU is computing the <b>memory address</b> to read from: ${instr.rs1 !== 0 ? 'R'+instr.rs1+'='+opA : 'base 0'} + offset ${instr.imm} = <span class="c-green">${result}</span> (0x${(result>>>0).toString(16).toUpperCase()}). The actual data fetch happens in the <b>Memory stage</b> next cycle.` + fwdNote;
+  if (isStore) return `The ALU is computing the <b>memory address</b> to write to: R${instr.rs1}=${opA} + offset ${instr.imm} = <span class="c-green">${result}</span>. Next cycle the Memory stage will write R${instr.rs2}=${opB} to that address.` + fwdNote;
+  if (isBranch) return '<b>Branch comparison:</b> Left: <span class="c-accent">'+opA+'</span> vs Right: <span class="c-accent">'+opB+'</span>. Result = <span class="c-green">'+result+'</span>. '+(result===0 ? 'Equal (zero flag set).' : 'Not equal.')+' Branch target: 0x'+((opA + instr.imm)>>>0).toString(16).toUpperCase()+'.'+fwdNote;
+  return `The ALU is performing <b>${instr.def.aluOp}</b>: <span class="c-accent">${opA}</span> ${instr.def.aluOp} <span class="c-accent">${opB}</span> = <span class="c-green">${result}</span>. This result will be written to R${instr.rd} when the instruction reaches the Writeback stage.` + fwdNote;
+}
+
+function branchFSMToEnglish(state, lastBranch) {
+  const stateDesc = {
+    SN: 'Strongly Not Taken — the predictor is very confident it should <b>not</b> jump. It has seen multiple "not taken" outcomes in a row. It takes 2 consecutive "taken" results to move toward predicting taken.',
+    WN: 'Weakly Not Taken — the predictor leans toward <b>not jumping</b>, but one "taken" result will flip it to predict taken next time.',
+    WT: 'Weakly Taken — the predictor leans toward <b>jumping</b>, but one "not taken" result will flip it to predict not-taken.',
+    ST: 'Strongly Taken — the predictor is very confident it should jump. It has seen multiple "taken" branches in a row. Common in tight loops.',
+  };
+  const predicting = (state === 'WT' || state === 'ST') ? 'TAKEN (will jump)' : 'NOT TAKEN (won\'t jump)';
+  let last = lastBranch ? ' Last branch: <b>' + lastBranch.instr + '</b> was ' + (lastBranch.taken ? 'taken' : 'not taken') + (lastBranch.predicted !== lastBranch.taken ? ' — <span class="c-red">MISPREDICTED</span>, pipeline flushed 2 instructions.' : ' — <span class="c-green">predicted correctly</span>.') : '';
+  return stateDesc[state] + '<br>Current prediction: <span class="c-yellow">' + predicting + '</span>.' + last;
+}
+
+function memToEnglish(lastAccess) {
+  if (!lastAccess) return 'Waiting for memory accesses. When a LW or SW instruction runs, check which cache level it hit and how many cycles it cost.';
+  const { type, addr, val, hit, level } = lastAccess;
+  const hitStr = hit ? '<span class="c-green">HIT</span>' : '<span class="c-red">MISS</span>';
+  const levelStr = level === 'L1' ? 'L1 cache (1 cycle — fastest)' : level === 'L2' ? 'L2 cache (~10 cycles)' : 'main memory (200+ cycles — slow!)';
+  if (type === 'LW') return `Last operation: <b>Load</b> from address <span class="c-accent">0x${(addr>>>0).toString(16).toUpperCase()}</span>. Cache ${hitStr} in ${levelStr}. Value read: <span class="c-green">${val}</span>. This value was placed into the destination register at Writeback.`;
+  if (type === 'SW') return `Last operation: <b>Store</b> of value <span class="c-accent">${val}</span> to address <span class="c-accent">0x${(addr>>>0).toString(16).toUpperCase()}</span>. Cache ${hitStr} in ${levelStr}. The cache line is now marked <b>dirty</b> — it will be written back to DRAM only when evicted.`;
+  return 'Waiting for the next load or store instruction.';
+}
+
 function describeInstr(instr, stage) {
   if (!instr || !instr.def) return { what: '—', detail: '' };
   const m = instr.mnem;
@@ -2543,6 +2699,15 @@ function updateDecode(instr) {
   setText('immType', immTypes[instr.def.type] || '—');
   setText('immVal', instr.imm !== undefined ? instr.imm.toString() : '—');
   setText('immSext', instr.imm !== undefined ? '0x'+(instr.imm>>>0).toString(16).padStart(8,'0').toUpperCase() : '—');
+
+  // Plain-English explanation
+  const engBox = document.getElementById('instrEnglishBox');
+  const engText = document.getElementById('instrEnglishText');
+  if (engBox && engText) {
+    const eng = instrToEnglish(instr);
+    if (eng) { engText.innerHTML = eng; engBox.style.display = ''; }
+    else { engBox.style.display = 'none'; }
+  }
 }
 
 function updateALUDisplay(instr, opA, opB, result, fwdA, fwdB) {
@@ -2582,6 +2747,14 @@ function updateALUDisplay(instr, opA, opB, result, fwdA, fwdB) {
     let el = document.getElementById('alu-'+op);
     if (el) el.className = 'ctrl-sig ' + (instr.def.aluOp && instr.def.aluOp.toLowerCase() === op ? 'on' : '');
   });
+
+  // Plain-English ALU explanation
+  const aluEngBox = document.getElementById('aluEnglishBox');
+  const aluEngText = document.getElementById('aluEnglishText');
+  if (aluEngBox && aluEngText) {
+    aluEngText.innerHTML = aluToEnglish(instr, opA, opB, result, fwdA, fwdB);
+    aluEngBox.style.display = '';
+  }
 
   // Forwarding display
   let fwdEXEl = document.getElementById('fwd-EX_MEM');
@@ -2679,6 +2852,10 @@ function updateFSM(taken) {
     if (el) el.className = 'fsm-state ' + s.toLowerCase() + (bpState === s ? ' current' : '');
   });
   setText('currentFSMState', bpState);
+  // Plain-English branch predictor explanation
+  const bEngEl = document.getElementById('branchEnglishText');
+  if (bEngEl) bEngEl.innerHTML = branchFSMToEnglish(bpState, branchHistory[0] || null);
+
   let bhrEl = document.getElementById('bhrDisplay');
   if (bhrEl) {
     bhrEl.innerHTML = bhrRegister.map(b => `<div style="width:20px;height:20px;border:1px solid var(--border2);background:var(--bg2);display:flex;align-items:center;justify-content:center;font-family:'Share Tech Mono',monospace;font-size:11px;color:${b?'var(--green)':'var(--red)'};">${b}</div>`).join('');
@@ -3078,6 +3255,15 @@ function updateAll() {
 
   let rl = document.getElementById('runLight');
   if (rl) rl.className = 'run-light ' + (autoRunInterval ? 'running' : 'paused');
+  // Update GOAL status bar with live progress during auto-run
+  if (autoRunInterval && currentProgramGoal && !programCompleteFired) {
+    const goalVal = document.getElementById('goalStatusVal');
+    if (goalVal && sortProgramType === 'bubble' && sortPassTotal > 0) {
+      goalVal.textContent = 'Bubble Sort: pass ' + Math.min(sortPass+1, sortPassTotal) + '/' + sortPassTotal +
+        ' — ' + sortCmpCount + ' comparisons, ' + sortSwapCount + ' swaps, ' +
+        totalStalls + ' stall cycles so far';
+    }
+  }
 }
 
 // ============================================================
@@ -3104,6 +3290,9 @@ function addInstruction() {
     updateMemoryTable();
     input.value = '';
     addLog(totalCycles, 'QUEUE', `Added: ${instr.raw}`, 'fetch');
+    // Update goal to reflect what's queued
+    const qlen = instrQueue.length;
+    setGoal('Manual sequence: ' + qlen + ' instruction' + (qlen !== 1 ? 's' : '') + ' queued — CPU will execute them in order, then loop', 'var(--text2)');
   }
 }
 
@@ -3117,6 +3306,36 @@ function queuePreset(raw) {
   }
 }
 
+function setGoal(goal, color) {
+  currentProgramGoal = goal;
+  programCompleteFired = false;
+  const item = document.getElementById('goalStatusItem');
+  const val  = document.getElementById('goalStatusVal');
+  if (!item || !val) return;
+  if (goal) {
+    item.style.display = '';
+    val.textContent = goal;
+    val.style.color = color || 'var(--text1)';
+  } else {
+    item.style.display = 'none';
+    val.textContent = '—';
+  }
+}
+
+function stopAutoRun(reason) {
+  if (!autoRunInterval) return;
+  clearInterval(autoRunInterval);
+  autoRunInterval = null;
+  document.getElementById('btnRun').textContent = 'AUTO RUN';
+  document.getElementById('btnRun').classList.remove('active');
+  const rl = document.getElementById('runLight');
+  if (rl) rl.className = 'run-light paused';
+  if (reason) {
+    setGoal('✓ DONE — ' + reason, 'var(--green)');
+    addLog(totalCycles, 'SIM', '── ' + reason + ' ──', 'writeback');
+  }
+}
+
 function toggleRun() {
   if (autoRunInterval) {
     clearInterval(autoRunInterval);
@@ -3126,8 +3345,25 @@ function toggleRun() {
   } else {
     autoRunInterval = setInterval(() => {
       if (instrQueue.length === 0 && !pipeline.IF && !pipeline.ID && !pipeline.EX && !pipeline.MEM && !pipeline.WB) {
+        if (programCompleteFired) {
+          // Program finished cleanly - don't restart
+          stopAutoRun('');
+          return;
+        }
         if (instructionMemory.length > 0) {
           instrQueue = instructionMemory.map(i => parseInstr(i.raw)).filter(Boolean);
+          instrQueue.forEach((instr, i) => { instr._sortMeta = (instructionMemory[i] && instructionMemory[i]._sortMeta) || null; });
+          // Reset sort display state so pass counter and bars restart cleanly
+          if (sortProgramType) {
+            sortPass = 0; sortCmpCount = 0; sortSwapCount = 0;
+            sortSortedUpTo = -1;
+            if (sortArrayInitial.length > 0) {
+              sortArray = [...sortArrayInitial];
+              // Restore initial memory values
+              const BASE = 0x1000;
+              sortArrayInitial.forEach((v, i) => { memory['0x'+(BASE+i*4).toString(16).toUpperCase()] = v; });
+            }
+          }
           updateInstrQueueDisplay();
           addLog(totalCycles, 'SIM', '── Program loop restart ──', 'writeback');
         } else {
@@ -3194,8 +3430,19 @@ function resetSim() {
   document.getElementById('btnRun').textContent = 'AUTO RUN';
   document.getElementById('btnRun').classList.remove('active');
   document.getElementById('runLight').className = 'run-light paused';
+  setGoal(''); programCompleteFired = false;
   document.getElementById('bitsRow').innerHTML = '';
   document.getElementById('decodeBadge').textContent = 'NO INSTR';
+  const resetEng = (id, msg) => { let el = document.getElementById(id); if (el) el.innerHTML = msg; };
+  resetEng('instrEnglishText', '');
+  const instrEngBox = document.getElementById('instrEnglishBox');
+  if (instrEngBox) instrEngBox.style.display = 'none';
+  resetEng('aluEnglishText', '');
+  const aluEngBox = document.getElementById('aluEnglishBox');
+  if (aluEngBox) aluEngBox.style.display = 'none';
+  resetEng('hazardEnglishText', 'Pipeline is flowing normally. No hazards detected this cycle.');
+  resetEng('memEnglishText', 'Waiting for memory accesses. When a LW or SW runs, check which cache level was hit.');
+  resetEng('branchEnglishText', 'No branches seen yet. The predictor starts in the <b>Weakly Taken (WT)</b> state — it will guess "taken" for the first branch it sees.');
   addLog(0, 'SIM', 'Simulation reset — load-use stall fix active', 'fetch');
 }
 
@@ -3368,6 +3615,8 @@ function launchBubbleSort() {
 
   openSortOverlay('BUBBLE SORT');
   renderSortBars(-1,-1,-1,-1,-1);
+  setGoal('Bubble Sort: sorting [' + arr.join(', ') + '] using ' + instrs.length + ' instructions — watch for load-use stalls on every LW pair', 'var(--accent)');
+  if (autoRunInterval) { /* already running, keep going */ } else { toggleRun(); }
   pushNarrative('info',
     `<b>Bubble Sort starting</b> — array: <span class="highlight-yellow">[${arr.join(', ')}]</span>`,
     `${n-1} passes needed. Each pass compares adjacent elements. Watch for load-use stalls on LW→SLT pairs — exactly 1 stall cycle each, then MEM/WB forwarding resolves it.`,
@@ -3390,6 +3639,7 @@ function launchDotProduct() {
   vecB.forEach((v, i) => { memory['0x'+(BASE_B + i*4).toString(16).toUpperCase()] = v; });
 
   let instrs = [];
+  let sortMeta = [];
   instrs.push(`ADDI R8,R0,${BASE_A}`);
   instrs.push(`ADDI R9,R0,${BASE_B}`);
   instrs.push(`ADD R15,R0,R0`);
@@ -3400,10 +3650,11 @@ function launchDotProduct() {
     instrs.push(`ADD R15,R15,R3`);
   }
   instrs.push(`SW R15,0(R8)`);
-  instrs.push(`ADD R10,R15,R0`);
+  instrs.push(`ADD R10,R15,R0`); sortMeta.push({ type:'done' });
 
   instrQueue = instrs.map(s => parseInstr(s)).filter(Boolean);
-  instructionMemory = [...instrQueue];
+  instrQueue.forEach((instr, i) => { instr._sortMeta = sortMeta[i] || null; });
+  instructionMemory = instrQueue.map(instr => ({...instr}));
   updateInstrQueueDisplay();
   updateMemoryTable();
   initDataMem();
@@ -3413,6 +3664,8 @@ function launchDotProduct() {
   sortArray = vecA;
   openSortOverlay('DOT PRODUCT  A·B');
   renderSortBars(-1,-1,-1,-1,-1);
+  setGoal('Dot Product: computing A·B across ' + n + ' elements — pure ALU multiply-accumulate, no branches', 'var(--purple)');
+  if (autoRunInterval) { /* already running */ } else { toggleRun(); }
   pushNarrative('info',
     `<b>Dot Product starting</b> — A·B = ${expected}`,
     `${n} multiply-accumulate iterations. Heavy MUL unit usage + forwarding. LW→MUL chains cause load-use stalls (1 cycle each), then MUL→ADD resolved by EX/MEM forwarding.`,
@@ -3434,6 +3687,7 @@ function launchXorCipher() {
   data.forEach((v, i) => { memory['0x'+(BASE + i*4).toString(16).toUpperCase()] = v; });
 
   let instrs = [];
+  let sortMeta = [];
   instrs.push(`ADDI R8,R0,${BASE}`);
   instrs.push(`ADDI R10,R0,${key & 0xFF}`);
   for (let i = 0; i < n; i++) {
@@ -3445,10 +3699,11 @@ function launchXorCipher() {
     instrs.push(`XOR R10,R10,R2`);
     instrs.push(`SW R2,${i*4}(R8)`);
   }
-  instrs.push(`ADD R15,R0,R0`);
+  instrs.push(`ADD R15,R0,R0`); sortMeta.push({ type:'done' });
 
   instrQueue = instrs.map(s => parseInstr(s)).filter(Boolean);
-  instructionMemory = [...instrQueue];
+  instrQueue.forEach((instr, i) => { instr._sortMeta = sortMeta[i] || null; });
+  instructionMemory = instrQueue.map(instr => ({...instr}));
   updateInstrQueueDisplay();
   updateMemoryTable();
   initDataMem();
@@ -3457,6 +3712,8 @@ function launchXorCipher() {
   sortArray = [...data];
   openSortOverlay('XOR CIPHER');
   renderSortBars(-1,-1,-1,-1,-1);
+  setGoal('XOR Cipher: encrypting ' + n + ' bytes with key 0x' + key.toString(16).toUpperCase() + ' — one XOR per byte, no memory stalls', 'var(--yellow)');
+  if (autoRunInterval) { /* already running */ } else { toggleRun(); }
   pushNarrative('info',
     `<b>XOR Cipher starting</b> — encrypting with rolling key <span class="highlight-accent">0x${key.toString(16).toUpperCase()}</span>`,
     `Pure ALU showcase — XOR, SLL, SRL, OR chains with near-zero stalls. Each LW causes 1 load-use stall, but the rest is pure forwarding. Watch pipeline efficiency stay high!`,
