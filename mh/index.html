@@ -1194,24 +1194,32 @@ function initCacheState() {
   l2Lines = new Array(NUM_L2_LINES).fill(0);
   var n = layout.sms ? layout.sms.length : 4;
   for (var i = 0; i < n; i++) {
+    // Baseline ~75-82%: registers are nearly always heavily allocated on a real GPU kernel.
+    // Each resident warp has a fixed compile-time register allocation — the file is never "empty".
+    var base = 0.72 + Math.random() * 0.10;
     cacheState.push({
       l1:   new Array(NUM_LINES).fill(0),
       smem: new Array(NUM_LINES).fill(0),
-      regsPressure: 0.28 + Math.random() * 0.12,
-      regsPressureTarget: 0.28 + Math.random() * 0.12,
+      regsPressure: base,
+      regsPressureTarget: base,
     });
   }
 }
+
+// Set register pressure target for an SM — animates smoothly in draw loop
 function setRegPressure(smIdx, target) {
   if (!cacheState[smIdx]) return;
-  cacheState[smIdx].regsPressureTarget = Math.max(0, Math.min(1, target));
+  cacheState[smIdx].regsPressureTarget = Math.max(0, Math.min(1.15, target)); // allow slight overflow past 1
 }
+
+// Tick register pressure toward target — call once per draw frame
 function tickRegPressure(dt) {
   for (var i = 0; i < cacheState.length; i++) {
     var cs = cacheState[i];
     if (!cs) continue;
     var diff = cs.regsPressureTarget - cs.regsPressure;
-    var rate = diff > 0 ? 2.5 : 0.6;
+    // Fast rise on spill (overflow is sudden), moderate decay back to loaded baseline
+    var rate = diff > 0 ? 3.5 : 1.2;
     cs.regsPressure += diff * rate * dt;
   }
 }
@@ -2398,22 +2406,25 @@ function drawAnimatedFrame(dt, time) {
       var ampere  = currentArch === 'ampere';
       var pool;
       if (!anyValid) {
+        // Nothing in L1 — only ops that work from cold state
         pool = apex    ? ['read','read','read','atomic','reg_spill'] :
                hopper  ? ['read','read','reg_spill','tma_load'] :
                ampere  ? ['read','read','reg_spill','cp_async'] :
                          ['read','reg_spill'];
       } else if (anyModified) {
-        pool = apex    ? ['writeback','writeback','invalidate','atomic','atomic','reg_spill'] :
-               hopper  ? ['writeback','invalidate','write','reg_spill','tma_load'] :
-               ampere  ? ['writeback','invalidate','write','reg_spill','cp_async'] :
-                         ['writeback','invalidate','write','reg_spill'];
+        // At least one SM has dirty data — write-back and invalidate make sense; write does NOT (needs Shared)
+        pool = apex    ? ['writeback','writeback','invalidate','read','atomic','reg_spill'] :
+               hopper  ? ['writeback','writeback','invalidate','read','reg_spill','tma_load'] :
+               ampere  ? ['writeback','writeback','invalidate','read','reg_spill','cp_async'] :
+                         ['writeback','writeback','invalidate','read','reg_spill'];
       } else {
-        pool = apex    ? ['write','invalidate','writeback','shared','read','atomic','reg_spill'] :
-               hopper  ? ['write','invalidate','writeback','shared','read','reg_spill','tma_load','cp_async'] :
-               ampere  ? ['write','invalidate','writeback','shared','read','reg_spill','cp_async'] :
-                         ['write','invalidate','writeback','shared','read','reg_spill'];
+        // Some Shared lines in L1 — write, invalidate, read all valid; writeback is NOT (nothing dirty)
+        pool = apex    ? ['write','invalidate','read','read','shared','atomic','reg_spill'] :
+               hopper  ? ['write','invalidate','read','read','shared','reg_spill','tma_load','cp_async'] :
+               ampere  ? ['write','invalidate','read','read','shared','reg_spill','cp_async'] :
+                         ['write','invalidate','read','read','shared','reg_spill'];
       }
-      triggerScenario(pool[Math.floor(Math.random()*pool.length)]);
+      triggerScenario(pool[Math.floor(Math.random()*pool.length)], true); // true = silent (no toasts)
     }
   }
 }
@@ -2460,31 +2471,38 @@ function drawSceneContent(dt, time) {
       if (b.type === 'regs') {
         var barC = Math.max(4, Math.floor(b.w/10));
         var cs_r = cacheState[si];
-        var pressure = cs_r ? cs_r.regsPressure : 0.3;
+        var pressure = cs_r ? cs_r.regsPressure : 0.75;
+        // Clamp visual fill to 1.0 — overflow (>1) is shown via color, not height
+        var visualFill = Math.min(1.0, pressure);
+        // Color: blue-grey at normal load → orange approaching limit → red pulsing at overflow
         var pressureColor;
-        if (pressure < 0.6) {
-          var t1 = pressure / 0.6;
-          pressureColor = 'hsl(' + Math.round(220 - t1*60) + ',40%,' + Math.round(22+t1*8) + '%)';
-        } else if (pressure < 0.85) {
-          var t2 = (pressure - 0.6) / 0.25;
-          pressureColor = 'hsl(' + Math.round(160 - t2*120) + ',60%,' + Math.round(30+t2*5) + '%)';
+        if (pressure < 0.82) {
+          // Normal loaded state: blue-grey (registers allocated but not overflowing)
+          pressureColor = 'hsl(220,35%,28%)';
+        } else if (pressure < 0.95) {
+          // High load approaching limit: shift warm
+          var t2 = (pressure - 0.82) / 0.13;
+          pressureColor = 'hsl(' + Math.round(220 - t2*180) + ',55%,' + Math.round(28+t2*8) + '%)';
         } else {
-          var pulse = 0.5 + 0.5 * Math.sin(Date.now() / 120);
-          pressureColor = 'hsl(' + Math.round(20 - pulse*20) + ',80%,' + Math.round(35+pulse*8) + '%)';
+          // Overflow / spill: orange-red pulse — compiler had to spill!
+          var pulse = 0.5 + 0.5 * Math.sin(Date.now() / 100);
+          pressureColor = 'hsl(' + Math.round(18 - pulse*18) + ',85%,' + Math.round(38+pulse*10) + '%)';
         }
-        var shimmer = Math.sin(Date.now()/800 + si) * 0.025;
+        // Subtle shimmer across bars (texture, not a fill change)
+        var shimmer = Math.sin(Date.now()/1200 + si) * 0.018;
         for (var rj = 0; rj < barC; rj++) {
           var barX = b.x + rj * (b.w / barC);
           var barW = b.w / barC - 1.5;
-          ctx.fillStyle = '#1a1c28';
+          ctx.fillStyle = '#141620';
           ctx.fillRect(barX, b.y, barW, b.h);
-          var barPressure = Math.min(1, Math.max(0, pressure + shimmer + (rj % 3 - 1) * 0.03));
-          var fillH = Math.round(b.h * barPressure);
+          var barFill = Math.min(1, Math.max(0, visualFill + shimmer + (rj % 3 - 1) * 0.015));
+          var fillH = Math.round(b.h * barFill);
           ctx.fillStyle = pressureColor;
           ctx.fillRect(barX, b.y + b.h - fillH, barW, fillH);
         }
+        // Label — orange when spilling
         ctx.font = '500 ' + Math.max(6, FONT_BLOCK_XS) + 'px monospace';
-        ctx.fillStyle = pressure > 0.8 ? '#fb923c' : '#6b7094';
+        ctx.fillStyle = pressure >= 0.95 ? '#fb923c' : '#6b7094';
         ctx.textAlign = 'center';
         ctx.fillText('regs', b.x + b.w/2, b.y - 1);
         continue;
@@ -3335,14 +3353,14 @@ function updateStats() {
   document.getElementById('stat-wb').textContent=stats.wb;
 }
 
-function triggerScenario(type) {
+function triggerScenario(type, silent) {
   if (paused) togglePause();
 
   var si = Math.floor(Math.random()*layout.sms.length);
   showExplanation(type);
   var sm = layout.sms[si];
 
-  // For write on non-Pascal, prefer an SM that has a Shared line
+  // For write on non-Pascal, prefer an SM that has a Shared line so the write is meaningful
   if (type === 'write' && currentArch !== 'pascal') {
     for (var wi0 = 0; wi0 < layout.sms.length; wi0++) {
       if (layout.sms[wi0].l1.state === 'shared') { si = wi0; sm = layout.sms[si]; break; }
@@ -3351,11 +3369,11 @@ function triggerScenario(type) {
 
   // ── Precondition enforcement ──
   // Each scenario has requirements. If not met, tell the user clearly and abort.
+  // In silent (auto) mode we abort silently — no toast shown.
   if (type === 'write' && currentArch !== 'pascal') {
-    // Write-evict needs at least one SM with a Shared line to make the INV meaningful.
     var anyShared = layout.sms.some(function(s){ return s.l1.state === 'shared'; });
     if (!anyShared) {
-      notifyUser('SM Write needs cached data first',
+      if (!silent) notifyUser('SM Write needs cached data first',
         'No SM has a Shared line in L1. Run SM Read first to populate the cache, then write.', '#51cf66');
       return;
     }
@@ -3363,7 +3381,7 @@ function triggerScenario(type) {
   if (type === 'invalidate') {
     var anyValid = layout.sms.some(function(s){ return s.l1.state !== 'invalid'; });
     if (!anyValid) {
-      notifyUser('Nothing to invalidate',
+      if (!silent) notifyUser('Nothing to invalidate',
         'All L1 caches are already empty (Invalid). Run SM Read first to put data in L1.', '#f06595');
       return;
     }
@@ -3371,17 +3389,16 @@ function triggerScenario(type) {
   if (type === 'writeback') {
     var anyModified = layout.sms.some(function(s){ return s.l1.state === 'modified'; });
     if (!anyModified) {
-      notifyUser('No dirty data to write back',
+      if (!silent) notifyUser('No dirty data to write back',
         'Write-back needs a Modified (dirty) L1 line. Run SM Write first to dirty a line.', '#ffa94d');
       return;
     }
-    // Use an SM that's actually Modified
     for (var mi = 0; mi < layout.sms.length; mi++) {
       if (layout.sms[mi].l1.state === 'modified') { si = mi; sm = layout.sms[si]; break; }
     }
   }
   if (type === 'atomic' && currentArch === 'apex' && arbiterState.active) {
-    notifyUser('Arbiter busy',
+    if (!silent) notifyUser('Arbiter busy',
       'An atomic sequence is already in flight. Wait for it to complete or Reset.', '#f59e0b');
     return;
   }
@@ -3608,7 +3625,7 @@ function triggerScenario(type) {
       logEvent('SM'+si+': register pressure — spilling to L1', '#fb923c');
       bubble(regsP.x, regsP.y, 'reg pressure', '#fb923c', {sub:'out of registers'});
       stats.misses++;
-      setRegPressure(si, 0.95);
+      setRegPressure(si, 1.10);
       spawnParticle(regsP, l1P, '#fb923c', 'SPILL', 2.2, function() {
         var l1Full = (function() {
           var cs = cacheState[si]; if (!cs) return false;
@@ -3625,7 +3642,7 @@ function triggerScenario(type) {
               flash(regsBlock(si) || layout.sms[si], '#fb923c');
               bubble(regsP.x, regsP.y, 'reg restored', '#51cf66', {sub:'warp resumes', life:1.8});
               logEvent('SM'+si+': register restored — warp resumes', '#51cf66');
-              setRegPressure(si, 0.30 + Math.random() * 0.1);
+              setRegPressure(si, 0.72 + Math.random() * 0.08);
               stats.hits++; updateStats();
             });
           }, 800);
@@ -3643,7 +3660,7 @@ function triggerScenario(type) {
                   flash(regsBlock(si) || layout.sms[si], '#fb923c');
                   bubble(regsP.x, regsP.y, 'reg restored', '#51cf66', {sub:'~200 cyc stall', life:1.8});
                   logEvent('SM'+si+': register restored from L2', '#51cf66');
-                  setRegPressure(si, 0.30 + Math.random() * 0.1);
+                  setRegPressure(si, 0.72 + Math.random() * 0.08);
                   stats.hits++; updateStats();
                 });
               }, [busP(si)]);
@@ -3666,7 +3683,7 @@ function triggerScenario(type) {
       bubble(asyncSrc.x, asyncSrc.y, 'cp.async issued', '#22d3ee', {sub:'warp not stalled'});
       if (asyncB) flash(asyncB, '#22d3ee');
       stats.misses++;
-      setRegPressure(si, 0.58 + Math.random() * 0.1);
+      setRegPressure(si, 0.80 + Math.random() * 0.08);
       setTimeout(function() {
         var rb = regsBlock(si);
         if (rb) {
@@ -3706,7 +3723,7 @@ function triggerScenario(type) {
       setTimeout(function() {
         for (var ti = 0; ti < layout.sms.length; ti++) {
           var rb2 = regsBlock(ti); if (rb2) flash(rb2, '#a78bfa');
-          setRegPressure(ti, 0.62 + Math.random() * 0.12);
+          setRegPressure(ti, 0.82 + Math.random() * 0.08);
         }
         bubble(regsPos(si).x, regsPos(si).y, 'all threads', '#a78bfa', {sub:'computing prev tile', life:2.2});
         logEvent('All SM'+si+' threads: computing on prev tile', '#a78bfa');
