@@ -3510,7 +3510,6 @@ function triggerScenario(type, silent) {
         particles.push(new Particle(l1Pos(si),busP(si),'#ff6b6b','RdReq',2,function(){
           spawnPassthrough(si,'#ff6b6b','RdReq',2.5,function(){
             logEvent('L2: hit — line found, serving to SM'+si,'#ffa94d');
-            l2AbsorbOne();
             bubble(l2Top().x,l2Top().y,'L2 hit','#51cf66',{life:1.5,sub:'data ready'});
             spawnParticle(l2Top(), l1Pos(si), '#ffa94d', 'DATA', 2, function(){
               sm.l1.state='shared'; fillL1Random(si, false); flash(sm.l1,'#339af0');
@@ -3541,7 +3540,7 @@ function triggerScenario(type, silent) {
                   flash(layout.globalMem,'#339af0');
                   spawnParticle(gmTop(), l2Top(), '#339af0', 'DATA', 2.2, function(){
                     // L2 fills as line comes through
-                    l2AbsorbOne(); l2AbsorbOne(); flash(layout.l2,'#ffa94d');
+                    l2AbsorbOne(); flash(layout.l2,'#ffa94d');
                     bubble(l2Top().x,l2Top().y,'L2 filled','#ffa94d',{life:1.5,sub:'cached for next time'});
                     logEvent('L2: line installed from DRAM','#ffa94d');
                     spawnParticle(l2Top(), l1Pos(si), '#ffa94d', 'DATA', 2, function(){
