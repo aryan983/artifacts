@@ -973,7 +973,7 @@ var ARCHS = {
     name:'Pascal', gen:'SM 6.1', year:2016, color:'#51cf66', example:'GTX 1080 Ti',
     smLabel:'SM',
     intro:"The last generation before unified L1. Pascal keeps things simple — L1 is read-only for global memory, so there's zero coherency overhead at L1. Writes go straight to L2. Great for understanding the baseline before things got complex.",
-      delta:"🆚 <strong>vs baseline:</strong> This is the reference point — read-only L1, no coherency, writes bypass L1 entirely.",
+      delta:"<strong>vs baseline:</strong> This is the reference point — read-only L1, no coherency, writes bypass L1 entirely.",
     perf:{ smCount:28, l1Size:24, smemSize:96, l2Size:4096, bw:484, flops:11.3, memType:'GDDR5X', vram:11, tdp:250, l1Latency:28, l2Latency:200, dramLatency:400 },
     blocks:{
       l1:{ label:'L1 (24KB)', desc:'Read-only texture/data cache. NOT coherent with global stores.', state:true },
@@ -992,7 +992,7 @@ var ARCHS = {
     name:'Volta', gen:'SM 7.0', year:2017, color:'#339af0', example:'V100',
     smLabel:'SM',
     intro:"The big unification. Volta merged L1 and texture cache into a single 128KB SRAM that's also shared with SMEM. L1 now caches global writes too, which means coherency actually matters — enter write-evict and invalidation.",
-      delta:"🆕 <strong>vs Pascal:</strong> L1 now caches writes. That means a dirty line in SM0 must be invalidated in SM1 — the first time GPUs needed a real coherency protocol. Cost: every write triggers an INV broadcast to all SMs.",
+      delta:"<strong>vs Pascal:</strong> L1 now caches writes. That means a dirty line in SM0 must be invalidated in SM1 — the first time GPUs needed a real coherency protocol. Cost: every write triggers an INV broadcast to all SMs.",
     perf:{ smCount:80, l1Size:128, smemSize:96, l2Size:6144, bw:900, flops:15.7, memType:'HBM2', vram:32, tdp:300, l1Latency:28, l2Latency:193, dramLatency:370 },
     blocks:{
       l1:{ label:'L1 + TEX (unified, 128KB)', desc:'L1 and texture cache merged.', state:true, changed:true },
@@ -1011,7 +1011,7 @@ var ARCHS = {
     name:'Ampere', gen:'SM 8.0', year:2020, color:'#ffa94d', example:'A100',
     smLabel:'SM',
     intro:"Ampere's headline: 10× larger L2 (40MB!) with software-controlled persistence, and async copy (cp.async) that moves data from global to shared memory without burning registers.",
-      delta:"🆕 <strong>vs Volta:</strong> L2 grew 10× to 40MB and you can now pin data to stay resident (persistence window). cp.async decouples memory loads from register pressure — overlapping compute and memory without stalling warps.",
+      delta:"<strong>vs Volta:</strong> L2 grew 10× to 40MB and you can now pin data to stay resident (persistence window). cp.async decouples memory loads from register pressure — overlapping compute and memory without stalling warps.",
     perf:{ smCount:108, l1Size:192, smemSize:164, l2Size:40960, bw:2039, flops:19.5, memType:'HBM2e', vram:80, tdp:400, l1Latency:33, l2Latency:200, dramLatency:400 },
     blocks:{
       l1:{ label:'L1 + TEX (192KB)', desc:'Larger unified L1/TEX cache.', state:true, changed:true },
@@ -1032,7 +1032,7 @@ var ARCHS = {
     name:'Hopper', gen:'SM 9.0', year:2022, color:'#845ef7', example:'H100',
     smLabel:'SM',
     intro:"Hopper introduces TMA (Tensor Memory Accelerator) — a hardware DMA engine for complex tensor addressing — and DSMEM, where SMs in a cluster can directly read each other's shared memory.",
-      delta:"🆕 <strong>vs Ampere:</strong> TMA offloads tensor address math from threads to hardware — freeing warps entirely during data movement. DSMEM lets SMs in a cluster share memory at SMEM latency (~20 cycles) rather than going through L2 (~200 cycles).",
+      delta:"<strong>vs Ampere:</strong> TMA offloads tensor address math from threads to hardware — freeing warps entirely during data movement. DSMEM lets SMs in a cluster share memory at SMEM latency (~20 cycles) rather than going through L2 (~200 cycles).",
     perf:{ smCount:132, l1Size:256, smemSize:228, l2Size:51200, bw:3352, flops:66.9, memType:'HBM3', vram:80, tdp:700, l1Latency:33, l2Latency:200, dramLatency:380 },
     blocks:{
       l1:{ label:'L1 + TEX (256KB)', desc:'Even larger unified cache with TMA support.', state:true, changed:true },
@@ -1055,7 +1055,7 @@ var ARCHS = {
     name:'Apex', gen:'SM 10.0', year:2026, color:'#f59e0b', example:'Concept',
     smLabel:'SM',
     intro:"A forward-looking architecture exploring three unsolved problems in GPU memory design. The headline addition: a hardware <strong>Atomic Arbiter</strong> with a visible request queue, sequence-numbered transactions, and a Reorder Buffer (ROB) to handle out-of-order returns. Also features a Coherency Directory replacing broadcast INV with targeted per-SM invalidation. None of these exist in shipping silicon yet — but the problems they solve are very real.",
-      delta:"🆕 <strong>vs Hopper:</strong> Atomics were always a black box — requests raced into L2 and serialised invisibly. The Arbiter makes that visible: you see the queue fill, grants issue, RMWs fly, and the ROB reorder returns. The Coherency Directory eliminates the O(n) INV broadcast — only SMs that actually hold a copy get notified. Both ideas exist in CPU design but not yet in shipping GPU silicon.",
+      delta:"<strong>vs Hopper:</strong> Atomics were always a black box — requests raced into L2 and serialised invisibly. The Arbiter makes that visible: you see the queue fill, grants issue, RMWs fly, and the ROB reorder returns. The Coherency Directory eliminates the O(n) INV broadcast — only SMs that actually hold a copy get notified. Both ideas exist in CPU design but not yet in shipping GPU silicon.",
     perf:{ smCount:144, l1Size:320, smemSize:256, l2Size:65536, bw:5000, flops:120, memType:'HBM4', vram:192, tdp:1000, l1Latency:25, l2Latency:160, dramLatency:350 },
     blocks:{
       l1:{ label:'L1 + TEX (320KB)', desc:'Enlarged unified L1 with lower latency predictor logic.', state:true, changed:true },
@@ -1563,10 +1563,19 @@ function hitTestParticleLabels(mx, my) {
   return null;
 }
 
+var _lastTooltipType = null;
+
 function updateTooltip(hit, clientX, clientY) {
   if (!hit) { hideTooltip(); return; }
   var info = BLOCK_INFO[hit.type];
   if (!info) { hideTooltip(); return; }
+
+  // Clear skeleton when block type changes so stale DOM nodes don't leak between types
+  var typeKey = hit.type + (hit.smIdx !== undefined ? '-' + hit.smIdx : '');
+  if (typeKey !== _lastTooltipType) {
+    ttMeta.innerHTML = '';
+    _lastTooltipType = typeKey;
+  }
 
   ttName.textContent = info.name;
   ttDot.style.background = info.color;
@@ -1580,65 +1589,94 @@ function updateTooltip(hit, clientX, clientY) {
 
   if (isL2Block) {
     tooltipEl.classList.remove('tt-wide');
-    var l2Filled = 0, l2Dirty = 0;
-    for (var l2ti = 0; l2ti < NUM_L2_LINES; l2ti++) {
-      if (l2Lines[l2ti] === 1) l2Filled++;
-      else if (l2Lines[l2ti] === 2) { l2Filled++; l2Dirty++; }
-    }
-    var l2Empty = NUM_L2_LINES - l2Filled;
-    var l2OccPct = Math.round(l2Filled / NUM_L2_LINES * 100);
-    var arch = ARCHS[currentArch];
-    // Build line grid (same visual as L1)
-    var l2GridHtml = '';
-    for (var l2gi = 0; l2gi < NUM_L2_LINES; l2gi++) {
-      var lv = l2Lines[l2gi];
-      var lc = lv === 2 ? '#ffa94d' : lv === 1 ? '#339af060' : '#1e2030';
-      l2GridHtml += '<div style="flex:1;border-radius:2px;background:' + lc + ';transition:background .15s"></div>';
-    }
-    // Per-SM L1 state summary
-    var smStateHtml = '';
-    for (var l2si = 0; l2si < layout.sms.length; l2si++) {
-      var st = layout.sms[l2si].l1.state;
-      var sc = st === 'modified' ? '#51cf66' : st === 'shared' ? '#339af0' : '#4a5080';
-      var sl = st === 'modified' ? 'M' : st === 'shared' ? 'S' : 'I';
-      smStateHtml +=
-        '<div style="display:flex;align-items:center;gap:4px;padding:2px 0">' +
-          '<span style="font-family:JetBrains Mono,monospace;font-size:.58rem;color:#6b7090;min-width:28px">SM' + l2si + '</span>' +
-          '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' + sc + '"></span>' +
-          '<span style="font-family:JetBrains Mono,monospace;font-size:.6rem;color:' + sc + '">' + st + '</span>' +
-          '<span style="font-family:JetBrains Mono,monospace;font-size:.56rem;color:#3a3d55;margin-left:auto">[' + sl + ']</span>' +
+    // Build skeleton once — recognised by sentinel id
+    if (!document.getElementById('tt-l2-fill-label')) {
+      var arch = ARCHS[currentArch];
+      var smStateRows = '';
+      for (var ssi = 0; ssi < layout.sms.length; ssi++) {
+        smStateRows +=
+          '<div id="tt-l2-sm-' + ssi + '" style="display:flex;align-items:center;gap:4px;padding:2px 0">' +
+            '<span style="font-family:JetBrains Mono,monospace;font-size:.58rem;color:#6b7090;min-width:28px">SM' + ssi + '</span>' +
+            '<span id="tt-l2-sm-dot-' + ssi + '" style="display:inline-block;width:8px;height:8px;border-radius:50%"></span>' +
+            '<span id="tt-l2-sm-state-' + ssi + '" style="font-family:JetBrains Mono,monospace;font-size:.6rem"></span>' +
+            '<span id="tt-l2-sm-tag-' + ssi + '" style="font-family:JetBrains Mono,monospace;font-size:.56rem;color:#3a3d55;margin-left:auto"></span>' +
+          '</div>';
+      }
+      // Build N line cells for the grid
+      var gridCells = '';
+      for (var gi = 0; gi < NUM_L2_LINES; gi++) {
+        gridCells += '<div id="tt-l2-cell-' + gi + '" style="flex:1;border-radius:2px;transition:background .15s"></div>';
+      }
+      ttMeta.innerHTML =
+        // ── Line grid header ──
+        '<div style="margin-bottom:6px">' +
+          '<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">' +
+            '<span style="font-family:JetBrains Mono,monospace;font-size:.6rem;color:#9095b0;text-transform:uppercase;letter-spacing:1px">L2 Lines (' + arch.blocks.l2.size + ')</span>' +
+            '<span id="tt-l2-fill-label" style="font-family:JetBrains Mono,monospace;font-size:.68rem;font-weight:700;color:#ffa94d"></span>' +
+            '<span id="tt-l2-dirty-label" style="font-family:JetBrains Mono,monospace;font-size:.62rem;color:#ffa94d;margin-left:2px"></span>' +
+          '</div>' +
+          // Live line grid
+          '<div style="display:flex;gap:2px;height:10px;margin-bottom:4px">' + gridCells + '</div>' +
+          // Legend
+          '<div style="display:flex;gap:10px;font-family:JetBrains Mono,monospace;font-size:.56rem;margin-bottom:5px">' +
+            '<span style="color:#339af0">■ clean</span>' +
+            '<span style="color:#ffa94d">■ dirty</span>' +
+            '<span style="color:#4a5080">■ empty</span>' +
+          '</div>' +
+          // Occupancy bar
+          '<div style="height:3px;background:#1e2030;border-radius:2px;margin-bottom:8px">' +
+            '<div id="tt-l2-occ-bar" style="height:3px;border-radius:2px;transition:width .2s,background .2s"></div>' +
+          '</div>' +
+
+          // ── Lifecycle section ──
+          '<div style="border-top:1px solid #1e2030;padding-top:7px;margin-bottom:6px">' +
+            '<div style="font-family:JetBrains Mono,monospace;font-size:.56rem;color:#9095b0;text-transform:uppercase;letter-spacing:1px;margin-bottom:5px">Cache Line Lifecycle</div>' +
+            // How lines go clean
+            '<div style="margin-bottom:4px">' +
+              '<div style="font-family:JetBrains Mono,monospace;font-size:.58rem;font-weight:700;color:#339af0;margin-bottom:1px">Clean (blue)</div>' +
+              '<div style="font-family:JetBrains Mono,monospace;font-size:.56rem;color:#6b7090;line-height:1.5">Filled on SM read miss (RdReq → L2 → DATA). Shared read-only across SMs — any number of SMs can hold a Shared copy simultaneously.</div>' +
+            '</div>' +
+            // How lines go dirty
+            '<div style="margin-bottom:4px">' +
+              '<div style="font-family:JetBrains Mono,monospace;font-size:.58rem;font-weight:700;color:#ffa94d;margin-bottom:1px">Dirty (orange)</div>' +
+              '<div style="font-family:JetBrains Mono,monospace;font-size:.56rem;color:#6b7090;line-height:1.5">Marked dirty on SM write (write-evict policy on Volta+) or write-back from L1. Dirty means L2 has the most recent value — DRAM is stale. Must be flushed before eviction.</div>' +
+            '</div>' +
+            // Eviction
+            '<div style="margin-bottom:4px">' +
+              '<div style="font-family:JetBrains Mono,monospace;font-size:.58rem;font-weight:700;color:#845ef7;margin-bottom:1px">Eviction → DRAM</div>' +
+              '<div style="font-family:JetBrains Mono,monospace;font-size:.56rem;color:#6b7090;line-height:1.5">When L2 is &gt;75% full, the LRU victim is evicted. Clean lines are simply discarded. Dirty lines must be written to DRAM first (EVICT → NoC → MC → HBM) — adds ~400 cycles.</div>' +
+            '</div>' +
+            // Write policy
+            '<div style="margin-bottom:6px">' +
+              '<div style="font-family:JetBrains Mono,monospace;font-size:.58rem;font-weight:700;color:#6b7090;margin-bottom:1px">Write policy: <span id="tt-l2-writepolicy" style="color:#aaa"></span></div>' +
+              '<div style="font-family:JetBrains Mono,monospace;font-size:.56rem;color:#6b7090;line-height:1.5"><span id="tt-l2-writepolicy-desc"></span></div>' +
+            '</div>' +
+          '</div>' +
+
+          // ── Latency row ──
+          '<div style="display:flex;gap:8px;margin-bottom:8px;font-family:JetBrains Mono,monospace;font-size:.56rem">' +
+            '<span style="color:#6b7090">Hit latency:</span>' +
+            '<span id="tt-l2-latency" style="color:#aaa"></span>' +
+            '<span style="color:#6b7090;margin-left:auto">Miss → DRAM:</span>' +
+            '<span style="color:#ff6b6b">~400 cycles</span>' +
+          '</div>' +
+
+          // ── Per-SM coherency state ──
+          '<div style="font-family:JetBrains Mono,monospace;font-size:.58rem;color:#9095b0;letter-spacing:.5px;margin-bottom:3px;text-transform:uppercase">Coherency state (L1 per SM)</div>' +
+          smStateRows +
         '</div>';
+
+      // Set static content
+      var wpEl = document.getElementById('tt-l2-writepolicy');
+      var wpdEl = document.getElementById('tt-l2-writepolicy-desc');
+      var latEl = document.getElementById('tt-l2-latency');
+      if (wpEl) wpEl.textContent = currentArch === 'pascal' ? 'write-through' : 'write-evict / write-back';
+      if (wpdEl) wpdEl.textContent = currentArch === 'pascal'
+        ? 'Pascal L1 is read-only — stores bypass it and go straight to L2. L2 always has the authoritative copy, so L1 never needs to be invalidated on a write.'
+        : 'Volta+: stores hit L1, which becomes Modified. L2 gets the data only when L1 evicts the dirty line (write-back) or on capacity pressure. Other SMs\' L1 copies are invalidated via INV.';
+      if (latEl) latEl.textContent = '~' + (currentArch === 'pascal' ? '80' : currentArch === 'ampere' || currentArch === 'hopper' ? '50' : '60') + ' cycles';
     }
-    ttMeta.innerHTML =
-      '<div style="margin-bottom:6px">' +
-        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">' +
-          '<span style="font-family:JetBrains Mono,monospace;font-size:.6rem;color:#9095b0;text-transform:uppercase;letter-spacing:1px">L2 Lines (' + arch.blocks.l2.size + ')</span>' +
-          '<span style="font-family:JetBrains Mono,monospace;font-size:.68rem;font-weight:700;color:#ffa94d">' + l2Filled + '/' + NUM_L2_LINES + ' filled</span>' +
-          (l2Dirty > 0 ? '<span style="font-family:JetBrains Mono,monospace;font-size:.62rem;color:#ffa94d">' + l2Dirty + ' dirty</span>' : '') +
-        '</div>' +
-        '<div style="display:flex;gap:2px;height:10px;margin-bottom:4px">' + l2GridHtml + '</div>' +
-        '<div style="display:flex;gap:10px;font-family:JetBrains Mono,monospace;font-size:.56rem;margin-bottom:6px">' +
-          '<span style="color:#339af0">■ clean (' + (l2Filled - l2Dirty) + ')</span>' +
-          '<span style="color:#ffa94d">■ dirty (' + l2Dirty + ')</span>' +
-          '<span style="color:#4a5080">■ empty (' + l2Empty + ')</span>' +
-        '</div>' +
-        // Occupancy bar
-        '<div style="height:3px;background:#1e2030;border-radius:2px;margin-bottom:8px">' +
-          '<div style="height:3px;border-radius:2px;background:' + (l2OccPct > 80 ? '#ff6b6b' : '#ffa94d') + ';width:' + l2OccPct + '%"></div>' +
-        '</div>' +
-        // Write policy & latency
-        '<div style="display:flex;gap:8px;margin-bottom:6px;font-family:JetBrains Mono,monospace;font-size:.56rem">' +
-          '<span style="color:#6b7090">Write policy:</span>' +
-          '<span style="color:#ffa94d">' + (currentArch === 'pascal' ? 'write-through' : 'write-evict / write-back') + '</span>' +
-        '</div>' +
-        '<div style="display:flex;gap:8px;margin-bottom:8px;font-family:JetBrains Mono,monospace;font-size:.56rem">' +
-          '<span style="color:#6b7090">Latency:</span>' +
-          '<span style="color:#aaa">~' + (currentArch === 'pascal' ? '80' : currentArch === 'ampere' || currentArch === 'hopper' ? '50' : '60') + ' cycles (hit)</span>' +
-        '</div>' +
-        // SM L1 state summary
-        '<div style="font-family:JetBrains Mono,monospace;font-size:.58rem;color:#9095b0;letter-spacing:.5px;margin-bottom:3px">COHERENCY STATE (L1 per SM)</div>' +
-        smStateHtml +
-      '</div>';
+    refreshTooltipL2Data();
     ttHint.style.display = (selectedBlock && selectedBlock.type === 'l2') ? 'none' : 'flex';
     positionTooltip(clientX, clientY);
     tooltipEl.classList.add('visible');
@@ -1763,16 +1801,41 @@ function updateTooltip(hit, clientX, clientY) {
   }
 
   if (isCacheBlock) {
-    ttMeta.innerHTML =
-      '<div style="margin-bottom:2px">' +
-        '<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">' +
-          '<span style="font-family:JetBrains Mono,monospace;font-size:.6rem;color:#9095b0;text-transform:uppercase;letter-spacing:1px">Cache Lines</span>' +
-          '<span id="tt-fill-label" style="font-family:JetBrains Mono,monospace;font-size:.68rem;font-weight:700;color:'+info.color+'"></span>' +
-          '<span id="tt-dirty-label" style="font-family:JetBrains Mono,monospace;font-size:.62rem;color:#51cf66"></span>' +
-        '</div>' +
-        '<div id="tt-line-grid" style="display:flex;gap:2px;height:10px;margin-bottom:5px"></div>' +
-        '<div id="tt-state-label" style="font-size:.66rem;font-family:JetBrains Mono,monospace"></div>' +
-      '</div>';
+    if (!document.getElementById('tt-line-grid')) {
+      // Build L1/SMEM skeleton with lifecycle info
+      var isL1 = hit.type === 'l1';
+      ttMeta.innerHTML =
+        '<div style="margin-bottom:2px">' +
+          '<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">' +
+            '<span style="font-family:JetBrains Mono,monospace;font-size:.6rem;color:#9095b0;text-transform:uppercase;letter-spacing:1px">Cache Lines</span>' +
+            '<span id="tt-fill-label" style="font-family:JetBrains Mono,monospace;font-size:.68rem;font-weight:700;color:'+info.color+'"></span>' +
+            '<span id="tt-dirty-label" style="font-family:JetBrains Mono,monospace;font-size:.62rem;color:#51cf66"></span>' +
+          '</div>' +
+          '<div id="tt-line-grid" style="display:flex;gap:2px;height:10px;margin-bottom:5px"></div>' +
+          '<div id="tt-state-label" style="font-size:.66rem;font-family:JetBrains Mono,monospace;margin-bottom:8px"></div>' +
+          (isL1 ? (
+            '<div style="border-top:1px solid #1e2030;padding-top:7px">' +
+              '<div style="font-family:JetBrains Mono,monospace;font-size:.56rem;color:#9095b0;text-transform:uppercase;letter-spacing:1px;margin-bottom:5px">L1 Cache Line States</div>' +
+              '<div style="margin-bottom:3px;font-family:JetBrains Mono,monospace;font-size:.56rem">' +
+                '<span style="color:#339af0;font-weight:700">Shared</span>' +
+                '<span style="color:#6b7090"> — clean copy. Filled on read miss (RdReq → L2 → DATA). Multiple SMs can hold Shared simultaneously. Instantly invalidated if another SM writes to the same address.</span>' +
+              '</div>' +
+              '<div style="margin-bottom:3px;font-family:JetBrains Mono,monospace;font-size:.56rem">' +
+                '<span style="color:#51cf66;font-weight:700">Modified</span>' +
+                '<span style="color:#6b7090"> — dirty. Set when SM writes to this line (write-evict). This SM has the only valid copy — all other SMs\' copies are invalidated. Line must be written back to L2 before eviction.</span>' +
+              '</div>' +
+              '<div style="font-family:JetBrains Mono,monospace;font-size:.56rem">' +
+                '<span style="color:#6b7090;font-weight:700">Invalid</span>' +
+                '<span style="color:#6b7090"> — empty. Either never loaded, or dropped by an INV message. Next access causes a miss — RdReq goes to L2 to refill.</span>' +
+              '</div>' +
+            '</div>'
+          ) : (
+            '<div style="border-top:1px solid #1e2030;padding-top:7px;font-family:JetBrains Mono,monospace;font-size:.56rem;color:#6b7090;line-height:1.5">' +
+              'SMEM is software-managed scratchpad. No coherency protocol — the programmer controls all reads and writes. Access via LDS (load) and STS (store). 32 memory banks; simultaneous access to different banks costs 0 extra cycles.' +
+            '</div>'
+          )) +
+        '</div>';
+    }
     refreshTooltipCacheData(hit, info);
   } else {
     ttMeta.innerHTML = '';
@@ -1792,6 +1855,52 @@ function updateTooltip(hit, clientX, clientY) {
   ttHint.style.display = (selectedBlock && selectedBlock.type === hit.type) ? 'none' : 'flex';
   positionTooltip(clientX, clientY);
   tooltipEl.classList.add('visible');
+}
+
+// Live in-place refresh for L2 tooltip — called every frame while L2 is hovered.
+// Only touches .style properties and .textContent — never rebuilds innerHTML.
+function refreshTooltipL2Data() {
+  var l2Filled = 0, l2Dirty = 0;
+  for (var i = 0; i < NUM_L2_LINES; i++) {
+    if (l2Lines[i] === 1) l2Filled++;
+    else if (l2Lines[i] === 2) { l2Filled++; l2Dirty++; }
+  }
+  var l2Empty = NUM_L2_LINES - l2Filled;
+  var l2OccPct = Math.round(l2Filled / NUM_L2_LINES * 100);
+
+  // Fill / dirty labels
+  var fillEl = document.getElementById('tt-l2-fill-label');
+  if (fillEl) fillEl.textContent = l2Filled + '/' + NUM_L2_LINES + ' filled';
+  var dirtyEl = document.getElementById('tt-l2-dirty-label');
+  if (dirtyEl) dirtyEl.textContent = l2Dirty > 0 ? l2Dirty + ' dirty' : '';
+
+  // Line cells — update background in-place so CSS transition fires
+  for (var gi = 0; gi < NUM_L2_LINES; gi++) {
+    var cell = document.getElementById('tt-l2-cell-' + gi);
+    if (!cell) continue;
+    var lv = l2Lines[gi];
+    cell.style.background = lv === 2 ? '#ffa94d' : lv === 1 ? '#339af060' : '#1e2030';
+  }
+
+  // Occupancy bar
+  var bar = document.getElementById('tt-l2-occ-bar');
+  if (bar) {
+    bar.style.width = l2OccPct + '%';
+    bar.style.background = l2OccPct > 80 ? '#ff6b6b' : '#ffa94d';
+  }
+
+  // Per-SM coherency state rows
+  for (var ssi = 0; ssi < layout.sms.length; ssi++) {
+    var st = layout.sms[ssi].l1.state;
+    var sc = st === 'modified' ? '#51cf66' : st === 'shared' ? '#339af0' : '#4a5080';
+    var sl = st === 'modified' ? '[M]' : st === 'shared' ? '[S]' : '[I]';
+    var dotEl = document.getElementById('tt-l2-sm-dot-' + ssi);
+    var stEl  = document.getElementById('tt-l2-sm-state-' + ssi);
+    var tagEl = document.getElementById('tt-l2-sm-tag-' + ssi);
+    if (dotEl) dotEl.style.background = sc;
+    if (stEl)  { stEl.style.color = sc; stEl.textContent = st; }
+    if (tagEl) tagEl.textContent = sl;
+  }
 }
 
 function refreshTooltipCacheData(hit, info) {
@@ -1866,6 +1975,7 @@ function positionTooltip(clientX, clientY) {
 
 function hideTooltip() {
   tooltipEl.classList.remove('visible');
+  _lastTooltipType = null;
 }
 
 // draw.js — GPU Cache Coherency Demo
@@ -2267,9 +2377,9 @@ function drawAnimatedFrame(dt, time) {
   if (hoveredBlock && (hoveredBlock.type === 'l1' || hoveredBlock.type === 'smem')) {
     refreshTooltipCacheData(hoveredBlock, BLOCK_INFO[hoveredBlock.type]);
   }
-  // Live tooltip refresh for L2 — line state changes during scenarios
+  // Live tooltip refresh for L2 — in-place DOM update so CSS transitions fire
   if (hoveredBlock && hoveredBlock.type === 'l2' && tooltipEl.classList.contains('visible')) {
-    updateTooltip(hoveredBlock, lastClientX, lastClientY);
+    refreshTooltipL2Data();
   }
   // Live tooltip refresh for arbiter (state changes while hovered)
   if (hoveredBlock && hoveredBlock.type === 'arbiter' && tooltipEl.classList.contains('visible')) {
