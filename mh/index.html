@@ -1191,7 +1191,16 @@ function l2Evict() {
 
 function initCacheState() {
   cacheState = [];
+  // Pre-fill L2 to ~45% — realistic: L2 is a shared last-level cache that
+  // is never truly empty on a running GPU. Cold start only happens at power-on.
+  var l2Count = Math.floor(NUM_L2_LINES * (0.38 + Math.random() * 0.14));
   l2Lines = new Array(NUM_L2_LINES).fill(0);
+  for (var li = 0; li < l2Count; li++) l2Lines[li] = 1;
+  // Shuffle so filled slots are scattered, not just at the front
+  for (var lj = NUM_L2_LINES - 1; lj > 0; lj--) {
+    var lk = Math.floor(Math.random() * (lj + 1));
+    var lt = l2Lines[lj]; l2Lines[lj] = l2Lines[lk]; l2Lines[lk] = lt;
+  }
   var n = layout.sms ? layout.sms.length : 4;
   for (var i = 0; i < n; i++) {
     // Baseline ~75-82%: registers are nearly always heavily allocated on a real GPU kernel.
@@ -1591,6 +1600,7 @@ function updateTooltip(hit, clientX, clientY) {
   ttDesc.textContent = info.desc;
 
   var isCacheBlock = (hit.type === 'l1' || hit.type === 'smem') && hit.smIdx !== undefined;
+  var isRegsBlock  = hit.type === 'regs' && hit.smIdx !== undefined;
   var isL2Block = hit.type === 'l2';
   var isArbiterBlock = hit.type === 'arbiter';
   var isCohDirBlock = hit.type === 'cohDir';
@@ -1700,8 +1710,14 @@ function updateTooltip(hit, clientX, clientY) {
     var arbGrants = arbiterState.recentGrants;
     var latFracTT = arbiterState.contentionLevel;
     var cycTT = Math.round(2 + latFracTT * 30);
-    var statusTT = arbQ.length >= QUEUE_CAPACITY - 2 ? 'SATURATED' : arbiterState.active ? 'ACTIVE' : 'IDLE';
-    var statusColor = arbQ.length >= QUEUE_CAPACITY - 2 ? '#ff6b6b' : arbiterState.active ? '#fbbf24' : '#4a5080';
+    var statusTT = arbQ.length >= QUEUE_CAPACITY - 2 ? 'SATURATED'
+      : arbiterState.active ? 'ACTIVE'
+      : arbiterState.passthroughCount > 0 ? 'PASSTHROUGH'
+      : 'IDLE';
+    var statusColor = arbQ.length >= QUEUE_CAPACITY - 2 ? '#ff6b6b'
+      : arbiterState.active ? '#fbbf24'
+      : arbiterState.passthroughCount > 0 ? '#22d3ee'
+      : '#4a5080';
 
     // ── Live ops table — what each in-flight op is doing RIGHT NOW ──
     var liveOpsHtml = '';
@@ -1808,6 +1824,48 @@ function updateTooltip(hit, clientX, clientY) {
     tooltipEl.classList.remove('tt-wide');
   }
 
+  if (isRegsBlock) {
+    tooltipEl.classList.remove('tt-wide');
+    if (!document.getElementById('tt-regs-bar')) {
+      // Build regs skeleton once
+      ttMeta.innerHTML =
+        '<div>' +
+          '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">' +
+            '<span style="font-family:JetBrains Mono,monospace;font-size:.6rem;color:#9095b0;text-transform:uppercase;letter-spacing:1px">Register Occupancy</span>' +
+            '<span id="tt-regs-pct" style="font-family:JetBrains Mono,monospace;font-size:.68rem;font-weight:700"></span>' +
+          '</div>' +
+          // Occupancy bar
+          '<div style="height:8px;background:#141620;border-radius:3px;margin-bottom:5px;position:relative;overflow:hidden">' +
+            '<div id="tt-regs-bar" style="height:100%;border-radius:3px;transition:width .15s,background .15s"></div>' +
+            // Danger line at 100%
+            '<div style="position:absolute;right:0;top:0;bottom:0;width:1.5px;background:#fb923c44"></div>' +
+          '</div>' +
+          '<div id="tt-regs-state" style="font-family:JetBrains Mono,monospace;font-size:.62rem;margin-bottom:8px"></div>' +
+          // Explanation
+          '<div style="border-top:1px solid #1e2030;padding-top:7px">' +
+            '<div style="font-family:JetBrains Mono,monospace;font-size:.56rem;color:#9095b0;text-transform:uppercase;letter-spacing:1px;margin-bottom:5px">How registers work</div>' +
+            '<div style="margin-bottom:4px;font-family:JetBrains Mono,monospace;font-size:.56rem;color:#6b7090;line-height:1.5">' +
+              'Each resident warp has a fixed register allocation decided at compile time. The register file is never empty — all resident warps\' registers are live simultaneously. Bars show current occupancy across all warps.' +
+            '</div>' +
+            '<div style="margin-bottom:4px;font-family:JetBrains Mono,monospace;font-size:.56rem">' +
+              '<span style="color:#5a7ad0;font-weight:700">Normal (≤85%)</span>' +
+              '<span style="color:#6b7090"> — all warp registers fit in the physical file. No spilling.</span>' +
+            '</div>' +
+            '<div style="margin-bottom:4px;font-family:JetBrains Mono,monospace;font-size:.56rem">' +
+              '<span style="color:#fb923c;font-weight:700">Overflow (>100%)</span>' +
+              '<span style="color:#6b7090"> — compiler inserted SPILL/RELOAD instructions. The warp stalls while values are written/read from L1 cache.</span>' +
+            '</div>' +
+            '<div style="font-family:JetBrains Mono,monospace;font-size:.56rem;color:#6b7090">Reducing registers per thread (–maxrregcount) lets more warps fit simultaneously, improving occupancy and latency hiding.</div>' +
+          '</div>' +
+        '</div>';
+    }
+    refreshTooltipRegsData(hit.smIdx);
+    ttHint.style.display = 'none';
+    positionTooltip(clientX, clientY);
+    tooltipEl.classList.add('visible');
+    return;
+  }
+
   if (isCacheBlock) {
     if (!document.getElementById('tt-line-grid')) {
       // Build L1/SMEM skeleton with lifecycle info
@@ -1863,6 +1921,34 @@ function updateTooltip(hit, clientX, clientY) {
   ttHint.style.display = (selectedBlock && selectedBlock.type === hit.type) ? 'none' : 'flex';
   positionTooltip(clientX, clientY);
   tooltipEl.classList.add('visible');
+}
+
+// Live in-place refresh for register file tooltip
+function refreshTooltipRegsData(smIdx) {
+  var cs = cacheState[smIdx];
+  var pressure = cs ? cs.regsPressure : 0.75;
+  var visualPct = Math.round(Math.min(pressure, 1.15) * 100);
+  var barFill = Math.min(100, visualPct);
+
+  var pctEl = document.getElementById('tt-regs-pct');
+  var barEl = document.getElementById('tt-regs-bar');
+  var stateEl = document.getElementById('tt-regs-state');
+
+  var color, stateText;
+  if (pressure >= 1.0) {
+    color = '#fb923c';
+    stateText = '⚠ OVERFLOW — register spill active. Warp is stalled, values spilling to L1.';
+  } else if (pressure >= 0.88) {
+    color = '#f59e0b';
+    stateText = '● High load — near capacity. Compiler may have inserted preventive spills.';
+  } else {
+    color = '#5a7ad0';
+    stateText = '● Normal — all registers fit in the physical file.';
+  }
+
+  if (pctEl) { pctEl.textContent = visualPct + '%'; pctEl.style.color = color; }
+  if (barEl)  { barEl.style.width = barFill + '%'; barEl.style.background = color; }
+  if (stateEl) { stateEl.style.color = color; stateEl.textContent = stateText; }
 }
 
 // Live in-place refresh for L2 tooltip — called every frame while L2 is hovered.
@@ -2384,6 +2470,10 @@ function drawAnimatedFrame(dt, time) {
   // Live tooltip refresh for cache blocks
   if (hoveredBlock && (hoveredBlock.type === 'l1' || hoveredBlock.type === 'smem')) {
     refreshTooltipCacheData(hoveredBlock, BLOCK_INFO[hoveredBlock.type]);
+  }
+  // Live tooltip refresh for register file — pressure changes during scenarios
+  if (hoveredBlock && hoveredBlock.type === 'regs' && tooltipEl.classList.contains('visible')) {
+    refreshTooltipRegsData(hoveredBlock.smIdx);
   }
   // Live tooltip refresh for L2 — in-place DOM update so CSS transitions fire
   if (hoveredBlock && hoveredBlock.type === 'l2' && tooltipEl.classList.contains('visible')) {
@@ -3404,26 +3494,71 @@ function triggerScenario(type, silent) {
   }
 
   switch(type) {
-    case 'read':
+    case 'read': {
+      // L1 miss — force invalid so the read request is clearly needed
       if (sm.l1.state !== 'invalid') { sm.l1.state = 'invalid'; }
       stats.misses++;
-      logEvent('SM'+si+': L1 read miss → L2','#ff6b6b');
-      bubble(l1Pos(si).x,l1Pos(si).y,'cache miss','#ff6b6b',{sub:'not in L1'});
-      particles.push(new Particle(l1Pos(si),busP(si),'#ff6b6b','RdReq',2,function(){
-        bubble(busP(si).x,busP(si).y,'going to L2','#ff6b6b',{life:1.4,sub:'fetch from below'});
-        spawnPassthrough(si,'#ff6b6b','RdReq',2.5,function(){
-          logEvent('L2: Hit → data returning to SM'+si,'#ffa94d');
-          l2AbsorbOne();
-          bubble(l2Top().x,l2Top().y,'L2 found it','#51cf66',{life:1.5,sub:'data ready'});
-          spawnParticle(l2Top(), l1Pos(si), '#ffa94d', 'DATA', 2, function(){
-            sm.l1.state='shared'; fillL1Random(si, false); flash(sm.l1,'#339af0');
-            bubble(l1Pos(si).x,l1Pos(si).y,'line cached','#339af0',{life:1.6,sub:'now Shared'});
-            logEvent('SM'+si+': L1 → Shared','#339af0');
-            stats.hits++;
-          }, [busP(si)]);
-        });
-      }));
+
+      // Check L2 occupancy — if <25% filled treat as L2 miss → go to DRAM
+      var l2Filled = 0;
+      for (var rl = 0; rl < NUM_L2_LINES; rl++) if (l2Lines[rl] > 0) l2Filled++;
+      var l2Hit = l2Filled > Math.floor(NUM_L2_LINES * 0.25);
+
+      if (l2Hit) {
+        logEvent('SM'+si+': L1 miss → L2 hit','#ff6b6b');
+        bubble(l1Pos(si).x,l1Pos(si).y,'L1 miss','#ff6b6b',{sub:'checking L2'});
+        particles.push(new Particle(l1Pos(si),busP(si),'#ff6b6b','RdReq',2,function(){
+          spawnPassthrough(si,'#ff6b6b','RdReq',2.5,function(){
+            logEvent('L2: hit — line found, serving to SM'+si,'#ffa94d');
+            l2AbsorbOne();
+            bubble(l2Top().x,l2Top().y,'L2 hit','#51cf66',{life:1.5,sub:'data ready'});
+            spawnParticle(l2Top(), l1Pos(si), '#ffa94d', 'DATA', 2, function(){
+              sm.l1.state='shared'; fillL1Random(si, false); flash(sm.l1,'#339af0');
+              bubble(l1Pos(si).x,l1Pos(si).y,'line cached','#339af0',{life:1.6,sub:'L1 → Shared'});
+              logEvent('SM'+si+': L1 → Shared (filled from L2)','#339af0');
+              stats.hits++;
+            }, [busP(si)]);
+          });
+        }));
+      } else {
+        // L2 miss — request goes all the way to DRAM, L2 fills on return
+        logEvent('SM'+si+': L1 miss → L2 miss → DRAM fetch','#ff6b6b');
+        bubble(l1Pos(si).x,l1Pos(si).y,'L1 miss','#ff6b6b',{sub:'L2 empty → DRAM'});
+        particles.push(new Particle(l1Pos(si),busP(si),'#ff6b6b','RdReq',2,function(){
+          spawnPassthrough(si,'#ff6b6b','RdReq',2.5,function(){
+            bubble(l2Top().x,l2Top().y,'L2 miss','#ff6b6b',{life:1.4,sub:'→ global mem'});
+            logEvent('L2: miss — forwarding to global memory','#ff6b6b');
+            // RdReq continues down: L2 → globalMem → HBM
+            spawnParticle(l2Top(), gmTop(), '#ff6b6b', 'RdReq', 2.2, function(){
+              flash(layout.globalMem,'#339af0');
+              bubble(gmTop().x,gmTop().y,'DRAM fetch','#339af0',{life:1.4,sub:'~400 cycles'});
+              logEvent('GlobalMem: reading from HBM','#339af0');
+              spawnParticle(gmTop(), hbmTop(), '#339af0', 'RdReq', 2.0, function(){
+                flash(layout.hbm,'#845ef7');
+                bubble(hbmTop().x,hbmTop().y,'HBM read','#845ef7',{life:1.2,sub:'data found'});
+                // DATA returns: HBM → globalMem → L2 (fills L2) → bus → L1
+                spawnParticle(hbmTop(), gmTop(), '#845ef7', 'DATA', 2.2, function(){
+                  flash(layout.globalMem,'#339af0');
+                  spawnParticle(gmTop(), l2Top(), '#339af0', 'DATA', 2.2, function(){
+                    // L2 fills as line comes through
+                    l2AbsorbOne(); l2AbsorbOne(); flash(layout.l2,'#ffa94d');
+                    bubble(l2Top().x,l2Top().y,'L2 filled','#ffa94d',{life:1.5,sub:'cached for next time'});
+                    logEvent('L2: line installed from DRAM','#ffa94d');
+                    spawnParticle(l2Top(), l1Pos(si), '#ffa94d', 'DATA', 2, function(){
+                      sm.l1.state='shared'; fillL1Random(si,false); flash(sm.l1,'#339af0');
+                      bubble(l1Pos(si).x,l1Pos(si).y,'line cached','#339af0',{life:1.6,sub:'L1 → Shared'});
+                      logEvent('SM'+si+': L1 → Shared (filled from DRAM via L2)','#339af0');
+                      stats.hits++;
+                    }, [busP(si)]);
+                  });
+                });
+              });
+            });
+          });
+        }));
+      }
       break;
+    }
     case 'write':
       if (currentArch==='pascal') {
         logEvent('SM'+si+': Write → bus (L1 bypassed)','#51cf66');
@@ -3828,6 +3963,7 @@ var arbiterState = {
   recentGrants: [],
   active: false,
   retireTimerPending: false,  // guards against duplicate ghost timers in arbiterTryRetire
+  passthroughCount: 0,        // number of non-atomic particles currently passing through
 };
 
 
@@ -3841,6 +3977,7 @@ function resetArbiter() {
   arbiterState.recentGrants = [];
   arbiterState.active = false;
   arbiterState.retireTimerPending = false;
+  arbiterState.passthroughCount = 0;
   updateArbiterDom();
 }
 
@@ -4120,6 +4257,7 @@ function spawnPassthrough(smIdx, color, label, speed, onArrival) {
     particles.push(new Particle(busP(smIdx), l2Top(), color, label, speed, onArrival));
     return;
   }
+  arbiterState.passthroughCount++;
   var busJunct  = busP(smIdx);
   var busAbove  = arbiterBusEntry();
   var arbEntry  = arbiterTop();
@@ -4136,6 +4274,7 @@ function spawnPassthrough(smIdx, color, label, speed, onArrival) {
       particles.push(new Particle(arbEntry, arbExit, color, 'PASS', speed * 1.5, function() {
         // leg 4: arbiter bottom → L2 top (exit to L2)
         particles.push(new Particle(arbExit, l2dest, color, label, speed, function() {
+          arbiterState.passthroughCount = Math.max(0, arbiterState.passthroughCount - 1);
           if (onArrival) onArrival();
         }));
       }));
