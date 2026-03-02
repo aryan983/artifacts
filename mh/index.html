@@ -74,6 +74,14 @@ position:relative;
 }
 .controls button.atomic-btn:hover { background:#f59e0b18; border-color:#f59e0b; color:#fbbf24; }
 .controls button.atomic-btn.apex-only { display:none; }
+.controls button.cp-async-btn {
+  background: transparent; border-color: #22d3ee50; color: #22d3ee;
+}
+.controls button.cp-async-btn:hover { background:#22d3ee15; border-color:#22d3ee; color:#67e8f9; }
+.controls button.tma-btn {
+  background: transparent; border-color: #22d3ee50; color: #22d3ee;
+}
+.controls button.tma-btn:hover { background:#22d3ee15; border-color:#22d3ee; color:#67e8f9; }
 
 /* ── Rich block info panel (arbiter etc.) ── */
 .arb-section { margin-bottom: 10px; }
@@ -241,8 +249,8 @@ position:relative;
 
 .main-container { display:flex; gap:24px; padding:12px 20px; max-width:1400px; margin:0 auto; align-items:flex-start; }
 .viz-area { flex:1; min-width:0; position:relative; }
-canvas { width:100%; height:640px; background:var(--surface); border-radius:12px; border:1px solid var(--border); display:block; cursor:default; }
-@media(max-width:500px){ canvas { height:580px; } .viz-area { max-width:none; } }
+canvas { width:100%; height:720px; background:var(--surface); border-radius:12px; border:1px solid var(--border); display:block; cursor:default; }
+@media(max-width:500px){ canvas { height:640px; } .viz-area { max-width:none; } }
 
 /* ── Tooltip ── */
 #block-tooltip {
@@ -478,7 +486,10 @@ position:absolute; top:-12px; width:100%; text-align:center; white-space:nowrap;
   <button class="scenario-btn" data-scenario="invalidate" onclick="triggerScenario('invalidate')">Invalidate</button>
   <button class="scenario-btn" data-scenario="writeback"  onclick="triggerScenario('writeback')">Write-Back</button>
   <button class="scenario-btn" data-scenario="shared"     onclick="triggerScenario('shared')">Shared Mem</button>
+  <button class="scenario-btn" data-scenario="reg_spill"  onclick="triggerScenario('reg_spill')" id="btn-reg-spill">Reg Spill</button>
   <button class="scenario-btn atomic-btn" data-scenario="atomic" onclick="triggerScenario('atomic')" id="btn-atomic">⚛ atomicAdd</button>
+  <button class="scenario-btn cp-async-btn" data-scenario="cp_async" onclick="triggerScenario('cp_async')" id="btn-cp-async" style="display:none">cp.async</button>
+  <button class="scenario-btn tma-btn" data-scenario="tma_load" onclick="triggerScenario('tma_load')" id="btn-tma-load" style="display:none">TMA Load</button>
   <button id="btn-pause" class="pause-btn" onclick="togglePause()">⏸ Pause</button>
   <button id="btn-auto" class="active" onclick="toggleAuto()">Auto</button>
   <button class="reset-btn" onclick="resetAll()">Reset</button>
@@ -673,6 +684,24 @@ var SCENARIO_INFO = {
     color: '#f59e0b',
     desc: 'Multiple SMs simultaneously call atomicAdd() to the same address. Without an arbiter, two SMs could both read the value, add to it, and one result gets silently lost. The Apex Arbiter prevents this by serializing all requests with sequence numbers.',
     watch: 'On Apex: watch ATOM packets queue in the Arbiter panel (hover it to expand). Each gets a SEQ#. GRANTs fire one at a time. On older archs: watch the raw bus contention with no coordination — and imagine the race conditions without hardware atomics.'
+  },
+  reg_spill: {
+    title: 'Register Spill — Regs → L1 → L2',
+    color: '#fb923c',
+    desc: 'A warp runs out of physical registers. The compiler spills excess live values to L1 cache, stalling the warp. If L1 is full, the spill cascades to L2 (~200 cycles). When the value is needed again, a RELOAD brings it back.',
+    watch: 'See the SPILL particle travel from the register file into L1. If L1 is under pressure, watch it cascade to L2. Then the RELOAD particle returns — that round-trip is the stall.'
+  },
+  cp_async: {
+    title: 'cp.async — Global → SMEM (Bypass Regs)',
+    color: '#22d3ee',
+    desc: 'Ampere\'s async copy loads data from global memory directly into shared memory — without touching registers and without stalling the warp. The warp immediately continues computing while data arrives.',
+    watch: 'Notice the cp.async particle bypasses the register file. Simultaneously a compute pulse appears inside the SM — the warp keeps working. This is how Ampere achieves compute-memory overlap.'
+  },
+  tma_load: {
+    title: 'TMA Load — Bulk Tensor Tile → SMEM',
+    color: '#22d3ee',
+    desc: 'Hopper\'s Tensor Memory Accelerator transfers entire tensor tiles from global memory to shared memory. One thread issues the descriptor; the hardware DMA handles all address math and data movement.',
+    watch: 'The TILE particle originates from the TMA block. Multiple tiles arrive in sequence. SM threads compute on the previous tile while new data arrives — true pipeline overlap.'
   }
 };
 
@@ -898,6 +927,9 @@ var INSTRUCTION_INFO = {
   'WR':     { name:'WR  (write request)', color:'#51cf66',
     what:'Cache-level write packet flowing from L1 down to L2 on a write-evict event, or from L2 down to the memory controller. Carries both the address and dirty data payload.',
     why:'Part of the write-evict chain: thread writes to L1 → L1 drops the dirty line → WR packet carries it to L2. If L2 is also full, another WR goes all the way to DRAM. Write-heavy kernels generate a constant stream of these.' },
+  'RMW':    { name:'RMW  (read-modify-write)', color:'#f59e0b',
+    what:'The atomic read-modify-write operation dispatched by the Apex Arbiter to L2 after serialisation. The arbiter has already granted exclusive access; this packet carries the operation type (e.g. ADD), operand, and SEQ# to the L2 slice, which performs the read, applies the operation, and writes the result atomically.',
+    why:'By the time you see RMW, the hard work is already done — the arbiter serialised competing requests so L2 never sees two RMWs to the same address simultaneously. Without the arbiter, two ATOMs reaching L2 at the same time would corrupt each other\'s result silently.' },
   'WB':     { name:'WB  (write-back)', color:'#ffa94d',
     what:'Write-Back — a dirty L1 line is being evicted and its contents written back to L2. Different from a regular write in that it\'s triggered by cache capacity pressure, not the thread actively storing. Carries Modified → Shared state transition.',
     why:'Happens automatically when the L1 is full and a new line must enter. Frequent write-backs indicate working sets larger than L1 — a sign you should either reduce data reuse distances or tune the SMEM/L1 split.' },
@@ -925,6 +957,15 @@ var INSTRUCTION_INFO = {
   'SEQ':    { name:'SEQ#  (sequence number)', color:'#fbbf24',
     what:'A monotonically incrementing transaction ID stamped by the Apex Arbiter on every incoming ATOM request. Travels with the request all the way to L2 and back. The ROB uses it to match returning ACKs to the correct waiting SM.',
     why:'Without sequence numbers, returning data has no way to identify which SM asked for it — especially when L2 bank conflicts cause some atomics to complete before earlier-numbered ones. The ROB uses SEQ# to restore order before retiring.' },
+  'SPILL':  { name:'SPILL  (register spill to L1)', color:'#fb923c',
+    what:'A thread\'s live registers exceed the physical register file. The compiler spills excess values to L1 cache (and if L1 is full, the spill cascades to L2). The warp stalls until the spill completes.',
+    why:'High occupancy reduces registers per thread, increasing spill risk. Spills consume L1 bandwidth and add ~28 cycles on L1 hit, ~200 cycles on L2 hit. Minimise by reducing thread count or splitting large kernels.' },
+  'RELOAD': { name:'RELOAD  (register reload from L1/L2)', color:'#fb923c',
+    what:'The compiler reloads a previously-spilled register value from L1 (or L2 on a miss) just before it is needed again.',
+    why:'Every RELOAD stalls the critical path. If all resident warps are spilling simultaneously, the SM stalls completely. Visible as "register-limited" in CUDA occupancy calculators.' },
+  'TILE':   { name:'TILE  (TMA bulk tile transfer)', color:'#22d3ee',
+    what:'A multi-dimensional tensor tile transferred by the Tensor Memory Accelerator. The TMA engine handles all address arithmetic autonomously — zero thread registers consumed, warp continues computing immediately.',
+    why:'TMA enables true compute-memory overlap on Hopper. Issue one TILE descriptor, compute on the previous tile, and the next tile arrives in SMEM for free. Critical for persistent kernels and WGMMA pipelines.' },
 };
 
 var ARCHS = {
@@ -1097,10 +1138,16 @@ function l2Fill(dirty) {
 }
 // Add exactly one clean slot — used on a single cache line read hit
 function l2AbsorbOne() {
+  // First try to fill an empty slot
   for (var i = 0; i < NUM_L2_LINES; i++) {
     if (l2Lines[i] === 0) { l2Lines[i] = 1; return; }
   }
-  // L2 full: already populated, no change needed
+  // L2 full: silently refresh first clean line (already present, just reused)
+  for (var i2 = 0; i2 < NUM_L2_LINES; i2++) {
+    if (l2Lines[i2] === 1) { l2Lines[i2] = 1; return; }
+  }
+  // All dirty — overwrite first with clean
+  l2Lines[0] = 1;
 }
 function l2Absorb() {
   // Mark some empty slots as clean — data written to L2
@@ -1113,16 +1160,32 @@ function l2Absorb() {
     if (l2Lines[i2] === 0) { l2Lines[i2] = 1; added++; }
   }
 }
-function l2Dirty() {
-  // Mark a clean line dirty — happens on write-back
+// Write-evict/write-through: dirty line arrives at L2
+function l2AbsorbDirty() {
   for (var i = 0; i < NUM_L2_LINES; i++) {
-    if (l2Lines[i] === 1 && Math.random() > 0.6) { l2Lines[i] = 2; return; }
+    if (l2Lines[i] === 0) { l2Lines[i] = 2; return; }
+  }
+  for (var i2 = 0; i2 < NUM_L2_LINES; i2++) {
+    if (l2Lines[i2] === 1) { l2Lines[i2] = 2; return; }
+  }
+}
+function l2Dirty() {
+  // Mark a clean line dirty — guaranteed to mark at least one
+  for (var i = 0; i < NUM_L2_LINES; i++) {
+    if (l2Lines[i] === 1) { l2Lines[i] = 2; return; }
+  }
+  for (var i2 = 0; i2 < NUM_L2_LINES; i2++) {
+    if (l2Lines[i2] === 0) { l2Lines[i2] = 2; return; }
   }
 }
 function l2Evict() {
-  // Remove a dirty line — evicted to DRAM
+  // Remove the first dirty line — evicted victim going to DRAM
   for (var i = 0; i < NUM_L2_LINES; i++) {
-    if (l2Lines[i] === 2 && Math.random() > 0.5) { l2Lines[i] = 0; return; }
+    if (l2Lines[i] === 2) { l2Lines[i] = 0; return; }
+  }
+  // No dirty line — evict a clean line (capacity eviction)
+  for (var i2 = 0; i2 < NUM_L2_LINES; i2++) {
+    if (l2Lines[i2] === 1) { l2Lines[i2] = 0; return; }
   }
 }
 
@@ -1134,7 +1197,22 @@ function initCacheState() {
     cacheState.push({
       l1:   new Array(NUM_LINES).fill(0),
       smem: new Array(NUM_LINES).fill(0),
+      regsPressure: 0.28 + Math.random() * 0.12,
+      regsPressureTarget: 0.28 + Math.random() * 0.12,
     });
+  }
+}
+function setRegPressure(smIdx, target) {
+  if (!cacheState[smIdx]) return;
+  cacheState[smIdx].regsPressureTarget = Math.max(0, Math.min(1, target));
+}
+function tickRegPressure(dt) {
+  for (var i = 0; i < cacheState.length; i++) {
+    var cs = cacheState[i];
+    if (!cs) continue;
+    var diff = cs.regsPressureTarget - cs.regsPressure;
+    var rate = diff > 0 ? 2.5 : 0.6;
+    cs.regsPressure += diff * rate * dt;
   }
 }
 
@@ -1166,6 +1244,19 @@ function setL1Dirty(smIdx) {
 function invalidateL1(smIdx) {
   if (!cacheState[smIdx]) return;
   cacheState[smIdx].l1 = new Array(NUM_LINES).fill(0);
+}
+function invalidateL1Lines(smIdx, count) {
+  if (!cacheState[smIdx]) return;
+  var lines = cacheState[smIdx].l1;
+  count = count || 1;
+  var occupied = [];
+  for (var i = 0; i < NUM_LINES; i++) { if (lines[i] > 0) occupied.push(i); }
+  for (var j = occupied.length - 1; j > 0; j--) {
+    var k = Math.floor(Math.random() * (j + 1));
+    var tmp = occupied[j]; occupied[j] = occupied[k]; occupied[k] = tmp;
+  }
+  var toDrop = Math.min(count, occupied.length);
+  for (var d = 0; d < toDrop; d++) { lines[occupied[d]] = 0; }
 }
 
 function writebackL1(smIdx) {
@@ -1853,7 +1944,34 @@ function switchArch(arch) {
   updateDiffBanner();
   updateKeyCard();
   updateArchIntro();
+  updateScenarioButtons();
   logEvent('Switched to ' + ARCHS[arch].name + ' (' + ARCHS[arch].gen + ')', ARCHS[arch].color);
+}
+
+// Update scenario button labels and visibility based on current arch
+function updateScenarioButtons() {
+  var isPascal = currentArch === 'pascal';
+  var isHopper = currentArch === 'hopper';
+  var isAmpere = currentArch === 'ampere';
+  var isApex   = currentArch === 'apex';
+  var atomicBtn = document.getElementById('btn-atomic');
+  if (atomicBtn) {
+    atomicBtn.classList.remove('apex-only');
+    atomicBtn.title = isApex
+      ? 'Apex: arbiter-serialized atomicAdd with SEQ# + ROB'
+      : 'Raw atomicAdd — serializes inside L2 with no coordination (slower)';
+  }
+  var writeBtn = document.querySelector('[data-scenario="write"]');
+  if (writeBtn) {
+    writeBtn.textContent = isPascal ? 'SM Write (WT)' : 'SM Write';
+    writeBtn.title = isPascal
+      ? 'Pascal: writes bypass L1, go straight to L2 (write-through)'
+      : 'Volta+: write hits L1 (Modified), INV fires to other SMs';
+  }
+  var cpBtn = document.getElementById('btn-cp-async');
+  if (cpBtn) cpBtn.style.display = (isAmpere || isHopper) ? '' : 'none';
+  var tmaBtn = document.getElementById('btn-tma-load');
+  if (tmaBtn) tmaBtn.style.display = isHopper ? '' : 'none';
 }
 
 function updateArchIntro() {
@@ -1893,8 +2011,8 @@ function buildLayout() {
     var subH = mob ? 18 : 22;
     var subPad = mob ? 4 : 5;
     var sub = [];
-    sub.push({ type:'regs', x:x+6, y:subY, w:smW-12, h:6 });
-    subY += 10;
+    sub.push({ type:'regs', x:x+6, y:subY+8, w:smW-12, h:10 });
+    subY += 22;
     if (arch.blocks.texCache) {
       sub.push({ type:'texCache', x:x+6, y:subY, w:smW-12, h:subH, label:'TEX$' });
       subY += subH+subPad;
@@ -1949,7 +2067,7 @@ function buildLayout() {
   // cohDir is a sub-region INSIDE L2 (right portion)
   if (currentArch === 'apex') {
     var arbH = mob ? 56 : 68;
-    var arbGap = mob ? 52 : 72;  // big gap so ACK travel is clearly visible
+    var arbGap = mob ? 32 : 38;  // gap between arbiter and L2 — enough for ACK particle travel
     // Arbiter and L2 span the full usable width on Apex
     var apexW = Math.min(usable * 0.92, totalSmW * 1.02);
     var apexX = cx - apexW/2;
@@ -1961,9 +2079,9 @@ function buildLayout() {
     var cdW = Math.round(apexW * 0.35);
     layout.cohDir = { x: apexX + apexW - cdW - 6, y: newL2Y + 6, w: cdW, h: l2H - 12 };
     // Shift everything below l2 down too
-    var cbY2 = newL2Y + l2H + (mob ? 22 : 30);
+    var cbY2 = newL2Y + l2H + (mob ? 16 : 22);
     layout.crossbar = { y: cbY2, x1: apexX-8, x2: apexX+apexW+8 };
-    var gmY2 = cbY2 + (mob ? 28 : 38);
+    var gmY2 = cbY2 + (mob ? 22 : 30);
     var gmW2 = apexW;
     layout.globalMem = { x: apexX, y: gmY2, w: gmW2, h: gmH };
     var mcGap3 = (gmW2 - mcCount*mcW)/(mcCount+1);
@@ -2142,6 +2260,7 @@ function drawStaticFrame() {
 
 function drawAnimatedFrame(dt, time) {
   ctx.clearRect(0, 0, W, H);
+  tickRegPressure(dt);
   drawSceneContent(dt, time);
 
   // Live tooltip refresh for cache blocks
@@ -2162,25 +2281,27 @@ function drawAnimatedFrame(dt, time) {
     var autoInterval = (currentArch === 'apex' && arbiterState.active) ? 99 : 6.5;
     if (autoTimer > autoInterval) {
       autoTimer=0;
-      // State-aware op selection: weight ops based on current cache state
-      // so the sequence makes sense (read before write, write before invalidate, etc.)
       var anyValid    = layout.sms.some(function(s){ return s.l1.state !== 'invalid'; });
       var anyModified = layout.sms.some(function(s){ return s.l1.state === 'modified'; });
-      var apex = currentArch === 'apex';
+      var apex    = currentArch === 'apex';
+      var hopper  = currentArch === 'hopper';
+      var ampere  = currentArch === 'ampere';
       var pool;
       if (!anyValid) {
-        // All invalid — only sensible ops are read or (apex) atomic
-        pool = apex ? ['read','read','read','atomic'] : ['read'];
+        pool = apex    ? ['read','read','read','atomic','reg_spill'] :
+               hopper  ? ['read','read','reg_spill','tma_load'] :
+               ampere  ? ['read','read','reg_spill','cp_async'] :
+                         ['read','reg_spill'];
       } else if (anyModified) {
-        // Someone has dirty data — writeback, invalidate, or atomic make sense
-        pool = apex
-          ? ['writeback','writeback','invalidate','atomic','atomic']
-          : ['writeback','invalidate','write'];
+        pool = apex    ? ['writeback','writeback','invalidate','atomic','atomic','reg_spill'] :
+               hopper  ? ['writeback','invalidate','write','reg_spill','tma_load'] :
+               ampere  ? ['writeback','invalidate','write','reg_spill','cp_async'] :
+                         ['writeback','invalidate','write','reg_spill'];
       } else {
-        // Some shared lines exist — write, invalidate, or shared make sense; read still ok
-        pool = apex
-          ? ['write','invalidate','writeback','shared','read','atomic']
-          : ['write','invalidate','writeback','shared','read'];
+        pool = apex    ? ['write','invalidate','writeback','shared','read','atomic','reg_spill'] :
+               hopper  ? ['write','invalidate','writeback','shared','read','reg_spill','tma_load','cp_async'] :
+               ampere  ? ['write','invalidate','writeback','shared','read','reg_spill','cp_async'] :
+                         ['write','invalidate','writeback','shared','read','reg_spill'];
       }
       triggerScenario(pool[Math.floor(Math.random()*pool.length)]);
     }
@@ -2228,10 +2349,34 @@ function drawSceneContent(dt, time) {
       var b = sm.sub[bi];
       if (b.type === 'regs') {
         var barC = Math.max(4, Math.floor(b.w/10));
-        for (var rj = 0; rj < barC; rj++) {
-          ctx.fillStyle='hsl(220,30%,'+(19+Math.sin(Date.now()/800+rj+si)*3)+'%)';
-          ctx.fillRect(b.x+rj*(b.w/barC), b.y, b.w/barC-1.5, b.h);
+        var cs_r = cacheState[si];
+        var pressure = cs_r ? cs_r.regsPressure : 0.3;
+        var pressureColor;
+        if (pressure < 0.6) {
+          var t1 = pressure / 0.6;
+          pressureColor = 'hsl(' + Math.round(220 - t1*60) + ',40%,' + Math.round(22+t1*8) + '%)';
+        } else if (pressure < 0.85) {
+          var t2 = (pressure - 0.6) / 0.25;
+          pressureColor = 'hsl(' + Math.round(160 - t2*120) + ',60%,' + Math.round(30+t2*5) + '%)';
+        } else {
+          var pulse = 0.5 + 0.5 * Math.sin(Date.now() / 120);
+          pressureColor = 'hsl(' + Math.round(20 - pulse*20) + ',80%,' + Math.round(35+pulse*8) + '%)';
         }
+        var shimmer = Math.sin(Date.now()/800 + si) * 0.025;
+        for (var rj = 0; rj < barC; rj++) {
+          var barX = b.x + rj * (b.w / barC);
+          var barW = b.w / barC - 1.5;
+          ctx.fillStyle = '#1a1c28';
+          ctx.fillRect(barX, b.y, barW, b.h);
+          var barPressure = Math.min(1, Math.max(0, pressure + shimmer + (rj % 3 - 1) * 0.03));
+          var fillH = Math.round(b.h * barPressure);
+          ctx.fillStyle = pressureColor;
+          ctx.fillRect(barX, b.y + b.h - fillH, barW, fillH);
+        }
+        ctx.font = '500 ' + Math.max(6, FONT_BLOCK_XS) + 'px monospace';
+        ctx.fillStyle = pressure > 0.8 ? '#fb923c' : '#6b7094';
+        ctx.textAlign = 'center';
+        ctx.fillText('regs', b.x + b.w/2, b.y - 1);
         continue;
       }
       rrect(b.x, b.y, b.w, b.h, 3);
@@ -2884,6 +3029,9 @@ function gmTop() { return {x:layout.globalMem.x+layout.globalMem.w/2,y:layout.gl
 function gmBot() { return {x:layout.globalMem.x+layout.globalMem.w/2,y:layout.globalMem.y+layout.globalMem.h}; }
 function hbmTop() { return {x:layout.hbm.x+layout.hbm.w/2,y:layout.hbm.y}; }
 function flash(b,c) { flashEffects.push({x:b.x,y:b.y,w:b.w,h:b.h,c:c,t:0,dur:.5}); }
+function regsBlock(i) { var sm=layout.sms[i]; for(var bi=0;bi<sm.sub.length;bi++){if(sm.sub[bi].type==='regs')return sm.sub[bi];} return null; }
+function regsPos(i) { var b=regsBlock(i); if(b) return {x:b.x+b.w/2,y:b.y+b.h/2}; var sm=layout.sms[i]; return {x:sm.x+sm.w/2,y:sm.y+30}; }
+function subBlock(smIdx,type) { var sm=layout.sms[smIdx]; for(var bi=0;bi<sm.sub.length;bi++){if(sm.sub[bi].type===type)return sm.sub[bi];} return null; }
 
 // scenarios.js — GPU Cache Coherency Demo
 
@@ -2966,6 +3114,36 @@ function getExplanation(type) {
       summary: currentArch==='apex'
         ? 'Arbiter: SEQ# tags enable ROB ordering. Contention meter shows cost of serialization.'
         : 'Without an arbiter, atomics serialize hidden inside L2 — no visibility, high latency. Switch to Apex to see the full arbiter system.'
+    },
+    reg_spill: { title:'Register Spill → L1 → L2', color:'#fb923c',
+      steps:[
+        {text:'<strong>Register pressure</strong> — warp exceeds physical register file.', micro:'Compiler emits spill code', delay:0},
+        {text:'<strong>SPILL to L1</strong> — excess live value written to L1 cache.', micro:'SPILL Rx → [L1 addr]', delay:700},
+        {text:'<strong>L1 hit (best case)</strong> — spill absorbed, ~28 cycle penalty.', micro:'L1 tag lookup → hit', delay:1500},
+        {text:'<strong>L1 full → cascade to L2</strong> — spill misses L1, goes to L2.', micro:'SPILL → RdReq → Bus → L2', delay:2400},
+        {text:'<strong>RELOAD</strong> — value fetched back when needed.', micro:'RELOAD Rx ← [L1/L2 addr]', delay:3400},
+        {text:'<strong>Warp resumes</strong> — register restored, execution continues.', micro:'~28–200 cycle stall total', delay:4200},
+      ], summary:'Register spills are invisible in source but devastating in perf — they turn register accesses into cache traffic.'
+    },
+    cp_async: { title:'cp.async — Global → SMEM (No Register Stall)', color:'#22d3ee',
+      steps:[
+        {text:'<strong>Warp issues cp.async</strong> — initiates async DMA.', micro:'cp.async.ca smem[addr], [gmem]', delay:0},
+        {text:'<strong>Warp continues immediately</strong> — no register stall.', micro:'Next compute instruction runs', delay:400},
+        {text:'<strong>Data fetches from global memory</strong> — in background.', micro:'LD global → bypass registers', delay:900},
+        {text:'<strong>L2 serves the line</strong> — or DRAM on L2 miss.', micro:'L2 slice lookup', delay:1700},
+        {text:'<strong>Data lands directly in SMEM</strong> — no register touch.', micro:'DATA → SMEM (bypass reg file)', delay:2600},
+        {text:'<strong>Warp barrier</strong> — commit point ensures data is ready.', micro:'cp.async.commit_group / wait', delay:3400},
+      ], summary:'cp.async decouples memory latency from compute — the key to software pipelining on Ampere and Hopper.'
+    },
+    tma_load: { title:'TMA Load — Tensor Tile → SMEM (Hardware DMA)', color:'#22d3ee',
+      steps:[
+        {text:'<strong>One thread issues TMA descriptor</strong>', micro:'cp.async.bulk.tensor ... smem', delay:0},
+        {text:'<strong>TMA engine takes over</strong> — threads completely free.', micro:'HW DMA: address calc offloaded', delay:500},
+        {text:'<strong>All threads compute on prev tile</strong>', micro:'WGMMA / tensor core compute', delay:1000},
+        {text:'<strong>TMA fetches tile from global memory</strong>', micro:'TILE → NoC → L2 → Bus', delay:1600},
+        {text:'<strong>Tile arrives in SMEM</strong> — zero register pressure.', micro:'TILE → SMEM direct deposit', delay:2700},
+        {text:'<strong>Barrier completes</strong> — next tile ready for compute.', micro:'mbarrier::arrive_and_expect_tx', delay:3500},
+      ], summary:'TMA completely hides memory latency — one thread drives bulk DMA while all other threads compute. The Hopper pipeline model.'
     }
   };
   return e[type];
@@ -2982,7 +3160,7 @@ function showExplanation(type) {
   exp.steps.forEach(function(s,i) {
     var li=document.createElement('li');
     var microText = s.micro;
-    var microHtml = microText.replace(/\b(LD\.E|ST\.E|LDS|STS|ST\.S|RdReq|INV|DATA|WR|WB|EVICT|STORE|DSMEM|cp\.async)\b/g, function(m) {
+    var microHtml = microText.replace(/\b(LD\.E|ST\.E|LDS|STS|ST\.S|RdReq|INV|DATA|WR|WB|RMW|EVICT|STORE|DSMEM|cp\.async|SPILL|RELOAD|TILE)\b/g, function(m) {
       return '<span class="micro-instr" data-instr="'+m+'" style="cursor:help;text-decoration:underline dotted;text-decoration-color:rgba(255,255,255,0.3)">'+m+'</span>';
     });
     li.innerHTML='<span class="step-num" style="background:'+exp.color+'20;color:'+exp.color+'">'+(i+1)+'</span><span class="step-text">'+s.text+'<span class="micro">'+microHtml+'</span></span>';
@@ -3007,6 +3185,39 @@ function logEvent(msg, color) {
   log.prepend(e); if(log.children.length>40) log.lastChild.remove();
 }
 
+// Show a user-facing toast when an operation cannot run in the current state.
+// Appears below the buttons, auto-dismisses after 3.5s.
+function notifyUser(msg, reason, color) {
+  var existing = document.getElementById('op-notice');
+  if (existing) existing.remove();
+  var el = document.createElement('div');
+  el.id = 'op-notice';
+  el.style.cssText = [
+    'position:fixed','bottom:24px','left:50%','transform:translateX(-50%)',
+    'background:#12141a','border:1px solid '+(color||'#f06595')+'60',
+    'color:'+(color||'#f06595'),'padding:10px 18px','border-radius:8px',
+    'font-family:JetBrains Mono,monospace','font-size:.78rem',
+    'z-index:9999','pointer-events:none','text-align:center',
+    'box-shadow:0 4px 24px rgba(0,0,0,.5)',
+    'animation:fadeInUp .18s ease'
+  ].join(';');
+  el.innerHTML = '<strong>' + msg + '</strong>'
+    + (reason ? '<br><span style="opacity:.65;font-size:.72rem">' + reason + '</span>' : '');
+  document.body.appendChild(el);
+  clearTimeout(notifyUser._timer);
+  notifyUser._timer = setTimeout(function() {
+    if (el.parentNode) el.remove();
+  }, 3500);
+}
+// Inject the fadeInUp keyframe once
+(function() {
+  if (document.getElementById('op-notice-style')) return;
+  var s = document.createElement('style');
+  s.id = 'op-notice-style';
+  s.textContent = '@keyframes fadeInUp{from{opacity:0;transform:translateX(-50%) translateY(10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}';
+  document.head.appendChild(s);
+})();
+
 function updateStats() {
   document.getElementById('stat-hits').textContent=stats.hits;
   document.getElementById('stat-misses').textContent=stats.misses;
@@ -3021,135 +3232,185 @@ function triggerScenario(type) {
   showExplanation(type);
   var sm = layout.sms[si];
 
-  // ── Precondition enforcement ──
-  // Each scenario requires certain cache state. If preconditions aren't met,
-  // either coerce state or redirect to a scenario that makes sense first.
+  // For write on non-Pascal, prefer an SM that has a Shared line
   if (type === 'write' && currentArch !== 'pascal') {
-    // Write-evict requires line to be in L1 (Shared) to make sense visually.
-    // If invalid, force a read first then write. Don't dirty-write an empty cache.
-    var anyShared = layout.sms.some(function(s){ return s.l1.state !== 'invalid'; });
+    for (var wi0 = 0; wi0 < layout.sms.length; wi0++) {
+      if (layout.sms[wi0].l1.state === 'shared') { si = wi0; sm = layout.sms[si]; break; }
+    }
+  }
+
+  // ── Precondition enforcement ──
+  // Each scenario has requirements. If not met, tell the user clearly and abort.
+  if (type === 'write' && currentArch !== 'pascal') {
+    // Write-evict needs at least one SM with a Shared line to make the INV meaningful.
+    var anyShared = layout.sms.some(function(s){ return s.l1.state === 'shared'; });
     if (!anyShared) {
-      // Redirect: do a read first, write will happen naturally on next auto tick
-      type = 'read';
-      showExplanation(type);
+      notifyUser('SM Write needs cached data first',
+        'No SM has a Shared line in L1. Run SM Read first to populate the cache, then write.', '#51cf66');
+      return;
     }
   }
   if (type === 'invalidate') {
-    // INV only meaningful if at least one SM has a valid line
     var anyValid = layout.sms.some(function(s){ return s.l1.state !== 'invalid'; });
-    if (!anyValid) { type = 'read'; showExplanation(type); }
+    if (!anyValid) {
+      notifyUser('Nothing to invalidate',
+        'All L1 caches are already empty (Invalid). Run SM Read first to put data in L1.', '#f06595');
+      return;
+    }
   }
   if (type === 'writeback') {
-    // Writeback requires a dirty (Modified) line. If none, promote one SM to Modified first.
     var anyModified = layout.sms.some(function(s){ return s.l1.state === 'modified'; });
     if (!anyModified) {
-      // Coerce: pick any SM, give it a shared line, then we'll dirty it
-      var targetSM = layout.sms.find(function(s){ return s.l1.state !== 'invalid'; });
-      if (!targetSM) { type = 'read'; showExplanation(type); }
-      else {
-        // Find that SM's index and make it Modified
-        for (var di = 0; di < layout.sms.length; di++) {
-          if (layout.sms[di] === targetSM) { si = di; sm = targetSM; break; }
-        }
-        sm.l1.state = 'modified'; setL1Dirty(si);
-      }
-    } else {
-      // Use an SM that's actually Modified
-      for (var mi = 0; mi < layout.sms.length; mi++) {
-        if (layout.sms[mi].l1.state === 'modified') { si = mi; sm = layout.sms[si]; break; }
-      }
+      notifyUser('No dirty data to write back',
+        'Write-back needs a Modified (dirty) L1 line. Run SM Write first to dirty a line.', '#ffa94d');
+      return;
     }
+    // Use an SM that's actually Modified
+    for (var mi = 0; mi < layout.sms.length; mi++) {
+      if (layout.sms[mi].l1.state === 'modified') { si = mi; sm = layout.sms[si]; break; }
+    }
+  }
+  if (type === 'atomic' && currentArch === 'apex' && arbiterState.active) {
+    notifyUser('Arbiter busy',
+      'An atomic sequence is already in flight. Wait for it to complete or Reset.', '#f59e0b');
+    return;
   }
 
   switch(type) {
     case 'read':
-      sm.l1.state='invalid'; invalidateL1(si); stats.misses++;
+      if (sm.l1.state !== 'invalid') { sm.l1.state = 'invalid'; }
+      stats.misses++;
       logEvent('SM'+si+': L1 read miss → L2','#ff6b6b');
       bubble(l1Pos(si).x,l1Pos(si).y,'cache miss','#ff6b6b',{sub:'not in L1'});
       particles.push(new Particle(l1Pos(si),busP(si),'#ff6b6b','RdReq',2,function(){
         bubble(busP(si).x,busP(si).y,'going to L2','#ff6b6b',{life:1.4,sub:'fetch from below'});
         spawnPassthrough(si,'#ff6b6b','RdReq',2.5,function(){
-          stats.hits++; logEvent('L2: Hit → data returning','#ffa94d');
-          // Add exactly one clean line to L2 to represent the fetched cache line
+          logEvent('L2: Hit → data returning to SM'+si,'#ffa94d');
           l2AbsorbOne();
           bubble(l2Top().x,l2Top().y,'L2 found it','#51cf66',{life:1.5,sub:'data ready'});
-          // Route DATA back via bus junction — l2Top → busP → l1Pos (no diagonal shortcuts)
           spawnParticle(l2Top(), l1Pos(si), '#ffa94d', 'DATA', 2, function(){
             sm.l1.state='shared'; fillL1Random(si, false); flash(sm.l1,'#339af0');
             bubble(l1Pos(si).x,l1Pos(si).y,'line cached','#339af0',{life:1.6,sub:'now Shared'});
             logEvent('SM'+si+': L1 → Shared','#339af0');
+            stats.hits++;
           }, [busP(si)]);
         });
       }));
       break;
     case 'write':
       if (currentArch==='pascal') {
-        logEvent('SM'+si+': Write → L2 (L1 bypassed)','#51cf66');
+        logEvent('SM'+si+': Write → bus (L1 bypassed)','#51cf66');
         stats.hits++;
-        bubble(l1Pos(si).x,l1Pos(si).y,'write bypass','#51cf66',{sub:'L1 skipped'});
-        particles.push(new Particle(l1Pos(si),busP(si),'#51cf66','WR',2,function(){
-          bubble(busP(si).x,busP(si).y,'skip L1','#8890a8',{life:1.2,sub:'straight to L2'});
-          spawnPassthrough(si,'#51cf66','WR',2.5,function(){
-            flash(layout.l2,'#ffa94d'); l2Absorb();
-            bubble(l2Top().x,l2Top().y,'L2 updated','#ffa94d',{life:1.5,sub:'write absorbed'});
-            logEvent('L2: Write absorbed','#ffa94d');
-          });
-        }));
+        var warpSrc = { x: sm.x + sm.w/2, y: sm.y + 18 };
+        bubble(warpSrc.x, warpSrc.y, 'write bypass','#51cf66',{sub:'L1 read-only'});
+        spawnParticle(warpSrc, l2Top(), '#51cf66', 'WR', 2, function(){
+          flash(layout.l2,'#ffa94d'); l2AbsorbDirty();
+          bubble(l2Top().x,l2Top().y,'L2 updated','#ffa94d',{life:1.5,sub:'write absorbed (dirty)'});
+          logEvent('L2: Write-through received — line dirty','#ffa94d');
+        }, [busP(si)]);
       } else {
         stats.hits++;
-        logEvent('SM'+si+': Write → Modified + invalidate','#51cf66');
-        bubble(l1Pos(si).x,l1Pos(si).y,'store issued','#51cf66',{sub:'write-evict'});
-        // Capture snapshot of which SMs currently have valid lines BEFORE any state change
+        logEvent('SM'+si+': Write → L1 Modified, INV others','#51cf66');
+        bubble(l1Pos(si).x,l1Pos(si).y,'write hit','#51cf66',{sub:'L1 → Modified'});
         var staleSMs = [];
         for (var wi=0;wi<layout.sms.length;wi++) {
-          if (wi!==si && layout.sms[wi].l1.state!=='invalid') staleSMs.push(wi);
+          if (wi!==si && layout.sms[wi].l1.state==='shared') staleSMs.push(wi);
         }
+        sm.l1.state='modified'; setL1Dirty(si); flash(sm.l1,'#51cf66');
         particles.push(new Particle(l1Pos(si),busP(si),'#51cf66','WR',2,function(){
-          // Write reaches bus — now L1 transitions to Modified and INV fires
-          sm.l1.state='modified'; setL1Dirty(si);
-          flash(sm.l1,'#51cf66');
-          bubble(l1Pos(si).x,l1Pos(si).y,'line dirty','#51cf66',{sub:'now Modified'});
-          spawnPassthrough(si,'#51cf66','WR',2.5,function(){
-            l2Absorb();
-            flash(layout.l2,'#ffa94d');
-            logEvent('L2: Write-evict received','#ffa94d');
-          });
-          // INV broadcast fires immediately from bus junction (write-evict policy)
-          for (var wj=0;wj<staleSMs.length;wj++) {
-            (function(idx){
-              setTimeout(function(){
-                particles.push(new Particle(busP(si),busP(idx),'#f06595','INV',3,function(){
-                  layout.sms[idx].l1.state='invalid'; invalidateL1(idx); stats.inv++;
-                  flash(layout.sms[idx].l1,'#f06595');
-                  bubble(l1Pos(idx).x,l1Pos(idx).y,'copy stale','#f06595',{life:1.3,sub:'lines cleared'});
-                  logEvent('SM'+idx+': Invalidated','#f06595');
-                  updateStats();
-                }));
-              }, wj*180 + Math.round(Math.random()*60));
-            })(staleSMs[wj]);
+          bubble(busP(si).x,busP(si).y,'announcing write','#51cf66',{life:1.2,sub:'INV outgoing'});
+          if (staleSMs.length === 0) {
+            logEvent('SM'+si+': No other sharers — no INV needed','#51cf66');
+            return;
+          }
+          if (currentArch === 'apex' && layout.cohDir) {
+            var cdCentre = { x: layout.cohDir.x + layout.cohDir.w/2, y: layout.cohDir.y + layout.cohDir.h/2 };
+            particles.push(new Particle(busP(si), l2Top(), '#f06595', 'WR→DIR', 2.5, function(){
+              flash(layout.cohDir, '#f06595');
+              bubble(cdCentre.x, cdCentre.y, 'dir lookup','#f06595',{life:1.3,sub:'checking sharers'});
+              logEvent('CohDir: '+staleSMs.length+' sharer(s) found → targeted INV','#f06595');
+              for (var wj=0;wj<staleSMs.length;wj++) {
+                (function(idx){
+                  setTimeout(function(){
+                    spawnParticle(l2Top(), l1Pos(idx), '#f06595', 'INV', 2.8, function(){
+                      layout.sms[idx].l1.state='invalid';
+                      invalidateL1Lines(idx, 1 + Math.floor(Math.random()*2));
+                      flash(layout.sms[idx].l1,'#f06595');
+                      bubble(l1Pos(idx).x,l1Pos(idx).y,'line dropped','#f06595',{life:1.3,sub:'targeted INV'});
+                      logEvent('SM'+idx+': 1-2 lines invalidated (targeted)','#f06595');
+                      stats.inv++; updateStats();
+                    }, [busP(idx)]);
+                  }, wj*180);
+                })(staleSMs[wj]);
+              }
+            }));
+          } else {
+            for (var wj=0;wj<staleSMs.length;wj++) {
+              (function(idx){
+                setTimeout(function(){
+                  particles.push(new Particle(busP(si),busP(idx),'#f06595','INV',3,function(){
+                    particles.push(new Particle(busP(idx),l1Pos(idx),'#f06595','INV',2,function(){
+                      layout.sms[idx].l1.state='invalid';
+                      invalidateL1Lines(idx, 1 + Math.floor(Math.random()*2));
+                      flash(layout.sms[idx].l1,'#f06595');
+                      bubble(l1Pos(idx).x,l1Pos(idx).y,'line dropped','#f06595',{life:1.3,sub:'addr match'});
+                      logEvent('SM'+idx+': 1-2 lines invalidated','#f06595');
+                      stats.inv++; updateStats();
+                    }));
+                  }));
+                }, wj*180 + Math.round(Math.random()*60));
+              })(staleSMs[wj]);
+            }
           }
         }));
       }
       break;
     case 'invalidate':
-      stats.inv++;
-      logEvent('Broadcast INV','#f06595');
-      // INV also marks L2 dirty lines as clean — the L2 now holds the authoritative copy
-      for (var l2ci=0; l2ci<NUM_L2_LINES; l2ci++) { if (l2Lines[l2ci]===2) l2Lines[l2ci]=1; }
-      bubble((layout.bus.x1+layout.bus.x2)/2,layout.bus.y,'broadcast flush','#f06595',{sub:'all SMs notified'});
+      // validSMs already verified non-empty by precondition above
+      var validSMs = [];
       for (var ii=0;ii<layout.sms.length;ii++) {
-        (function(idx){
-          setTimeout(function(){
-            var from={x:(layout.bus.x1+layout.bus.x2)/2,y:layout.bus.y};
-            particles.push(new Particle(from,busP(idx),'#f06595','INV',3,function(){
-              particles.push(new Particle(busP(idx),l1Pos(idx),'#f06595','INV',2,function(){
-                layout.sms[idx].l1.state='invalid'; invalidateL1(idx);
-                flash(layout.sms[idx].l1,'#f06595');
-                bubble(l1Pos(idx).x,l1Pos(idx).y,'all cleared','#f06595',{life:1.2,sub:'lines dropped'});
+        if (layout.sms[ii].l1.state !== 'invalid') validSMs.push(ii);
+      }
+      stats.inv++;
+      logEvent('Broadcast INV → '+validSMs.length+' SM(s) with valid lines','#f06595');
+      bubble((layout.bus.x1+layout.bus.x2)/2,layout.bus.y,'INV broadcast','#f06595',{sub:validSMs.length+' SM(s) targeted'});
+      if (currentArch === 'apex' && layout.cohDir) {
+        var cdPos2 = { x: layout.cohDir.x + layout.cohDir.w/2, y: layout.cohDir.y + layout.cohDir.h/2 };
+        var busCenter = {x:(layout.bus.x1+layout.bus.x2)/2, y:layout.bus.y};
+        particles.push(new Particle(busCenter, l2Top(), '#f06595', 'INV', 2.5, function(){
+          flash(layout.cohDir, '#f06595');
+          bubble(cdPos2.x, cdPos2.y, 'dir lookup','#f06595',{life:1.3,sub:validSMs.length+' sharer(s)'});
+          logEvent('CohDir: targeted INV to '+validSMs.length+' SM(s)','#f06595');
+          for (var vi=0;vi<validSMs.length;vi++) {
+            (function(idx){
+              setTimeout(function(){
+                spawnParticle(l2Top(), l1Pos(idx), '#f06595', 'INV', 2.8, function(){
+                  layout.sms[idx].l1.state = 'invalid';
+                  invalidateL1Lines(idx, 1 + Math.floor(Math.random()*2));
+                  flash(layout.sms[idx].l1,'#f06595');
+                  bubble(l1Pos(idx).x,l1Pos(idx).y,'line(s) dropped','#f06595',{life:1.2,sub:'targeted'});
+                }, [busP(idx)]);
+              }, vi*140);
+            })(validSMs[vi]);
+          }
+        }));
+      } else {
+        for (var vi=0;vi<validSMs.length;vi++) {
+          (function(idx){
+            setTimeout(function(){
+              var from={x:(layout.bus.x1+layout.bus.x2)/2,y:layout.bus.y};
+              particles.push(new Particle(from,busP(idx),'#f06595','INV',3,function(){
+                particles.push(new Particle(busP(idx),l1Pos(idx),'#f06595','INV',2,function(){
+                  layout.sms[idx].l1.state='invalid';
+                  invalidateL1Lines(idx, 1 + Math.floor(Math.random()*2));
+                  flash(layout.sms[idx].l1,'#f06595');
+                  bubble(l1Pos(idx).x,l1Pos(idx).y,'line(s) dropped','#f06595',{life:1.2,sub:'addr match'});
+                  logEvent('SM'+idx+': L1 line(s) invalidated','#f06595');
+                }));
               }));
-            }));
-          }, idx*120 + Math.round(Math.random()*80));
-        })(ii);
+            }, vi*120 + Math.round(Math.random()*60));
+          })(validSMs[vi]);
+        }
       }
       break;
     case 'writeback':
@@ -3159,28 +3420,35 @@ function triggerScenario(type) {
       bubble(l1Pos(si).x,l1Pos(si).y,'dirty evict','#ffa94d',{sub:'must flush out'});
       particles.push(new Particle(l1Pos(si),busP(si),'#ffa94d','WB',2,function(){
         spawnPassthrough(si,'#ffa94d','WB',2.5,function(){
-          flash(layout.l2,'#ffa94d'); sm.l1.state='invalid'; invalidateL1(si); l2Dirty(); stats.wb++;
+          // WB arrives at L2: mark L1 evicted, dirty line now lives in L2
+          sm.l1.state='invalid'; invalidateL1(si); l2Dirty(); stats.wb++;
+          flash(layout.l2,'#ffa94d');
           bubble(l2Top().x,l2Top().y,'L2 absorbed','#ffa94d',{life:1.4,sub:'dirty → L2'});
-          logEvent('L2: Write-back received','#ffa94d');
-          setTimeout(function(){
-            // Evict dirty victim from L2 → crossbar → globalMem → HBM
-            l2Evict();
-            bubble(l2Bot().x,l2Bot().y,'L2 evicting','#339af0',{life:1.3,sub:'victim to DRAM'});
-            particles.push(new Particle(l2Bot(),cbP(),'#339af0','EVICT',2,function(){
-              particles.push(new Particle(cbP(),gmTop(),'#339af0','WR',2,function(){
-                flash(layout.globalMem,'#339af0');
-                bubble(gmTop().x,gmTop().y,'queued MC','#339af0',{life:1.2,sub:'scheduling write'});
-                // Continue from gmTop → gmBot (through the MC block) then to HBM
-                particles.push(new Particle(gmTop(),gmBot(),'#339af0','WR',2,function(){
-                  particles.push(new Particle(gmBot(),hbmTop(),'#845ef7','STORE',1.5,function(){
-                    flash(layout.hbm,'#845ef7');
-                    bubble(hbmTop().x,hbmTop().y,'persisted','#845ef7',{life:1.5,sub:'written to DRAM'});
-                    logEvent(ARCHS[currentArch].blocks.hbm.label+': Stored','#845ef7');
+          logEvent('L2: Write-back received — line dirty in L2','#ffa94d');
+          // Eviction only fires if L2 is >75% full (realistic pressure)
+          var l2FilledCount = 0;
+          for (var li=0;li<NUM_L2_LINES;li++) if(l2Lines[li]>0) l2FilledCount++;
+          if (l2FilledCount / NUM_L2_LINES > 0.75) {
+            setTimeout(function(){
+              l2Evict();
+              bubble(l2Bot().x,l2Bot().y,'L2 evicting','#339af0',{life:1.3,sub:'victim to DRAM'});
+              particles.push(new Particle(l2Bot(),cbP(),'#339af0','EVICT',2,function(){
+                particles.push(new Particle(cbP(),gmTop(),'#339af0','WR',2,function(){
+                  flash(layout.globalMem,'#339af0');
+                  bubble(gmTop().x,gmTop().y,'queued MC','#339af0',{life:1.2,sub:'scheduling write'});
+                  particles.push(new Particle(gmTop(),gmBot(),'#339af0','WR',2,function(){
+                    particles.push(new Particle(gmBot(),hbmTop(),'#845ef7','STORE',1.5,function(){
+                      flash(layout.hbm,'#845ef7');
+                      bubble(hbmTop().x,hbmTop().y,'persisted','#845ef7',{life:1.5,sub:'written to DRAM'});
+                      logEvent(ARCHS[currentArch].blocks.hbm.label+': Stored','#845ef7');
+                    }));
                   }));
                 }));
               }));
-            }));
-          },500);
+            },500);
+          } else {
+            logEvent('L2: Dirty line retained — no eviction needed','#ffa94d');
+          }
         });
       }));
       break;
@@ -3192,9 +3460,9 @@ function triggerScenario(type) {
       flash(smemBlock,'#51cf66'); stats.hits++;
       fillSmem(si);
       bubble(sm.x+sm.w/2,sm.y+14,'no coherency','#51cf66',{sub:'SM-private scratchpad'});
-      var regsBlock=null;
-      for(var ri=0;ri<sm.sub.length;ri++){if(sm.sub[ri].type==='regs')regsBlock=sm.sub[ri];}
-      var sfrom={x:sm.x+sm.w/2,y:regsBlock?regsBlock.y+3:sm.y+40};
+      var regsBlockEl=null;
+      for(var ri=0;ri<sm.sub.length;ri++){if(sm.sub[ri].type==='regs')regsBlockEl=sm.sub[ri];}
+      var sfrom={x:sm.x+sm.w/2,y:regsBlockEl?regsBlockEl.y+3:sm.y+40};
       particles.push(new Particle(sfrom,{x:smemBlock.x+smemBlock.w/2,y:smemBlock.y+smemBlock.h/2},'#51cf66','ST.S',1.5,function(){
         bubble(smemBlock.x+smemBlock.w/2,smemBlock.y,'~20 cycles','#51cf66',{life:1.4,sub:'fast SRAM hit'});
       }));
@@ -3222,6 +3490,144 @@ function triggerScenario(type) {
     case 'atomic':
       triggerAtomic();
       return;
+
+    case 'reg_spill': {
+      var regsP = regsPos(si);
+      var l1B = layout.sms[si].l1;
+      var l1P = l1Pos(si);
+      logEvent('SM'+si+': register pressure — spilling to L1', '#fb923c');
+      bubble(regsP.x, regsP.y, 'reg pressure', '#fb923c', {sub:'out of registers'});
+      stats.misses++;
+      setRegPressure(si, 0.95);
+      spawnParticle(regsP, l1P, '#fb923c', 'SPILL', 2.2, function() {
+        var l1Full = (function() {
+          var cs = cacheState[si]; if (!cs) return false;
+          var filled = 0; for (var i=0;i<NUM_LINES;i++) if(cs.l1[i]>0) filled++;
+          return filled >= NUM_LINES - 2;
+        })();
+        if (!l1Full) {
+          fillL1Random(si, false); flash(l1B, '#fb923c');
+          bubble(l1P.x, l1P.y, 'spill hit L1', '#fb923c', {sub:'~28 cycle penalty'});
+          logEvent('SM'+si+': spill → L1 hit (~28 cycles)', '#fb923c');
+          setTimeout(function() {
+            logEvent('SM'+si+': RELOAD ← L1', '#fb923c');
+            spawnParticle(l1P, regsP, '#fb923c', 'RELOAD', 2.2, function() {
+              flash(regsBlock(si) || layout.sms[si], '#fb923c');
+              bubble(regsP.x, regsP.y, 'reg restored', '#51cf66', {sub:'warp resumes', life:1.8});
+              logEvent('SM'+si+': register restored — warp resumes', '#51cf66');
+              setRegPressure(si, 0.30 + Math.random() * 0.1);
+              stats.hits++; updateStats();
+            });
+          }, 800);
+        } else {
+          bubble(l1P.x, l1P.y, 'L1 full!', '#ff6b6b', {sub:'spill → L2'});
+          logEvent('SM'+si+': L1 full — spill cascades to L2 (~200 cycles)', '#ff6b6b');
+          spawnPassthrough(si, '#fb923c', 'SPILL', 2.2, function() {
+            l2AbsorbOne(); flash(layout.l2, '#fb923c');
+            bubble(l2Top().x, l2Top().y, 'spill in L2', '#fb923c', {sub:'~200 cycle penalty'});
+            logEvent('L2: spill absorbed', '#fb923c');
+            setTimeout(function() {
+              logEvent('SM'+si+': RELOAD ← L2', '#fb923c');
+              spawnParticle(l2Top(), l1P, '#fb923c', 'RELOAD', 2, function() {
+                spawnParticle(l1P, regsP, '#fb923c', 'RELOAD', 2.2, function() {
+                  flash(regsBlock(si) || layout.sms[si], '#fb923c');
+                  bubble(regsP.x, regsP.y, 'reg restored', '#51cf66', {sub:'~200 cyc stall', life:1.8});
+                  logEvent('SM'+si+': register restored from L2', '#51cf66');
+                  setRegPressure(si, 0.30 + Math.random() * 0.1);
+                  stats.hits++; updateStats();
+                });
+              }, [busP(si)]);
+            }, 700);
+          });
+        }
+      });
+      break;
+    }
+
+    case 'cp_async': {
+      var smemB = subBlock(si, 'smem');
+      var asyncB = subBlock(si, 'async');
+      if (!smemB) { logEvent('No SMEM block found', '#ff6b6b'); break; }
+      var smemCentre = { x: smemB.x + smemB.w/2, y: smemB.y + smemB.h/2 };
+      var asyncSrc   = asyncB
+        ? { x: asyncB.x + asyncB.w/2, y: asyncB.y + asyncB.h/2 }
+        : { x: layout.sms[si].x + layout.sms[si].w/2, y: layout.sms[si].y + layout.sms[si].h - 8 };
+      logEvent('SM'+si+': cp.async issued — warp continues immediately', '#22d3ee');
+      bubble(asyncSrc.x, asyncSrc.y, 'cp.async issued', '#22d3ee', {sub:'warp not stalled'});
+      if (asyncB) flash(asyncB, '#22d3ee');
+      stats.misses++;
+      setRegPressure(si, 0.58 + Math.random() * 0.1);
+      setTimeout(function() {
+        var rb = regsBlock(si);
+        if (rb) {
+          flash(rb, '#a78bfa');
+          bubble(regsPos(si).x, regsPos(si).y, 'computing…', '#a78bfa', {sub:'warp not stalled', life:2.0});
+          logEvent('SM'+si+': warp computes on prev tile while data fetches', '#a78bfa');
+        }
+      }, 300);
+      spawnParticle(gmTop(), l2Top(), '#22d3ee', 'cp.async', 2.0, function() {
+        l2AbsorbOne(); flash(layout.l2, '#22d3ee');
+        bubble(l2Top().x, l2Top().y, 'L2 serving', '#22d3ee', {sub:'async DMA path'});
+        spawnParticle(l2Top(), smemCentre, '#22d3ee', 'DATA', 2.2, function() {
+          fillSmem(si); flash(smemB, '#22d3ee');
+          bubble(smemCentre.x, smemCentre.y, 'data in SMEM', '#22d3ee', {sub:'regs untouched!', life:1.8});
+          logEvent('SM'+si+': cp.async complete — SMEM filled, no register used', '#22d3ee');
+          stats.hits++; updateStats();
+          setTimeout(function() {
+            if (asyncB) flash(asyncB, '#51cf66');
+            bubble(asyncSrc.x, asyncSrc.y, 'barrier done', '#51cf66', {sub:'tile committed', life:1.4});
+            logEvent('SM'+si+': cp.async.wait complete — tile ready', '#51cf66');
+          }, 400);
+        }, [busP(si)]);
+      }, [cbP()]);
+      break;
+    }
+
+    case 'tma_load': {
+      var tmaB = subBlock(si, 'tma');
+      var smemBt = subBlock(si, 'smem');
+      if (!tmaB || !smemBt) { logEvent('TMA/SMEM block not found', '#ff6b6b'); break; }
+      var tmaCentre   = { x: tmaB.x + tmaB.w/2, y: tmaB.y + tmaB.h/2 };
+      var smemCentreT = { x: smemBt.x + smemBt.w/2, y: smemBt.y + smemBt.h/2 };
+      logEvent('SM'+si+': TMA descriptor issued — HW DMA takes over', '#22d3ee');
+      bubble(tmaCentre.x, tmaCentre.y, 'TMA issued', '#22d3ee', {sub:'HW DMA starts'});
+      flash(tmaB, '#22d3ee');
+      stats.misses++;
+      setTimeout(function() {
+        for (var ti = 0; ti < layout.sms.length; ti++) {
+          var rb2 = regsBlock(ti); if (rb2) flash(rb2, '#a78bfa');
+          setRegPressure(ti, 0.62 + Math.random() * 0.12);
+        }
+        bubble(regsPos(si).x, regsPos(si).y, 'all threads', '#a78bfa', {sub:'computing prev tile', life:2.2});
+        logEvent('All SM'+si+' threads: computing on prev tile', '#a78bfa');
+      }, 200);
+      var tileCount = 2 + Math.floor(Math.random() * 2);
+      (function fetchTile(tileIdx) {
+        if (tileIdx >= tileCount) return;
+        setTimeout(function() {
+          logEvent('TMA: fetching tile '+tileIdx+' from global memory', '#22d3ee');
+          spawnParticle(gmTop(), l2Top(), '#22d3ee', 'TILE', 2.2, function() {
+            l2AbsorbOne();
+            bubble(l2Top().x, l2Top().y, 'tile '+tileIdx+' from L2', '#22d3ee', {sub:'DMA path', life:1.2});
+            spawnParticle(l2Top(), smemCentreT, '#22d3ee', 'TILE', 2.4, function() {
+              fillSmem(si); flash(smemBt, '#22d3ee');
+              bubble(smemCentreT.x, smemCentreT.y, 'tile '+tileIdx+' ready', '#22d3ee', {sub:'SMEM filled', life:1.4});
+              logEvent('SM'+si+': tile '+tileIdx+' landed in SMEM', '#22d3ee');
+              if (tileIdx === tileCount - 1) {
+                stats.hits++; updateStats();
+                setTimeout(function() {
+                  flash(tmaB, '#51cf66');
+                  bubble(tmaCentre.x, tmaCentre.y, 'mbarrier done', '#51cf66', {sub:'all tiles ready', life:1.6});
+                  logEvent('SM'+si+': TMA complete — mbarrier arrived', '#51cf66');
+                }, 300);
+              }
+            }, [busP(si)]);
+          }, [cbP()]);
+          fetchTile(tileIdx + 1);
+        }, tileIdx * 900);
+      })(0);
+      break;
+    }
   }
   updateStats();
 }
@@ -3537,29 +3943,45 @@ function spawnRoutedToArbiter(smIdx, color, label, speed, onArrival) {
     }));
   }));
 }
-// Route a GRANT signal from arbiter back to SM — stops at bus junction (warp scheduler receives it)
-// GRANT is a control signal, not data — it doesn't go into L1
+// Route a GRANT signal from arbiter back to SM.
+// GRANT is a control signal received by the warp scheduler — it travels all the
+// way down to the SM's warp scheduler block so it's visually clear which SM got the grant.
 function spawnGrantToSM(smIdx, onArrival) {
-  var fromPos  = arbiterTop();
   var busAbove = arbiterBusEntry();
   var busJunct = busP(smIdx);
-  particles.push(new Particle(fromPos, busAbove, '#51cf66', 'GRANT', 2.8, function() {
-    particles.push(new Particle(busAbove, busJunct, '#51cf66', 'GRANT', 3.0, function() {
+  // Find the warp scheduler block for this SM so GRANT visibly lands there
+  var warpDest = busJunct; // fallback: stop at bus junction
+  var sm = layout.sms[smIdx];
+  if (sm) {
+    for (var bi = 0; bi < sm.sub.length; bi++) {
+      if (sm.sub[bi].type === 'warpScheduler') {
+        warpDest = { x: sm.sub[bi].x + sm.sub[bi].w/2, y: sm.sub[bi].y + sm.sub[bi].h/2 };
+        break;
+      }
+    }
+    // If no warp scheduler block, land at bottom of SM
+    if (warpDest === busJunct) {
+      warpDest = { x: sm.x + sm.w/2, y: sm.y + sm.h - 8 };
+    }
+  }
+  // Route: arbiterBusEntry (bus level) → busP(smIdx) → warpDest (inside SM)
+  particles.push(new Particle(busAbove, busJunct, '#51cf66', 'GRANT', 3.0, function() {
+    particles.push(new Particle(busJunct, warpDest, '#51cf66', 'GRANT', 2.5, function() {
       if (onArrival) onArrival();
     }));
   }));
 }
-// Route from arbiter back to SM via bus (DATA goes all the way to L1)
+// Route DATA from arbiter back to SM's L1 via the bus.
+// Starts from arbiterBusEntry (bus level above arbiter) — NOT from arbiterTop —
+// so the particle never visually passes back through the arbiter block body.
 function spawnRoutedFromArbiter(smIdx, color, label, speed, onArrival) {
-  var fromPos  = arbiterTop();
   var busAbove = arbiterBusEntry();
   var busJunct = busP(smIdx);
   var dest     = l1Pos(smIdx);
-  particles.push(new Particle(fromPos, busAbove, color, label, speed, function() {
-    particles.push(new Particle(busAbove, busJunct, color, label, speed * 1.1, function() {
-      particles.push(new Particle(busJunct, dest, color, label, speed, function() {
-        if (onArrival) onArrival();
-      }));
+  // Route: arbiterBusEntry → busP(smIdx) → l1Pos(smIdx)
+  particles.push(new Particle(busAbove, busJunct, color, label, speed * 1.1, function() {
+    particles.push(new Particle(busJunct, dest, color, label, speed, function() {
+      if (onArrival) onArrival();
     }));
   }));
 }
@@ -3653,14 +4075,14 @@ function triggerAtomic() {
           var arbExit  = arbiterBot();
           var l2dest   = l2Top();
 
-          // Step 2: ATOM travels through arbiter body (arbEntry → arbExit)
-          particles.push(new Particle(arbEntry, arbExit, '#f59e0b', 'ATOM', 2.0, function() {
+          // Step 2: RMW travels through arbiter body (arbEntry → arbExit)
+          particles.push(new Particle(arbEntry, arbExit, '#f59e0b', 'RMW', 2.0, function() {
             // Arbiter body exited — next grant can now issue (queue slot freed above)
             grantInFlight = false;
             tryNextGrant();  // issue next grant now that arbiter body is clear
 
-            // Step 3: ATOM exits arbiter → L2
-            particles.push(new Particle(arbExit, l2dest, '#f59e0b', 'ATOM', 2.0, function() {
+            // Step 3: RMW exits arbiter → L2
+            particles.push(new Particle(arbExit, l2dest, '#f59e0b', 'RMW', 2.0, function() {
               flash(layout.l2, '#f59e0b');
               logEvent('L2: RMW SEQ#'+capturedSeq+' complete', '#ffa94d');
               for (var pb = 0; pb < arbiterState.activeOps.length; pb++) {
@@ -3676,19 +4098,25 @@ function triggerAtomic() {
                 ? 50  + Math.random() * 130
                 : 320 + Math.random() * 280;
               setTimeout(function() {
-                // Step 4: ACK returns from L2 → arbiter
+                // Step 4: ACK returns from L2 → up through arbiter → bus level
+                // l2Top → arbExit (bottom of arbiter) → arbiterBusEntry (bus level)
+                // This makes the ACK visibly traverse the arbiter body upward
                 particles.push(new Particle(l2Top(), arbExit, '#ffa94d', 'ACK#'+capturedSeq, 2.0, function() {
-                  flash(layout.arbiter, '#ffa94d');
-                  arbiterAckFromL2(capturedSeq, function() {
-                    logEvent('ROB: SEQ#'+capturedSeq+' retired → DATA→SM'+capturedIdx, '#a78bfa');
-                    // Step 5: DATA returns from arbiter → SM's L1
-                    spawnRoutedFromArbiter(capturedIdx, '#ffa94d', 'DATA', 2.2, function() {
-                      layout.sms[capturedIdx].l1.state = 'modified';
-                      setL1Dirty(capturedIdx);
-                      flash(layout.sms[capturedIdx].l1, '#f59e0b');
-                      stats.hits++; updateStats();
+                  // ACK enters arbiter bottom — travel up through arbiter body to bus level
+                  particles.push(new Particle(arbExit, arbiterBusEntry(), '#ffa94d', 'ACK#'+capturedSeq, 2.0, function() {
+                    flash(layout.arbiter, '#ffa94d');
+                    arbiterAckFromL2(capturedSeq, function() {
+                      logEvent('ROB: SEQ#'+capturedSeq+' retired → DATA→SM'+capturedIdx, '#a78bfa');
+                      // Step 5: DATA routes from bus level → SM bus junction → L1
+                      // spawnRoutedFromArbiter starts at arbiterBusEntry (bus level), no air-travel
+                      spawnRoutedFromArbiter(capturedIdx, '#ffa94d', 'DATA', 2.2, function() {
+                        layout.sms[capturedIdx].l1.state = 'modified';
+                        setL1Dirty(capturedIdx);
+                        flash(layout.sms[capturedIdx].l1, '#f59e0b');
+                        stats.hits++; updateStats();
+                      });
                     });
-                  });
+                  }));
                 }));
               }, l2Jitter);
             }));
@@ -3745,13 +4173,12 @@ function triggerAtomic() {
               flash(layout.l2, '#f59e0b');
               logEvent('L2: atomic locked (SM'+idx2+')', '#ffa94d');
               setTimeout(function() {
-                particles.push(new Particle(l2Top(), busP(idx2), '#ffa94d', 'DATA', 2, function() {
-                  particles.push(new Particle(busP(idx2), l1Pos(idx2), '#ffa94d', 'DATA', 2, function() {
-                    layout.sms[idx2].l1.state = 'modified'; setL1Dirty(idx2);
-                    flash(layout.sms[idx2].l1, '#f59e0b');
-                    stats.hits++; updateStats();
-                  }));
-                }));
+                // DATA returns: l2Top → busP (horizontal) → l1Pos (down to SM) — no diagonals
+                spawnParticle(l2Top(), l1Pos(idx2), '#ffa94d', 'DATA', 2, function() {
+                  layout.sms[idx2].l1.state = 'modified'; setL1Dirty(idx2);
+                  flash(layout.sms[idx2].l1, '#f59e0b');
+                  stats.hits++; updateStats();
+                }, [busP(idx2)]);
               }, 100 + Math.random() * 600); // random L2 lock contention
             }));
           }));
@@ -3777,6 +4204,7 @@ function startApp() {
   initialized = true;
   updateKeyCard();
   updateArchIntro();
+  updateScenarioButtons();
   buildInstrChips();
   lastTime = performance.now();
   requestAnimationFrame(drawFrame);
