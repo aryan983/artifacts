@@ -257,12 +257,13 @@ function triggerScenario(type, silent) {
                     l2AbsorbOne(); flash(layout.l2,'#ffa94d');
                     bubble(l2Top().x,l2Top().y,'L2 filled','#ffa94d',{life:1.5,sub:'cached for next time'});
                     logEvent('L2: line installed from DRAM','#ffa94d');
+                    var busAtL2 = { x: l2Top().x, y: layout.bus.y };
                     spawnParticle(l2Top(), l1Pos(si), '#ffa94d', 'DATA', 2, function(){
                       sm.l1.state='shared'; fillL1Random(si,false); flash(sm.l1,'#339af0');
                       bubble(l1Pos(si).x,l1Pos(si).y,'line cached','#339af0',{life:1.6,sub:'L1 → Shared'});
                       logEvent('SM'+si+': L1 → Shared (filled from DRAM via L2)','#339af0');
                       stats.hits++;
-                    }, [busP(si)]);
+                    }, [busAtL2, busP(si)]);
                   });
                 });
               });
