@@ -159,22 +159,147 @@ function updateSelPanel(hit) {
   connList.innerHTML = '';
   if (!info.connects || info.connects.length === 0) {
     connList.innerHTML = '<div style="font-size:.75rem;color:var(--dim);padding:6px 0">No direct connections defined.</div>';
+  } else {
+    for (var i = 0; i < info.connects.length; i++) {
+      var c = info.connects[i];
+      var targetInfo = BLOCK_INFO[c.to] || {};
+      var el = document.createElement('div');
+      el.className = 'conn-item';
+      el.innerHTML = '<span class="ci-arrow" style="color:' + (targetInfo.color||'#6b7094') + '">' + c.arrow + '</span><div class="ci-body"><span class="ci-target" style="color:' + (targetInfo.color||'#aaa') + '">' + (targetInfo.name || c.to) + '</span><span class="ci-why">' + c.why + '</span></div>';
+      (function(connTo) {
+        el.addEventListener('click', function(e) {
+          e.stopPropagation();
+          var targetHit = getBlockRect(connTo, hit.smIdx) || getBlockRect(connTo);
+          if (targetHit) selectBlock(targetHit);
+        });
+      })(c.to);
+      connList.appendChild(el);
+    }
+  }
+  // ── Cache line inspector — L1 and L2 blocks ────────────────────────────────
+  renderCacheLineTable(hit);
+}
+
+// Op type labels and colors for the inspector table
+var OP_LABELS = {
+  read:     { label: 'SM Read',    color: '#339af0' },
+  write:    { label: 'SM Write',   color: '#51cf66' },
+  atomic:   { label: 'atomicAdd',  color: '#f59e0b' },
+  spill:    { label: 'Reg Spill',  color: '#fb923c' },
+  cp_async: { label: 'cp.async',   color: '#22d3ee' },
+  tma:      { label: 'TMA Load',   color: '#22d3ee' },
+  shared:   { label: 'Shared Mem', color: '#6ee09a' },
+};
+
+function renderCacheLineTable(hit) {
+  var section = document.getElementById('cl-section');
+  var tbody   = document.getElementById('cl-tbody');
+  if (!section || !tbody) return;
+
+  var isL1 = hit.type === 'l1';
+  var isL2 = hit.type === 'l2';
+  if (!isL1 && !isL2) { section.style.display = 'none'; return; }
+
+  section.style.display = 'block';
+  tbody.innerHTML = '';
+
+  // Update section title
+  var titleEl = document.getElementById('cl-section-title');
+  if (titleEl) titleEl.textContent = isL2 ? 'L2 Cache Line State (' + NUM_L2_LINES + ' lines)' : 'L1 Cache Line State';
+
+  // ── L1 ────────────────────────────────────────────────────────────────────
+  if (isL1) {
+    var cs = cacheState[hit.smIdx];
+    if (!cs) { section.style.display = 'none'; return; }
+    var lines = cs.l1;
+    for (var i = 0; i < lines.length; i++) {
+      var ln = lines[i];
+      var s  = ln ? ln.s : 0;
+      var op = ln ? ln.op : null;
+      var tr = document.createElement('tr');
+      if (s === 2) tr.className = 'cl-row-dirty';
+      else if (s === 1) tr.className = 'cl-row-clean';
+      var stateLabel, stateColor;
+      if (s === 2)      { stateLabel = 'Dirty'; stateColor = '#ffa94d'; }
+      else if (s === 1) { stateLabel = 'Clean'; stateColor = '#339af0'; }
+      else              { stateLabel = 'Empty'; stateColor = '#3a3d50'; }
+      var opInfo = op ? (OP_LABELS[op] || { label: op, color: '#aaa' }) : null;
+      var tdIdx   = document.createElement('td'); tdIdx.className = 'cl-idx'; tdIdx.textContent = i;
+      var tdState = document.createElement('td');
+      tdState.innerHTML =
+        '<span class="cl-swatch" style="background:' + stateColor + ';opacity:' + (s === 0 ? '0.2' : '0.85') + '"></span>' +
+        '<span class="cl-state" style="color:' + stateColor + '">' + stateLabel + '</span>';
+      var tdOp = document.createElement('td');
+      tdOp.className = s === 0 ? 'cl-empty' : 'cl-op';
+      tdOp.innerHTML = opInfo
+        ? '<span style="color:' + opInfo.color + '">' + opInfo.label + '</span>'
+        : (s === 0 ? '—' : '<span style="color:#6b7090">unknown</span>');
+      tr.appendChild(tdIdx); tr.appendChild(tdState); tr.appendChild(tdOp);
+      tbody.appendChild(tr);
+    }
+    // Update header for L1
+    var hdr = document.getElementById('cl-table-header');
+    if (hdr) hdr.innerHTML = '<tr><th class="cl-idx">#</th><th>State</th><th>Last Op</th></tr>';
     return;
   }
-  for (var i = 0; i < info.connects.length; i++) {
-    var c = info.connects[i];
-    var targetInfo = BLOCK_INFO[c.to] || {};
-    var el = document.createElement('div');
-    el.className = 'conn-item';
-    el.innerHTML = '<span class="ci-arrow" style="color:' + (targetInfo.color||'#6b7094') + '">' + c.arrow + '</span><div class="ci-body"><span class="ci-target" style="color:' + (targetInfo.color||'#aaa') + '">' + (targetInfo.name || c.to) + '</span><span class="ci-why">' + c.why + '</span></div>';
-    (function(connTo) {
-      el.addEventListener('click', function(e) {
-        e.stopPropagation();
-        var targetHit = getBlockRect(connTo, hit.smIdx) || getBlockRect(connTo);
-        if (targetHit) selectBlock(targetHit);
-      });
-    })(c.to);
-    connList.appendChild(el);
+
+  // ── L2 ────────────────────────────────────────────────────────────────────
+  // Update header for L2 (no op tag — L2 is unified/shared, no per-op tracking)
+  var hdr2 = document.getElementById('cl-table-header');
+  if (hdr2) hdr2.innerHTML = '<tr><th class="cl-idx">#</th><th>State</th><th>Status</th></tr>';
+
+  // Gather which SMs are currently Modified or Shared (for live status annotation)
+  var modSMs = [], shrSMs = [];
+  for (var smi = 0; smi < layout.sms.length; smi++) {
+    var smst = layout.sms[smi] ? layout.sms[smi].l1.state : 'invalid';
+    if (smst === 'modified') modSMs.push('SM'+smi);
+    else if (smst === 'shared') shrSMs.push('SM'+smi);
+  }
+
+  for (var j = 0; j < NUM_L2_LINES; j++) {
+    var lv = l2Lines[j];
+    var tr2 = document.createElement('tr');
+    var sl2, sc2;
+    if (lv === 2)      { sl2 = 'Dirty'; sc2 = '#ffa94d'; tr2.className = 'cl-row-dirty'; }
+    else if (lv === 1) { sl2 = 'Clean'; sc2 = '#339af090'; tr2.className = 'cl-row-clean'; }
+    else               { sl2 = 'Empty'; sc2 = '#3a3d50'; }
+
+    // Status column — what this line is doing / what needs to happen next
+    var statusHtml;
+    if (lv === 0) {
+      statusHtml = '<span class="cl-empty">—</span>';
+    } else if (lv === 2) {
+      // Dirty: L2 has newer data than DRAM. Must be flushed before eviction.
+      // If an SM is Modified it means that SM's L1 has an even newer copy —
+      // L2 is stale relative to that SM but is the truth for everyone else.
+      var note = modSMs.length > 0
+        ? 'stale — ' + modSMs.join('+') + ' L1 newer'
+        : 'pending flush → DRAM';
+      statusHtml = '<span style="color:#ffa94d">' + note + '</span>';
+    } else {
+      // Clean: L2 and DRAM agree. Safe to evict without writeback.
+      var note1 = shrSMs.length > 0
+        ? 'serving ' + shrSMs.join(', ')
+        : 'cached — safe to evict';
+      statusHtml = '<span style="color:#339af0">' + note1 + '</span>';
+    }
+
+    var tdI = document.createElement('td'); tdI.className = 'cl-idx'; tdI.textContent = j;
+    var tdS = document.createElement('td');
+    tdS.innerHTML =
+      '<span class="cl-swatch" style="background:' + sc2 + ';opacity:' + (lv === 0 ? '0.2' : '0.85') + '"></span>' +
+      '<span class="cl-state" style="color:' + sc2 + '">' + sl2 + '</span>';
+    var tdH = document.createElement('td'); tdH.innerHTML = statusHtml;
+
+    tr2.appendChild(tdI); tr2.appendChild(tdS); tr2.appendChild(tdH);
+    tbody.appendChild(tr2);
+  }
+}
+
+// Keep the table live while a block is selected
+function refreshCacheLineTableIfOpen() {
+  if (selectedBlock && (selectedBlock.type === 'l1' || selectedBlock.type === 'l2')) {
+    renderCacheLineTable(selectedBlock);
   }
 }
 

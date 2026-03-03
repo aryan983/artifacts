@@ -83,6 +83,12 @@ var SCENARIO_INFO = {
     desc: 'Ampere\'s async copy instruction loads data from global memory directly into shared memory — without touching registers and without stalling the issuing warp. The warp immediately continues computing while data arrives in the background.',
     watch: 'Notice: the cp.async particle bypasses the register file entirely. Simultaneously, a compute particle pulses inside the SM — the warp keeps working. This is how Ampere achieves full compute-memory overlap without software tricks.'
   },
+  flush: {
+    title: 'Cache Flush  (__threadfence / cudaDeviceSynchronize)',
+    color: '#f97316',
+    desc: '__threadfence() forces all dirty L1 lines from every SM to write back to L2, then L2 dirty lines drain to DRAM. cudaDeviceSynchronize goes further — it blocks the CPU until all outstanding memory ops complete. Used at kernel boundaries and before CPU reads.',
+    watch: 'Watch all SM dirty lines fire WB packets simultaneously to L2. Then L2 dirty lines cascade down to DRAM via the crossbar and memory controllers. At the end every cache level is clean — L1s go Shared, L2 is clean, HBM holds the authoritative data.'
+  },
   tma_load: {
     title: 'TMA Load — Bulk Tensor Tile → SMEM',
     color: '#22d3ee',

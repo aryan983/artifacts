@@ -155,6 +155,8 @@ function updateStats() {
   document.getElementById('stat-misses').textContent=stats.misses;
   document.getElementById('stat-inv').textContent=stats.inv;
   document.getElementById('stat-wb').textContent=stats.wb;
+  var fe = document.getElementById('stat-flush');
+  if (fe) fe.textContent=stats.flush;
 }
 
 function triggerScenario(type, silent) {
@@ -201,6 +203,24 @@ function triggerScenario(type, silent) {
       if (layout.sms[mi].l1.state === 'modified') { si = mi; sm = layout.sms[si]; break; }
     }
   }
+  if (type === 'flush') {
+    // Check physical dirty lines — block-level state can be stale
+    var anyDirty = false;
+    for (var fdi2=0; fdi2<layout.sms.length; fdi2++) {
+      if (!cacheState[fdi2]) continue;
+      for (var fdj=0; fdj<NUM_LINES; fdj++) {
+        if (cacheState[fdi2].l1[fdj].s === 2) { anyDirty = true; break; }
+      }
+      if (anyDirty) break;
+    }
+    var anyL2Dirty = false;
+    for (var fdi=0; fdi<NUM_L2_LINES; fdi++) { if (l2Lines[fdi] === 2) { anyL2Dirty = true; break; } }
+    if (!anyDirty && !anyL2Dirty) {
+      if (!silent) notifyUser('Nothing to flush',
+        'No dirty lines in L1 or L2. Run SM Write or Write-Back first to create dirty data.', '#f97316');
+      return;
+    }
+  }
   if (type === 'atomic' && currentArch === 'apex' && arbiterState.active) {
     if (!silent) notifyUser('Arbiter busy',
       'An atomic sequence is already in flight. Wait for it to complete or Reset.', '#f59e0b');
@@ -209,8 +229,15 @@ function triggerScenario(type, silent) {
 
   switch(type) {
     case 'read': {
-      // ── L1 Hit path (if L1 already has a valid line for this address) ────────
-      if (sm.l1.state === 'shared' || sm.l1.state === 'modified') {
+      // ── L1 Hit path ──────────────────────────────────────────────────────────
+      // Hit if state says valid AND there are actually lines present.
+      // State alone can be stale after reset/init — check physical fill count too.
+      var l1FilledCount = 0;
+      if (cacheState[si]) {
+        for (var rh=0; rh<NUM_LINES; rh++) if (cacheState[si].l1[rh].s > 0) l1FilledCount++;
+      }
+      var l1HasData = (sm.l1.state === 'shared' || sm.l1.state === 'modified') && l1FilledCount > 0;
+      if (l1HasData) {
         stats.hits++;
         logEvent('SM'+si+': L1 hit — no bus traffic','#339af0');
         bubble(l1Pos(si).x, l1Pos(si).y, 'L1 hit!', '#339af0', {sub:'data already cached', life:1.8});
@@ -298,85 +325,121 @@ function triggerScenario(type, silent) {
         var warpSrc = { x: sm.x + sm.w/2, y: sm.y + 18 };
         bubble(warpSrc.x, warpSrc.y, 'write bypass','#51cf66',{sub:'L1 read-only'});
         // L1 state unchanged — it wasn't involved
+        var busCenterPW = { x: l2Top().x, y: layout.bus.y };
         spawnParticle(warpSrc, l2Top(), '#51cf66', 'WR', 2, function(){
           flash(layout.l2,'#ffa94d'); l2AbsorbDirty();
           bubble(l2Top().x,l2Top().y,'L2 updated','#ffa94d',{life:1.5,sub:'write absorbed (dirty)'});
           logEvent('L2: Write-through received — line dirty','#ffa94d');
-        }, [busP(si)]);
+        }, [busP(si), busCenterPW]);
       } else {
-        // Volta+: Write-evict policy.
-        // Step 1: SM writes the line into L1 → L1 = Modified (the SM owns it now).
-        // Step 2: INV fires to any SM that has a Shared copy of this line.
-        // The line stays in L1 as Modified until capacity pressure evicts it (that's writeback).
-        // We do NOT evict to L2 here — that's a separate scenario.
-        stats.hits++;
-        logEvent('SM'+si+': Write → L1 Modified, INV others','#51cf66');
-        bubble(l1Pos(si).x,l1Pos(si).y,'write hit','#51cf66',{sub:'L1 → Modified'});
+        // Volta+: Write-evict policy (NO write-allocate).
+        //
+        // Write-HIT  (L1 already Shared/Modified for this line):
+        //   → Mark L1 Modified, write stays in L1, WR evict to L2, INV other sharers.
+        //
+        // Write-MISS (L1 Invalid — line not cached):
+        //   → Write goes directly to L2, L1 is NOT filled (write-evict = no allocate on miss).
+        //   → No INV needed — nobody else can have a stale copy if we never had it.
 
-        // Snapshot which SMs have Shared copies right now (before state changes)
-        var staleSMs = [];
-        for (var wi=0;wi<layout.sms.length;wi++) {
-          if (wi!==si && layout.sms[wi].l1.state==='shared') staleSMs.push(wi);
+        var l1HasLine = (sm.l1.state === 'shared' || sm.l1.state === 'modified');
+        var l1WriteFilledCount = 0;
+        if (cacheState[si]) {
+          for (var wfc=0;wfc<NUM_LINES;wfc++) if(cacheState[si].l1[wfc].s>0) l1WriteFilledCount++;
         }
+        var isWriteHit = l1HasLine && l1WriteFilledCount > 0;
 
-        // L1 of writing SM goes Modified immediately (the write happened locally)
-        sm.l1.state='modified'; setL1Dirty(si, 'write'); flash(sm.l1,'#51cf66');
+        if (!isWriteHit) {
+          // ── Write-Miss: write-evict → straight to L2, L1 untouched ─────────
+          stats.misses++;
+          logEvent('SM'+si+': Write miss → write-evict to L2 (L1 not filled)','#51cf66');
+          bubble(l1Pos(si).x, l1Pos(si).y, 'write miss','#51cf66',{sub:'write-evict → L2'});
+          var warpSrcM = { x: sm.x + sm.w/2, y: sm.y + 18 };
+          // Particle: registers → bus → L2 (bypasses L1 entirely)
+          var busCenterWM = { x: l2Top().x, y: layout.bus.y };
+          spawnParticle(warpSrcM, l2Top(), '#51cf66', 'WR', 2, function(){
+            flash(layout.l2,'#ffa94d'); l2AbsorbDirty();
+            bubble(l2Top().x,l2Top().y,'write landed','#ffa94d',{life:1.5,sub:'L2 dirty (no L1 fill)'});
+            logEvent('L2: write-evict received — line dirty, L1 not allocated','#ffa94d');
+          }, [busP(si), busCenterWM]);
 
-        // WR packet travels to bus to announce the write (triggers INV broadcast)
-        particles.push(new Particle(l1Pos(si),busP(si),'#51cf66','WR',2,function(){
-          bubble(busP(si).x,busP(si).y,'announcing write','#51cf66',{life:1.2,sub:'INV outgoing'});
+        } else {
+          // ── Write-Hit: line is in L1, mark Modified, evict to L2, INV others ─
+          stats.hits++;
+          logEvent('SM'+si+': Write hit → L1 Modified, write-evict to L2, INV others','#51cf66');
+          bubble(l1Pos(si).x,l1Pos(si).y,'write hit','#51cf66',{sub:'L1 → Modified'});
 
-          if (staleSMs.length === 0) {
-            logEvent('SM'+si+': No other sharers — no INV needed','#51cf66');
-            return;
+          // Snapshot sharers BEFORE state changes
+          var staleSMs = [];
+          for (var wi=0;wi<layout.sms.length;wi++) {
+            if (wi!==si && layout.sms[wi].l1.state==='shared') staleSMs.push(wi);
           }
 
-          // On Apex: route INV via the Coherency Directory (targeted, not broadcast)
-          if (currentArch === 'apex' && layout.cohDir) {
-            var cdCentre = { x: layout.cohDir.x + layout.cohDir.w/2, y: layout.cohDir.y + layout.cohDir.h/2 };
-            // Consult directory: WR → cohDir
+          // Mark L1 Modified immediately — the write happened locally
+          sm.l1.state='modified'; setL1Dirty(si, 'write'); flash(sm.l1,'#51cf66');
+
+          // WR travels L1 → bus → L2 (write-evict: data goes to L2 too)
+          particles.push(new Particle(l1Pos(si), busP(si), '#51cf66', 'WR', 2, function(){
+            bubble(busP(si).x, busP(si).y, 'write-evict','#51cf66',{life:1.0,sub:'→ L2 + INV'});
+            // Continue to L2
+            var busCenterWH = { x: l2Top().x, y: layout.bus.y };
+            spawnParticle(busP(si), l2Top(), '#51cf66', 'WR', 2, function(){
+              flash(layout.l2,'#ffa94d'); l2AbsorbDirty();
+              bubble(l2Top().x,l2Top().y,'L2 updated','#ffa94d',{life:1.3,sub:'dirty line installed'});
+              logEvent('L2: write-evict received — line dirty','#ffa94d');
+            }, [busCenterWH]);
+
+            // Simultaneously fire INV to all sharers
+            if (staleSMs.length === 0) {
+              logEvent('SM'+si+': No other sharers — no INV needed','#51cf66');
+            } else if (currentArch === 'apex' && layout.cohDir) {
+              // Apex: targeted INV via Coherency Directory
+              var cdCentre = { x: layout.cohDir.x + layout.cohDir.w/2, y: layout.cohDir.y + layout.cohDir.h/2 };
+              var busCenterDir = { x: l2Top().x, y: layout.bus.y };
             particles.push(new Particle(busP(si), l2Top(), '#f06595', 'WR→DIR', 2.5, function(){
-              flash(layout.cohDir, '#f06595');
-              bubble(cdCentre.x, cdCentre.y, 'dir lookup','#f06595',{life:1.3,sub:'checking sharers'});
-              logEvent('CohDir: '+staleSMs.length+' sharer(s) found → targeted INV','#f06595');
-              // Directory knows exactly which SMs have copies — fire targeted INV only to them
+                flash(layout.cohDir, '#f06595');
+                bubble(cdCentre.x, cdCentre.y, 'dir lookup','#f06595',{life:1.3,sub:'checking sharers'});
+                logEvent('CohDir: '+staleSMs.length+' sharer(s) found → targeted INV','#f06595');
+                for (var wj=0;wj<staleSMs.length;wj++) {
+                  (function(idx){
+                    setTimeout(function(){
+                      var bcInvWH = { x: l2Top().x, y: layout.bus.y };
+                      spawnParticle(l2Top(), l1Pos(idx), '#f06595', 'INV', 2.8, function(){
+                        invalidateL1Lines(idx, 1 + Math.floor(Math.random()*2));
+                        var invRemain5c = 0;
+                        if (cacheState[idx]) for (var ir5c=0;ir5c<NUM_LINES;ir5c++) if(cacheState[idx].l1[ir5c].s>0) invRemain5c++;
+                        layout.sms[idx].l1.state = invRemain5c > 0 ? 'shared' : 'invalid';
+                        flash(layout.sms[idx].l1,'#f06595');
+                        bubble(l1Pos(idx).x,l1Pos(idx).y,'line dropped','#f06595',{life:1.3,sub:'targeted INV'});
+                        logEvent('SM'+idx+': line invalidated (targeted)','#f06595');
+                        stats.inv++; updateStats();
+                      }, [bcInvWH, busP(idx)]);
+                    }, wj*180);
+                  })(staleSMs[wj]);
+                }
+              }));
+            } else {
+              // Non-Apex: broadcast INV from bus to all sharers
               for (var wj=0;wj<staleSMs.length;wj++) {
                 (function(idx){
                   setTimeout(function(){
-                    // Targeted INV: l2Top → busP(idx) → l1Pos(idx)
-                    spawnParticle(l2Top(), l1Pos(idx), '#f06595', 'INV', 2.8, function(){
-                      layout.sms[idx].l1.state='invalid';
-                      invalidateL1Lines(idx, 1 + Math.floor(Math.random()*2));
-                      flash(layout.sms[idx].l1,'#f06595');
-                      bubble(l1Pos(idx).x,l1Pos(idx).y,'line dropped','#f06595',{life:1.3,sub:'targeted INV'});
-                      logEvent('SM'+idx+': 1-2 lines invalidated (targeted)','#f06595');
-                      stats.inv++; updateStats();
-                    }, [busP(idx)]);
-                  }, wj*180);
+                    particles.push(new Particle(busP(si),busP(idx),'#f06595','INV',3,function(){
+                      particles.push(new Particle(busP(idx),l1Pos(idx),'#f06595','INV',2,function(){
+                        invalidateL1Lines(idx, 1 + Math.floor(Math.random()*2));
+                        var invRem5d = 0;
+                        if (cacheState[idx]) for (var ir5d=0;ir5d<NUM_LINES;ir5d++) if(cacheState[idx].l1[ir5d].s>0) invRem5d++;
+                        layout.sms[idx].l1.state = invRem5d > 0 ? 'shared' : 'invalid';
+                        flash(layout.sms[idx].l1,'#f06595');
+                        bubble(l1Pos(idx).x,l1Pos(idx).y,'line dropped','#f06595',{life:1.3,sub:'addr match'});
+                        logEvent('SM'+idx+': line invalidated','#f06595');
+                        stats.inv++; updateStats();
+                      }));
+                    }));
+                  }, wj*180 + Math.round(Math.random()*60));
                 })(staleSMs[wj]);
               }
-            }));
-          } else {
-            // Non-Apex: broadcast INV to all SMs that have a Shared copy
-            for (var wj=0;wj<staleSMs.length;wj++) {
-              (function(idx){
-                setTimeout(function(){
-                  particles.push(new Particle(busP(si),busP(idx),'#f06595','INV',3,function(){
-                    particles.push(new Particle(busP(idx),l1Pos(idx),'#f06595','INV',2,function(){
-                      layout.sms[idx].l1.state='invalid';
-                      // INV carries specific address — only drop 1-2 matching lines, rest of L1 stays
-                      invalidateL1Lines(idx, 1 + Math.floor(Math.random()*2));
-                      flash(layout.sms[idx].l1,'#f06595');
-                      bubble(l1Pos(idx).x,l1Pos(idx).y,'line dropped','#f06595',{life:1.3,sub:'addr match'});
-                      logEvent('SM'+idx+': 1-2 lines invalidated','#f06595');
-                      stats.inv++; updateStats();
-                    }));
-                  }));
-                }, wj*180 + Math.round(Math.random()*60));
-              })(staleSMs[wj]);
             }
-          }
-        }));
+          }));
+        }
       }
       break;
     case 'invalidate':
@@ -403,12 +466,15 @@ function triggerScenario(type, silent) {
           for (var vi=0;vi<validSMs.length;vi++) {
             (function(idx){
               setTimeout(function(){
+                var bcInvB = { x: l2Top().x, y: layout.bus.y };
                 spawnParticle(l2Top(), l1Pos(idx), '#f06595', 'INV', 2.8, function(){
-                  layout.sms[idx].l1.state = 'invalid';
                   invalidateL1Lines(idx, 1 + Math.floor(Math.random()*2));
+                  var invRem5a = 0;
+                  if (cacheState[idx]) for (var ir5a=0;ir5a<NUM_LINES;ir5a++) if(cacheState[idx].l1[ir5a].s>0) invRem5a++;
+                  layout.sms[idx].l1.state = invRem5a > 0 ? 'shared' : 'invalid';
                   flash(layout.sms[idx].l1,'#f06595');
                   bubble(l1Pos(idx).x,l1Pos(idx).y,'line(s) dropped','#f06595',{life:1.2,sub:'targeted'});
-                }, [busP(idx)]);
+                }, [bcInvB, busP(idx)]);
               }, vi*140);
             })(validSMs[vi]);
           }
@@ -422,9 +488,11 @@ function triggerScenario(type, silent) {
               var from={x:(layout.bus.x1+layout.bus.x2)/2,y:layout.bus.y};
               particles.push(new Particle(from,busP(idx),'#f06595','INV',3,function(){
                 particles.push(new Particle(busP(idx),l1Pos(idx),'#f06595','INV',2,function(){
-                  layout.sms[idx].l1.state='invalid';
-                  // Drop only the lines matching the invalidated address — 1 to 2 lines
                   invalidateL1Lines(idx, 1 + Math.floor(Math.random()*2));
+                  // State reflects what physically remains
+                  var invRemain5b = 0;
+                  if (cacheState[idx]) for (var ir5b=0;ir5b<NUM_LINES;ir5b++) if(cacheState[idx].l1[ir5b].s>0) invRemain5b++;
+                  layout.sms[idx].l1.state = invRemain5b > 0 ? 'shared' : 'invalid';
                   flash(layout.sms[idx].l1,'#f06595');
                   bubble(l1Pos(idx).x,l1Pos(idx).y,'line(s) dropped','#f06595',{life:1.2,sub:'addr match'});
                   logEvent('SM'+idx+': L1 line(s) invalidated','#f06595');
@@ -444,12 +512,18 @@ function triggerScenario(type, silent) {
         spawnPassthrough(si,'#ffa94d','WB',2.5,function(){
           // WB arrives at L2: evict exactly the one dirty line from L1, install it in L2
           evictOneL1Line(si);
-          // If L1 still has valid lines, keep it modified; otherwise go invalid
-          var stillHasDirty = false;
+          // After eviction: check what's left in L1
+          var wbDirtyLeft = 0, wbCleanLeft = 0;
           if (cacheState[si]) {
-            for (var wbi=0;wbi<NUM_LINES;wbi++) if(cacheState[si].l1[wbi].s>0){stillHasDirty=true;break;}
+            for (var wbi=0;wbi<NUM_LINES;wbi++) {
+              var ws = cacheState[si].l1[wbi].s;
+              if (ws === 2) wbDirtyLeft++;
+              else if (ws === 1) wbCleanLeft++;
+            }
           }
-          if (!stillHasDirty) sm.l1.state='invalid';
+          if (wbDirtyLeft > 0)        sm.l1.state = 'modified'; // still owns dirty lines
+          else if (wbCleanLeft > 0)   sm.l1.state = 'shared';   // only clean lines — L2 is authority
+          else                         sm.l1.state = 'invalid';  // L1 completely empty
           // Animate a particle hitting a specific L2 slot
           var l2SlotIdx = -1;
           for (var l2s=0;l2s<NUM_L2_LINES;l2s++){if(l2Lines[l2s]===0){l2SlotIdx=l2s;break;}}
@@ -491,30 +565,40 @@ function triggerScenario(type, silent) {
       var smemBlock=null;
       for(var sbi=0;sbi<sm.sub.length;sbi++){if(sm.sub[sbi].type==='smem')smemBlock=sm.sub[sbi];}
       if(!smemBlock) break;
-      logEvent('SM'+si+': SMEM access','#51cf66');
-      flash(smemBlock,'#51cf66'); stats.hits++;
-      fillSmem(si);
-      bubble(sm.x+sm.w/2,sm.y+14,'no coherency','#51cf66',{sub:'SM-private scratchpad'});
       var regsBlockEl=null;
       for(var ri=0;ri<sm.sub.length;ri++){if(sm.sub[ri].type==='regs')regsBlockEl=sm.sub[ri];}
       var sfrom={x:sm.x+sm.w/2,y:regsBlockEl?regsBlockEl.y+3:sm.y+40};
-      // ST.S: register → SMEM (store)
-      particles.push(new Particle(sfrom,{x:smemBlock.x+smemBlock.w/2,y:smemBlock.y+smemBlock.h/2},'#51cf66','ST.S',1.5,function(){
-        bubble(smemBlock.x+smemBlock.w/2,smemBlock.y,'~20 cycles','#51cf66',{life:1.4,sub:'SRAM write'});
-        logEvent('SM'+si+': ST.S — data written to SMEM','#51cf66');
-        // LDS: SMEM → register (load back, as other threads read it)
+      var smemCentre={x:smemBlock.x+smemBlock.w/2, y:smemBlock.y+smemBlock.h/2};
+
+      // Phase 1: threads compute, then issue STS (store to SMEM)
+      logEvent('SM'+si+': threads computing, then STS issued','#51cf66');
+      bubble(sfrom.x, sfrom.y, 'STS issued','#51cf66',{sub:'writing to SMEM'});
+
+      // Phase 2: ST.S particle travels regs → SMEM. Only on arrival do we fill + flash SMEM.
+      particles.push(new Particle(sfrom, smemCentre, '#51cf66', 'ST.S', 1.5, function(){
+        // Data arrives at SMEM — now update visual state
+        fillSmem(si);
+        flash(smemBlock, '#51cf66');
+        stats.hits++;
+        bubble(smemBlock.x+smemBlock.w/2, smemBlock.y, '~20 cycles','#51cf66',{life:1.6,sub:'SRAM write complete'});
+        logEvent('SM'+si+': ST.S complete — data in SMEM (~20 cycles)','#51cf66');
+
+        // Phase 3: __syncthreads() — all threads must reach barrier before any LDS
         setTimeout(function(){
-          logEvent('SM'+si+': LDS — threads reading from SMEM','#51cf66');
-          bubble(smemBlock.x+smemBlock.w/2,smemBlock.y,'LDS issued','#51cf66',{sub:'threads reading'});
-          spawnParticle(
-            {x:smemBlock.x+smemBlock.w/2,y:smemBlock.y+smemBlock.h/2},
-            sfrom, '#51cf66','LDS',1.5,
-            function(){
-              bubble(sfrom.x,sfrom.y,'reg filled','#51cf66',{sub:'~20 cycle SMEM hit',life:1.4});
-              logEvent('SM'+si+': LDS hit — data in registers (~20 cycles, no bus)','#51cf66');
-            }
-          );
-        }, 700);
+          bubble(sm.x+sm.w/2, sm.y+14, '__syncthreads()','#f59e0b',{sub:'barrier — all threads sync',life:2.0});
+          logEvent('SM'+si+': __syncthreads() — waiting for all threads','#f59e0b');
+
+          // Phase 4: LDS after barrier — threads read back from SMEM
+          setTimeout(function(){
+            logEvent('SM'+si+': LDS — all threads reading from SMEM','#51cf66');
+            bubble(smemBlock.x+smemBlock.w/2, smemBlock.y,'LDS','#51cf66',{sub:'no coherency cost'});
+            spawnParticle(smemCentre, sfrom, '#51cf66', 'LDS', 1.5, function(){
+              bubble(sfrom.x, sfrom.y,'reg filled','#51cf66',{sub:'~20 cycle SMEM hit',life:1.4});
+              logEvent('SM'+si+': LDS hit — data in registers, no bus traffic','#51cf66');
+              bubble(sm.x+sm.w/2, sm.y+14, 'no coherency','#51cf66',{sub:'SM-private scratchpad',life:1.8});
+            });
+          }, 900);
+        }, 600);
       }));
       if (currentArch==='hopper'&&layout.sms.length>1) {
         var other=(si+1)%layout.sms.length;
@@ -537,6 +621,112 @@ function triggerScenario(type, silent) {
         }
       }
       break;
+    case 'flush': {
+      // ── Cache Flush: __threadfence / cudaDeviceSynchronize ──────────────────
+      // Phase 1: All SMs with dirty L1 lines fire WB packets simultaneously to L2.
+      // Phase 2: All L2 dirty lines drain to DRAM via crossbar → memory controller → HBM.
+      // Result: all caches clean, HBM holds authoritative data.
+      stats.flush++;
+      logEvent('FLUSH initiated — draining all dirty lines to DRAM', '#f97316');
+      bubble((layout.bus.x1+layout.bus.x2)/2, layout.bus.y, '__threadfence()', '#f97316',
+        {sub:'flushing all dirty lines', life:2.2});
+
+      // Collect all SMs with dirty L1
+      // Collect SMs with physically dirty lines — don't rely on block-level state
+      var dirtySMs = [];
+      for (var fi=0; fi<layout.sms.length; fi++) {
+        if (!cacheState[fi]) continue;
+        for (var fci=0; fci<NUM_LINES; fci++) {
+          if (cacheState[fi].l1[fci].s === 2) { dirtySMs.push(fi); break; }
+        }
+      }
+
+      var l2FlushDone = false;  // gate: only start L2→DRAM after all L1 WBs land
+
+      // Phase 1: fan-out — all dirty SMs fire WB simultaneously
+      if (dirtySMs.length === 0) {
+        // No dirty L1s — skip straight to L2 flush
+        l2FlushDone = false;
+        doL2Flush();
+      } else {
+        var wbLanded = 0;
+        for (var fj=0; fj<dirtySMs.length; fj++) {
+          (function(smI) {
+            var fsmState = layout.sms[smI];
+            logEvent('SM'+smI+': flushing dirty lines → L2', '#f97316');
+            bubble(l1Pos(smI).x, l1Pos(smI).y, 'WB flush', '#f97316', {sub:'all dirty lines'});
+            // WB packet: L1 → bus → L2
+            particles.push(new Particle(l1Pos(smI), busP(smI), '#f97316', 'WB', 2.2, function() {
+              var busCtr = { x: l2Top().x, y: layout.bus.y };
+              spawnParticle(busP(smI), l2Top(), '#f97316', 'WB', 2.2, function() {
+                // All dirty lines from this SM land in L2 as dirty
+                if (cacheState[smI]) {
+                  for (var fk=0; fk<NUM_LINES; fk++) {
+                    if (cacheState[smI].l1[fk].s === 2) {
+                      cacheState[smI].l1[fk] = makeLine(1, cacheState[smI].l1[fk].op); // downgrade to clean
+                      l2AbsorbDirty(); // each dirty line lands in L2 dirty
+                    }
+                  }
+                }
+                fsmState.l1.state = 'shared'; // L1 is now clean — L2 is authority
+                flash(fsmState.l1, '#f97316');
+                stats.wb++;
+                logEvent('SM'+smI+': all lines written back, L1 → Shared', '#51cf66');
+                bubble(l1Pos(smI).x, l1Pos(smI).y, 'L1 clean', '#51cf66', {sub:'WB complete', life:1.4});
+                wbLanded++;
+                if (wbLanded === dirtySMs.length) {
+                  // All L1 WBs landed — now flush L2 → DRAM
+                  flash(layout.l2, '#f97316');
+                  bubble(l2Top().x, l2Top().y, 'L2 flushing', '#f97316', {sub:'→ DRAM', life:1.6});
+                  logEvent('L2: all dirty lines draining to DRAM', '#f97316');
+                  setTimeout(doL2Flush, 400);
+                }
+              }, [busCtr]);
+            }));
+          })(dirtySMs[fj]);
+        }
+      }
+
+      function doL2Flush() {
+        // Count dirty L2 lines to drain
+        var dirtyL2 = 0;
+        for (var dl=0; dl<NUM_L2_LINES; dl++) if (l2Lines[dl] === 2) dirtyL2++;
+
+        if (dirtyL2 === 0) {
+          logEvent('FLUSH complete — no dirty L2 lines, all clean', '#51cf66');
+          bubble(l2Top().x, l2Top().y, 'flush done', '#51cf66', {sub:'all caches clean', life:2.0});
+          updateStats();
+          return;
+        }
+
+        // Fire one EVICT particle representing the dirty drain
+        logEvent('L2: '+dirtyL2+' dirty line(s) draining to DRAM', '#f97316');
+        particles.push(new Particle(l2Bot(), cbP(), '#f97316', 'FLUSH', 2.0, function() {
+          particles.push(new Particle(cbP(), gmTop(), '#f97316', 'WR', 2.0, function() {
+            flash(layout.globalMem, '#f97316');
+            bubble(gmTop().x, gmTop().y, 'MC write', '#f97316', {sub:dirtyL2+' lines → HBM', life:1.4});
+            particles.push(new Particle(gmTop(), gmBot(), '#f97316', 'WR', 1.8, function() {
+              particles.push(new Particle(gmBot(), hbmTop(), '#845ef7', 'STORE', 1.5, function() {
+                flash(layout.hbm, '#845ef7');
+                bubble(hbmTop().x, hbmTop().y, 'persisted', '#845ef7',
+                  {sub:dirtyL2+' lines written', life:2.0});
+                logEvent('HBM: '+dirtyL2+' dirty line(s) written — flush complete', '#845ef7');
+                // Clean all L2 dirty lines — flush is done
+                for (var cl=0; cl<NUM_L2_LINES; cl++) {
+                  if (l2Lines[cl] === 2) l2Lines[cl] = 1; // dirty → clean (data stays, just clean now)
+                }
+                flash(layout.l2, '#51cf66');
+                bubble(l2Top().x, l2Top().y, 'L2 clean', '#51cf66', {sub:'flush complete', life:2.0});
+                logEvent('FLUSH complete — all caches clean, HBM authoritative', '#51cf66');
+                updateStats();
+              }));
+            }));
+          }));
+        }));
+      }
+      break;
+    }
+
     case 'atomic':
       triggerAtomic();
       return;
@@ -562,7 +752,7 @@ function triggerScenario(type, silent) {
 
         if (!l1Full) {
           // L1 hit — absorb spill into L1
-          fillL1Random(si, false, 'spill'); flash(l1B, '#fb923c');
+          fillL1Random(si, true, 'spill'); flash(l1B, '#fb923c');  // dirty — spill writes new data L2 doesn't have
           bubble(l1P.x, l1P.y, 'spill hit L1', '#fb923c', {sub:'~28 cycle penalty'});
           logEvent('SM'+si+': spill → L1 hit (~28 cycles)', '#fb923c');
 
@@ -584,12 +774,13 @@ function triggerScenario(type, silent) {
           bubble(l1P.x, l1P.y, 'L1 full!', '#ff6b6b', {sub:'spill → L2'});
           logEvent('SM'+si+': L1 full — spill cascades to L2 (~200 cycles)', '#ff6b6b');
           spawnPassthrough(si, '#fb923c', 'SPILL', 2.2, function() {
-            l2AbsorbOne(); flash(layout.l2, '#fb923c');
+            l2AbsorbDirty(); flash(layout.l2, '#fb923c');  // spill is new data → dirty in L2
             bubble(l2Top().x, l2Top().y, 'spill in L2', '#fb923c', {sub:'~200 cycle penalty'});
-            logEvent('L2: spill absorbed', '#fb923c');
+            logEvent('L2: spill absorbed (dirty — new register data)', '#fb923c');
 
             setTimeout(function() {
               logEvent('SM'+si+': RELOAD ← L2', '#fb923c');
+              var bcSpill = { x: l2Top().x, y: layout.bus.y };
               spawnParticle(l2Top(), l1P, '#fb923c', 'RELOAD', 2, function() {
                 spawnParticle(l1P, regsP, '#fb923c', 'RELOAD', 2.2, function() {
                   flash(regsBlock(si) || layout.sms[si], '#fb923c');
@@ -598,7 +789,7 @@ function triggerScenario(type, silent) {
                   setRegPressure(si, 0.72 + Math.random() * 0.08);  // back to loaded baseline
                   stats.hits++; updateStats();
                 });
-              }, [busP(si)]);
+              }, [bcSpill, busP(si)]);
             }, 700);
           });
         }

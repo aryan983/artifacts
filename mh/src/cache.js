@@ -15,15 +15,20 @@ var OP_COLORS = {
 };
 
 // Return the render color for a single L1 line slot object {s, op}.
+// Unified color scheme: Dirty = orange (#ffa94d), Clean = blue (#339af0).
+// Op type adds a tint overlay but STATE drives the base color.
 // s: 0=empty, 1=clean, 2=dirty
+var STATE_COLORS = {
+  dirty: '#ffa94d',   // orange — needs writeback, L2 stale
+  clean: '#339af0',   // blue   — matches L2, safe to evict
+};
 function lineColor(line, blockState) {
   if (!line || line.s === 0) return '#2a2d3a';
-  if (line.op && OP_COLORS[line.op]) {
-    return line.s === 2 ? OP_COLORS[line.op] : OP_COLORS[line.op] + '70';
-  }
-  // no op tag — fall back to state-based color
-  if (line.s === 2) return '#51cf66';
-  return blockState === 'shared' ? '#339af0' : '#51cf6688';
+  var base = line.s === 2 ? STATE_COLORS.dirty : STATE_COLORS.clean;
+  // If op is tagged, blend op hue as a subtle tint on top of state color
+  // Dirty: full state color with slight op-hue shift; Clean: 55% opacity
+  if (line.s === 2) return base;          // dirty — full orange always
+  return base + '80';                     // clean — blue at 50% opacity
 }
 
 // Make an empty line slot object

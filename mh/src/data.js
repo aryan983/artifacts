@@ -321,7 +321,7 @@ var ARCHS = {
 
 var currentArch = 'pascal';
 var prevArch = null;
-var stats = { hits:0, misses:0, inv:0, wb:0 };
+var stats = { hits:0, misses:0, inv:0, wb:0, flush:0 };
 var autoMode = true, autoTimer = 0;
 var particles = [], flashEffects = [], stepTimers = [], bubbles = [];
 var SPEED_SCALE = 0.55;  // global multiplier — all particle speeds divided by this; <1 = slower

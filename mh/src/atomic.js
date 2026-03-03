@@ -88,9 +88,17 @@ function triggerAtomic() {
                       // Step 5: DATA routes from bus level → SM bus junction → L1
                       // spawnRoutedFromArbiter starts at arbiterBusEntry (bus level), no air-travel
                       spawnRoutedFromArbiter(capturedIdx, '#ffa94d', 'DATA', 2.2, function() {
-                        layout.sms[capturedIdx].l1.state = 'modified';
-                        setL1Dirty(capturedIdx, 'atomic');
+                        // RMW happened at L2 — result goes to registers, NOT into L1 as a dirty line.
+                        // If L1 had a copy of this address, it's now stale — invalidate it.
+                        invalidateL1Lines(capturedIdx, 1);
+                        var remAfter = 0;
+                        if (cacheState[capturedIdx]) for (var ra=0;ra<NUM_LINES;ra++) if(cacheState[capturedIdx].l1[ra].s>0) remAfter++;
+                        layout.sms[capturedIdx].l1.state = remAfter > 0 ? 'shared' : 'invalid';
                         flash(layout.sms[capturedIdx].l1, '#f59e0b');
+                        // Result lands in registers
+                        var regsT = regsPos(capturedIdx);
+                        bubble(regsT.x, regsT.y, 'atomic result', '#f59e0b', {sub:'value in regs', life:1.4});
+                        logEvent('SM'+capturedIdx+': atomicAdd result in registers, L1 copy invalidated', '#f59e0b');
                         stats.hits++; updateStats();
                       });
                     });
@@ -153,8 +161,15 @@ function triggerAtomic() {
               setTimeout(function() {
                 // DATA returns: l2Top → busP (horizontal along bus) → l1Pos (down to SM)
                 spawnParticle(l2Top(), l1Pos(idx2), '#ffa94d', 'DATA', 2, function() {
-                  layout.sms[idx2].l1.state = 'modified'; setL1Dirty(idx2, 'atomic');
+                  // RMW at L2 — result goes to registers, not L1. Invalidate any L1 copy.
+                  invalidateL1Lines(idx2, 1);
+                  var remAfter2 = 0;
+                  if (cacheState[idx2]) for (var ra2=0;ra2<NUM_LINES;ra2++) if(cacheState[idx2].l1[ra2].s>0) remAfter2++;
+                  layout.sms[idx2].l1.state = remAfter2 > 0 ? 'shared' : 'invalid';
                   flash(layout.sms[idx2].l1, '#f59e0b');
+                  var regsT2 = regsPos(idx2);
+                  bubble(regsT2.x, regsT2.y, 'atomic result', '#f59e0b', {sub:'value in regs', life:1.4});
+                  logEvent('SM'+idx2+': atomicAdd result in registers, L1 copy invalidated', '#f59e0b');
                   stats.hits++; updateStats();
                 }, [busP(idx2)]);
               }, 100 + Math.random() * 600); // random L2 lock contention

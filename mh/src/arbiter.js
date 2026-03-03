@@ -9,7 +9,7 @@ function toggleAuto() {
 
 function resetAll(silent) {
   particles=[]; flashEffects=[]; bubbles=[];
-  stats={hits:0,misses:0,inv:0,wb:0}; updateStats();
+  stats={hits:0,misses:0,inv:0,wb:0,flush:0}; updateStats();
   for(var ri=0;ri<layout.sms.length;ri++){layout.sms[ri].l1.state='invalid';}
   initCacheState();
   document.getElementById('event-log').innerHTML='';
@@ -360,8 +360,9 @@ function spawnRoutedFromArbiter(smIdx, color, label, speed, onArrival) {
 // Shows a dim pulse and a small label — particles routed through it as a waypoint
 function spawnPassthrough(smIdx, color, label, speed, onArrival) {
   if (currentArch !== 'apex' || !layout.arbiter) {
-    // Non-Apex: go straight bus → L2 as before
-    particles.push(new Particle(busP(smIdx), l2Top(), color, label, speed, onArrival));
+    // Non-Apex: bus column → bus center (horizontal) → L2 top (vertical down)
+    var busCenter0 = { x: l2Top().x, y: layout.bus.y };
+    spawnParticle(busP(smIdx), l2Top(), color, label, speed, onArrival, [busCenter0]);
     return;
   }
   arbiterState.passthroughCount++;

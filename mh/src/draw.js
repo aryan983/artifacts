@@ -432,6 +432,8 @@ function drawAnimatedFrame(dt, time) {
   if (hoveredBlock && (hoveredBlock.type === 'l1' || hoveredBlock.type === 'smem')) {
     refreshTooltipCacheData(hoveredBlock, BLOCK_INFO[hoveredBlock.type]);
   }
+  // Live refresh of the cache-line inspector table in the selection panel
+  refreshCacheLineTableIfOpen();
   // Live tooltip refresh for register file — pressure changes during scenarios
   if (hoveredBlock && hoveredBlock.type === 'regs' && tooltipEl.classList.contains('visible')) {
     refreshTooltipRegsData(hoveredBlock.smIdx);
@@ -580,19 +582,7 @@ function drawSceneContent(dt, time) {
             ctx.fillRect(gx + li*slotW + 0.5, gy, slotW - 1, 4);
             if (lineObj && lineObj.s > 0 && lineObj.op) opsSeen[lineObj.op] = true;
           }
-          // Draw tiny op-type legend dots above the line bar
-          var opKeys = Object.keys(opsSeen);
-          if (opKeys.length > 0) {
-            var dotR = 2.5, dotGap = 7, dotY = gy - 5;
-            var totalDotW = opKeys.length * dotGap;
-            var dotStartX = b.x + b.w/2 - totalDotW/2 + dotR;
-            for (var oi = 0; oi < opKeys.length; oi++) {
-              ctx.beginPath();
-              ctx.arc(dotStartX + oi * dotGap, dotY, dotR, 0, Math.PI*2);
-              ctx.fillStyle = OP_COLORS[opKeys[oi]] || '#aaa';
-              ctx.fill();
-            }
-          }
+          // op legend is shown in the bracket label text — no dots needed
         }
 
         ctx.font='600 '+FONT_BLOCK_LG+'px monospace';
@@ -608,7 +598,9 @@ function drawSceneContent(dt, time) {
             var ln = csLbl.l1[lbl];
             if (ln && ln.s > 0) {
               totalFilled++;
-              var tag = ln.op ? ln.op.charAt(0).toUpperCase() : (ln.s===2?'W':'?');
+              // Use 2-char abbreviations to avoid spill/shared both being 'S'
+              var opTagMap = { read:'R', write:'W', atomic:'A', spill:'Sp', cp_async:'Cp', tma:'T', shared:'Sh' };
+              var tag = ln.op ? (opTagMap[ln.op] || ln.op.charAt(0).toUpperCase()) : (ln.s===2?'W':'?');
               opCounts[tag] = (opCounts[tag]||0)+1;
             }
           }
