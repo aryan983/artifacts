@@ -908,6 +908,28 @@ function drawSceneContent(dt, time) {
     ctx.fillRect(l2.x + l2BarGutter + l2i*l2BarW, l2BarY, l2BarW - 1, l2BarH);
   }
 
+  // lineFlashes: pulse individual L2 bars green/red on hit/miss
+  var _hitAge = Date.now() - l2LastHitTime;
+  var _hitAlpha = l2LastHitLine >= 0 && _hitAge < 2000 ? Math.max(0, 1 - _hitAge / 2000) : 0;
+  lineFlashes = lineFlashes.filter(function(f) {
+    if (!paused) f.t += 0.04;
+    if (f.t >= f.dur) return false;
+    if (f.type === 'l2') {
+      var _bx = l2.x + l2BarGutter + f.lineIdx * l2BarW;
+      var _alpha = Math.round((1 - f.t / f.dur) * 200).toString(16).padStart(2,'0');
+      ctx.fillStyle = (f.hit ? '#51cf66' : '#ff6b6b') + _alpha;
+      ctx.fillRect(_bx, l2BarY, l2BarW - 1, l2BarH);
+    }
+    return true;
+  });
+  // Sustained glow on last-hit line
+  if (_hitAlpha > 0 && l2LastHitLine >= 0) {
+    var _glowX = l2.x + l2BarGutter + l2LastHitLine * l2BarW;
+    ctx.strokeStyle = 'rgba(81,207,102,' + _hitAlpha.toFixed(2) + ')';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(_glowX - 0.5, l2BarY - 0.5, l2BarW, l2BarH + 1);
+  }
+
   if (layout.l2Persist) {
     var p = layout.l2Persist;
     rrect(p.x,p.y,p.w,p.h,2);
