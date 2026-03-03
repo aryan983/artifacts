@@ -89,7 +89,7 @@ function triggerAtomic() {
                       // spawnRoutedFromArbiter starts at arbiterBusEntry (bus level), no air-travel
                       spawnRoutedFromArbiter(capturedIdx, '#ffa94d', 'DATA', 2.2, function() {
                         layout.sms[capturedIdx].l1.state = 'modified';
-                        setL1Dirty(capturedIdx);
+                        setL1Dirty(capturedIdx, 'atomic');
                         flash(layout.sms[capturedIdx].l1, '#f59e0b');
                         stats.hits++; updateStats();
                       });
@@ -153,7 +153,7 @@ function triggerAtomic() {
               setTimeout(function() {
                 // DATA returns: l2Top → busP (horizontal along bus) → l1Pos (down to SM)
                 spawnParticle(l2Top(), l1Pos(idx2), '#ffa94d', 'DATA', 2, function() {
-                  layout.sms[idx2].l1.state = 'modified'; setL1Dirty(idx2);
+                  layout.sms[idx2].l1.state = 'modified'; setL1Dirty(idx2, 'atomic');
                   flash(layout.sms[idx2].l1, '#f59e0b');
                   stats.hits++; updateStats();
                 }, [busP(idx2)]);

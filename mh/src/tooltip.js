@@ -683,6 +683,16 @@ function refreshTooltipCacheData(hit, info) {
 
   var cs = getCacheStats(hit.smIdx, kind);
   var arr = cacheState[hit.smIdx] ? cacheState[hit.smIdx][kind] : [];
+  // Resolve current L1 block state for op-color context
+  var blockState = 'invalid';
+  if (hit.type === 'l1' && layout.sms[hit.smIdx]) {
+    for (var bsi = 0; bsi < layout.sms[hit.smIdx].sub.length; bsi++) {
+      if (layout.sms[hit.smIdx].sub[bsi].type === 'l1') {
+        blockState = layout.sms[hit.smIdx].sub[bsi].state || 'invalid'; break;
+      }
+    }
+  }
+  hit.blockState = blockState;
 
   var fillLbl = document.getElementById('tt-fill-label');
   if (fillLbl) fillLbl.textContent = cs.filled + '/' + NUM_LINES + ' filled';
@@ -701,12 +711,41 @@ function refreshTooltipCacheData(hit, info) {
       }
     }
     for (var li2 = 0; li2 < NUM_LINES; li2++) {
-      var lv = arr[li2] || 0;
+      var lineObj = arr[li2];
       var lc;
-      if (lv === 2)      lc = '#51cf66';
-      else if (lv === 1) lc = hit.type === 'l1' ? inf.color + 'cc' : '#51cf6688';
-      else               lc = '#1e2030';
+      if (hit.type === 'l1' && lineObj && typeof lineObj === 'object') {
+        // Use op-type color for L1 line slots
+        lc = lineColor(lineObj, hit.blockState || 'invalid');
+      } else {
+        var lv = (lineObj && typeof lineObj === 'object') ? lineObj.s : (lineObj || 0);
+        if (lv === 2)      lc = '#51cf66';
+        else if (lv === 1) lc = '#51cf6688';
+        else               lc = '#1e2030';
+      }
       grid.children[li2].style.background = lc;
+    }
+    // Op-type legend row for L1
+    var opLegend = document.getElementById('tt-op-legend');
+    if (hit.type === 'l1') {
+      if (!opLegend) {
+        opLegend = document.createElement('div');
+        opLegend.id = 'tt-op-legend';
+        opLegend.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;margin-bottom:4px;font-family:JetBrains Mono,monospace;font-size:.58rem;';
+        grid.parentNode.insertBefore(opLegend, grid.nextSibling);
+      }
+      var opsSeen = {};
+      for (var opi = 0; opi < arr.length; opi++) {
+        if (arr[opi] && arr[opi].s > 0 && arr[opi].op) opsSeen[arr[opi].op] = true;
+      }
+      var opKeys = Object.keys(opsSeen);
+      opLegend.innerHTML = opKeys.length === 0 ? '' : opKeys.map(function(op) {
+        var col = OP_COLORS[op] || '#aaa';
+        return '<span style="display:flex;align-items:center;gap:3px;color:' + col + '">' +
+               '<span style="width:7px;height:7px;border-radius:50%;background:' + col + ';flex-shrink:0"></span>' +
+               op + '</span>';
+      }).join('');
+    } else if (opLegend) {
+      opLegend.innerHTML = '';
     }
   }
 

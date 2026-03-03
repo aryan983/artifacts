@@ -571,11 +571,27 @@ function drawSceneContent(dt, time) {
           var gx = b.x + 4, gw = b.w - 8;
           var slotW = gw / NUM_LINES;
           var gy = b.y + b.h - 6;
+          // Track which op types are present so we can draw a legend badge
+          var opsSeen = {};
           for (var li = 0; li < NUM_LINES; li++) {
-            var lv = lines2[li];
-            var lc = lv === 2 ? '#51cf66' : (lv === 1 ? (b.state==='shared'?'#339af0':'#51cf6688') : '#2a2d3a');
+            var lineObj = lines2[li];
+            var lc = lineColor(lineObj, b.state);
             ctx.fillStyle = lc;
             ctx.fillRect(gx + li*slotW + 0.5, gy, slotW - 1, 4);
+            if (lineObj && lineObj.s > 0 && lineObj.op) opsSeen[lineObj.op] = true;
+          }
+          // Draw tiny op-type legend dots above the line bar
+          var opKeys = Object.keys(opsSeen);
+          if (opKeys.length > 0) {
+            var dotR = 2.5, dotGap = 7, dotY = gy - 5;
+            var totalDotW = opKeys.length * dotGap;
+            var dotStartX = b.x + b.w/2 - totalDotW/2 + dotR;
+            for (var oi = 0; oi < opKeys.length; oi++) {
+              ctx.beginPath();
+              ctx.arc(dotStartX + oi * dotGap, dotY, dotR, 0, Math.PI*2);
+              ctx.fillStyle = OP_COLORS[opKeys[oi]] || '#aaa';
+              ctx.fill();
+            }
           }
         }
 

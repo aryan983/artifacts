@@ -227,7 +227,7 @@ function triggerScenario(type, silent) {
             bubble(l2Top().x,l2Top().y,'L2 hit','#51cf66',{life:1.5,sub:'data ready'});
             var busAtL2hit = { x: l2Top().x, y: layout.bus.y };
             spawnParticle(l2Top(), l1Pos(si), '#ffa94d', 'DATA', 2, function(){
-              sm.l1.state='shared'; fillL1Random(si, false); flash(sm.l1,'#339af0');
+              sm.l1.state='shared'; fillL1Random(si, false, 'read'); flash(sm.l1,'#339af0');
               bubble(l1Pos(si).x,l1Pos(si).y,'line cached','#339af0',{life:1.6,sub:'L1 → Shared'});
               logEvent('SM'+si+': L1 → Shared (filled from L2)','#339af0');
               stats.hits++;
@@ -260,7 +260,7 @@ function triggerScenario(type, silent) {
                     logEvent('L2: line installed from DRAM','#ffa94d');
                     var busAtL2miss = { x: l2Top().x, y: layout.bus.y };
                     spawnParticle(l2Top(), l1Pos(si), '#ffa94d', 'DATA', 2, function(){
-                      sm.l1.state='shared'; fillL1Random(si,false); flash(sm.l1,'#339af0');
+                      sm.l1.state='shared'; fillL1Random(si,false,'read'); flash(sm.l1,'#339af0');
                       bubble(l1Pos(si).x,l1Pos(si).y,'line cached','#339af0',{life:1.6,sub:'L1 → Shared'});
                       logEvent('SM'+si+': L1 → Shared (filled from DRAM via L2)','#339af0');
                       stats.hits++;
@@ -305,7 +305,7 @@ function triggerScenario(type, silent) {
         }
 
         // L1 of writing SM goes Modified immediately (the write happened locally)
-        sm.l1.state='modified'; setL1Dirty(si); flash(sm.l1,'#51cf66');
+        sm.l1.state='modified'; setL1Dirty(si, 'write'); flash(sm.l1,'#51cf66');
 
         // WR packet travels to bus to announce the write (triggers INV broadcast)
         particles.push(new Particle(l1Pos(si),busP(si),'#51cf66','WR',2,function(){
@@ -422,7 +422,7 @@ function triggerScenario(type, silent) {
       break;
     case 'writeback':
       // Precondition already ensures sm is Modified — only coerce lines if not already dirty
-      if (sm.l1.state !== 'modified') { sm.l1.state='modified'; setL1Dirty(si); }
+      if (sm.l1.state !== 'modified') { sm.l1.state='modified'; setL1Dirty(si, 'write'); }
       logEvent('SM'+si+': Write-back → L2','#ffa94d');
       bubble(l1Pos(si).x,l1Pos(si).y,'dirty evict','#ffa94d',{sub:'must flush out'});
       particles.push(new Particle(l1Pos(si),busP(si),'#ffa94d','WB',2,function(){
@@ -521,7 +521,7 @@ function triggerScenario(type, silent) {
 
         if (!l1Full) {
           // L1 hit — absorb spill into L1
-          fillL1Random(si, false); flash(l1B, '#fb923c');
+          fillL1Random(si, false, 'spill'); flash(l1B, '#fb923c');
           bubble(l1P.x, l1P.y, 'spill hit L1', '#fb923c', {sub:'~28 cycle penalty'});
           logEvent('SM'+si+': spill → L1 hit (~28 cycles)', '#fb923c');
 
