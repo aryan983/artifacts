@@ -213,56 +213,77 @@ function triggerScenario(type, silent) {
       if (sm.l1.state !== 'invalid') { sm.l1.state = 'invalid'; }
       stats.misses++;
 
-      // Check L2 occupancy — if <25% filled treat as L2 miss → go to DRAM
-      var l2Filled = 0;
-      for (var rl = 0; rl < NUM_L2_LINES; rl++) if (l2Lines[rl] > 0) l2Filled++;
-      var l2Hit = l2Filled > Math.floor(NUM_L2_LINES * 0.25);
+      // Pick address by choosing which L2 slot to target — address directly identifies the bar.
+      // L1 slot is assigned independently when data arrives (fillL1Random).
+      var l2Filled = 0, _filledIdxs = [], _emptyIdxs = [];
+      for (var rl = 0; rl < NUM_L2_LINES; rl++) {
+        if (l2Lines[rl] > 0) { l2Filled++; _filledIdxs.push(rl); }
+        else _emptyIdxs.push(rl);
+      }
+      // Probabilistic hit/miss: ~55% hit at 45% fill, ~90% at full
+      var _hitProb = _filledIdxs.length > 0 ? 0.3 + (l2Filled / NUM_L2_LINES) * 0.6 : 0;
+      var l2Hit = (Math.random() < _hitProb) && _filledIdxs.length > 0;
+      if (_emptyIdxs.length === 0) l2Hit = true;
+
+      var _targetL2Slot, _rdAddr;
+      if (l2Hit) {
+        _targetL2Slot = _filledIdxs[Math.floor(Math.random() * _filledIdxs.length)];
+        _rdAddr = 'A' + _targetL2Slot;
+        l2Tags[_targetL2Slot] = _rdAddr;
+      } else {
+        _targetL2Slot = _emptyIdxs[Math.floor(Math.random() * _emptyIdxs.length)];
+        _rdAddr = 'A' + _targetL2Slot;
+      }
 
       if (l2Hit) {
-        logEvent('SM'+si+': L1 miss → L2 hit','#ff6b6b');
+        logEvent('SM'+si+': L1 miss ['+_rdAddr+'] → L2 hit','#ff6b6b');
         bubble(l1Pos(si).x,l1Pos(si).y,'L1 miss','#ff6b6b',{sub:'checking L2'});
-        particles.push(new Particle(l1Pos(si),busP(si),'#ff6b6b','RdReq',2,function(){
-          spawnPassthrough(si,'#ff6b6b','RdReq',2.5,function(){
-            logEvent('L2: hit — line found, serving to SM'+si,'#ffa94d');
-            bubble(l2Top().x,l2Top().y,'L2 hit','#51cf66',{life:1.5,sub:'data ready'});
+        particles.push(new Particle(l1Pos(si),busP(si),'#ff6b6b','RdReq['+_rdAddr+']',2,function(){
+          spawnPassthrough(si,'#ff6b6b','RdReq['+_rdAddr+']',2.5,function(){
+            logEvent('L2: hit ['+_rdAddr+'] — serving to SM'+si,'#ffa94d');
+            // Flash the exact L2 bar that holds this address
+            flashLine('l2', -1, _targetL2Slot, true);
+            bubble(l2Top().x,l2Top().y,'L2 hit','#51cf66',{life:1.5,sub:'line: '+_rdAddr});
             var busAtL2hit = { x: l2Top().x, y: layout.bus.y };
-            spawnParticle(l2Top(), l1Pos(si), '#ffa94d', 'DATA', 2, function(){
+            spawnParticle(l2Top(), l1Pos(si), '#ffa94d', 'DATA['+_rdAddr+']', 2, function(){
               sm.l1.state='shared'; fillL1Random(si, false); flash(sm.l1,'#339af0');
               bubble(l1Pos(si).x,l1Pos(si).y,'line cached','#339af0',{life:1.6,sub:'L1 → Shared'});
-              logEvent('SM'+si+': L1 → Shared (filled from L2)','#339af0');
+              logEvent('SM'+si+': L1 → Shared (filled from L2 ['+_rdAddr+'])','#339af0');
               stats.hits++;
             }, [busAtL2hit, busP(si)]);
           });
         }));
       } else {
-        // L2 miss — request goes all the way to DRAM, L2 fills on return
-        logEvent('SM'+si+': L1 miss → L2 miss → DRAM fetch','#ff6b6b');
-        bubble(l1Pos(si).x,l1Pos(si).y,'L1 miss','#ff6b6b',{sub:'L2 empty → DRAM'});
-        particles.push(new Particle(l1Pos(si),busP(si),'#ff6b6b','RdReq',2,function(){
-          spawnPassthrough(si,'#ff6b6b','RdReq',2.5,function(){
-            bubble(l2Top().x,l2Top().y,'L2 miss','#ff6b6b',{life:1.4,sub:'→ global mem'});
-            logEvent('L2: miss — forwarding to global memory','#ff6b6b');
-            // RdReq continues down: L2 → globalMem → HBM
-            spawnParticle(l2Top(), gmTop(), '#ff6b6b', 'RdReq', 2.2, function(){
+        // L2 miss — request goes all the way to DRAM, L2 fills target slot on return
+        logEvent('SM'+si+': L1 miss ['+_rdAddr+'] → L2 miss → DRAM','#ff6b6b');
+        bubble(l1Pos(si).x,l1Pos(si).y,'L1 miss','#ff6b6b',{sub:'L2 miss → DRAM'});
+        particles.push(new Particle(l1Pos(si),busP(si),'#ff6b6b','RdReq['+_rdAddr+']',2,function(){
+          spawnPassthrough(si,'#ff6b6b','RdReq['+_rdAddr+']',2.5,function(){
+            // Flash the target slot red — it's empty
+            flashLine('l2', -1, _targetL2Slot, false);
+            bubble(l2Top().x,l2Top().y,'L2 miss','#ff6b6b',{life:1.4,sub:'→ DRAM for '+_rdAddr});
+            logEvent('L2: miss ['+_rdAddr+'] — forwarding to global memory','#ff6b6b');
+            spawnParticle(l2Top(), gmTop(), '#ff6b6b', 'RdReq['+_rdAddr+']', 2.2, function(){
               flash(layout.globalMem,'#339af0');
               bubble(gmTop().x,gmTop().y,'DRAM fetch','#339af0',{life:1.4,sub:'~400 cycles'});
-              logEvent('GlobalMem: reading from HBM','#339af0');
-              spawnParticle(gmTop(), hbmTop(), '#339af0', 'RdReq', 2.0, function(){
+              logEvent('GlobalMem: reading ['+_rdAddr+'] from HBM','#339af0');
+              spawnParticle(gmTop(), hbmTop(), '#339af0', 'RdReq['+_rdAddr+']', 2.0, function(){
                 flash(layout.hbm,'#845ef7');
-                bubble(hbmTop().x,hbmTop().y,'HBM read','#845ef7',{life:1.2,sub:'data found'});
-                // DATA returns: HBM → globalMem → L2 (fills L2) → bus → L1
-                spawnParticle(hbmTop(), gmTop(), '#845ef7', 'DATA', 2.2, function(){
+                bubble(hbmTop().x,hbmTop().y,'HBM read','#845ef7',{life:1.2,sub:'line: '+_rdAddr});
+                spawnParticle(hbmTop(), gmTop(), '#845ef7', 'DATA['+_rdAddr+']', 2.2, function(){
                   flash(layout.globalMem,'#339af0');
-                  spawnParticle(gmTop(), l2Top(), '#339af0', 'DATA', 2.2, function(){
-                    // L2 fills as line comes through
-                    l2AbsorbOne(); flash(layout.l2,'#ffa94d');
-                    bubble(l2Top().x,l2Top().y,'L2 filled','#ffa94d',{life:1.5,sub:'cached for next time'});
-                    logEvent('L2: line installed from DRAM','#ffa94d');
+                  spawnParticle(gmTop(), l2Top(), '#339af0', 'DATA['+_rdAddr+']', 2.2, function(){
+                    // Fill exactly the target slot
+                    l2Lines[_targetL2Slot] = 1; l2Tags[_targetL2Slot] = _rdAddr;
+                    flash(layout.l2,'#ffa94d');
+                    flashLine('l2', -1, _targetL2Slot, true);
+                    bubble(l2Top().x,l2Top().y,'L2 filled ['+_rdAddr+']','#ffa94d',{life:1.5,sub:'cached for next time'});
+                    logEvent('L2: ['+_rdAddr+'] installed from DRAM','#ffa94d');
                     var busAtL2miss = { x: l2Top().x, y: layout.bus.y };
-                    spawnParticle(l2Top(), l1Pos(si), '#ffa94d', 'DATA', 2, function(){
+                    spawnParticle(l2Top(), l1Pos(si), '#ffa94d', 'DATA['+_rdAddr+']', 2, function(){
                       sm.l1.state='shared'; fillL1Random(si,false); flash(sm.l1,'#339af0');
                       bubble(l1Pos(si).x,l1Pos(si).y,'line cached','#339af0',{life:1.6,sub:'L1 → Shared'});
-                      logEvent('SM'+si+': L1 → Shared (filled from DRAM via L2)','#339af0');
+                      logEvent('SM'+si+': L1 → Shared (filled from DRAM via L2 ['+_rdAddr+'])','#339af0');
                       stats.hits++;
                     }, [busAtL2miss, busP(si)]);
                   });
