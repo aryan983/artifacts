@@ -75,6 +75,12 @@ position:relative;
 .controls button.atomic-btn:hover { background:#f59e0b18; border-color:#f59e0b; color:#fbbf24; }
 .controls button.atomic-btn.apex-only { display:none; }
 
+/* ── Flush button ── */
+.controls button.flush-btn {
+  border-color: #f9731650; color: #f97316;
+}
+.controls button.flush-btn:hover { background:#f9731618; border-color:#f97316; color:#fb923c; }
+
 /* ── cp.async + TMA buttons ── */
 .controls button.cp-async-btn {
   background: transparent; border-color: #22d3ee50; color: #22d3ee;
@@ -476,8 +482,8 @@ position:absolute; top:-12px; width:100%; text-align:center; white-space:nowrap;
 #cl-table .cl-state { font-weight:700; }
 #cl-table .cl-op { color:#aaa; }
 #cl-table .cl-empty { color:#3a3d50; font-style:italic; }
-#cl-table tr.cl-row-dirty td { background:#51cf6606; }
-#cl-table tr.cl-row-clean td { background:#339af006; }
+#cl-table tr.cl-row-dirty td { background:#ffa94d08; }
+#cl-table tr.cl-row-clean td { background:#339af008; }
 </style>
 </head>
 <body>
@@ -511,6 +517,7 @@ position:absolute; top:-12px; width:100%; text-align:center; white-space:nowrap;
   <button class="scenario-btn tma-btn" data-scenario="tma_load" onclick="triggerScenario('tma_load')" id="btn-tma-load" style="display:none">TMA Load</button>
   <button id="btn-pause" class="pause-btn" onclick="togglePause()">⏸ Pause</button>
   <button id="btn-auto" class="active" onclick="toggleAuto()">Auto</button>
+  <button class="scenario-btn flush-btn" data-scenario="flush" onclick="triggerScenario('flush')" id="btn-flush">⚡ Flush</button>
   <button class="reset-btn" onclick="resetAll()">Reset</button>
 </div>
 
@@ -536,15 +543,27 @@ position:absolute; top:-12px; width:100%; text-align:center; white-space:nowrap;
         <div class="conn-list" id="conn-list"></div>
       </div>
       <div class="cl-section" id="cl-section" style="display:none">
-        <h5>Cache Line State</h5>
+        <h5 id="cl-section-title">Cache Line State</h5>
         <table id="cl-table">
-          <thead><tr>
+          <thead id="cl-table-header"><tr>
             <th class="cl-idx">#</th>
             <th>State</th>
             <th>Last Op</th>
           </tr></thead>
           <tbody id="cl-tbody"></tbody>
         </table>
+        <div id="cl-legend" style="margin-top:8px;display:flex;flex-wrap:wrap;gap:8px;font-family:'JetBrains Mono',monospace;font-size:.58rem;">
+          <div style="font-size:.56rem;color:var(--dim);width:100%;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px">Line color legend</div>
+          <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:#ffa94d;display:inline-block"></span><span style="color:#ffa94d">Dirty</span><span style="color:var(--dim)">— newer than L2/DRAM</span></span>
+          <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:#339af0;display:inline-block"></span><span style="color:#339af0">Clean</span><span style="color:var(--dim)">— matches L2</span></span>
+          <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:#2a2d3a;border:1px solid #3a3d50;display:inline-block"></span><span style="color:var(--dim)">Empty</span><span style="color:var(--dim)">— no data</span></span>
+          <div style="width:100%;margin-top:4px;font-size:.56rem;color:var(--dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:2px">Last op colors</div>
+          <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:#339af0;display:inline-block"></span><span style="color:#339af0">SM Read</span></span>
+          <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:#51cf66;display:inline-block"></span><span style="color:#51cf66">SM Write</span></span>
+          <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:#f59e0b;display:inline-block"></span><span style="color:#f59e0b">Atomic</span></span>
+          <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:#fb923c;display:inline-block"></span><span style="color:#fb923c">Reg Spill</span></span>
+          <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:#22d3ee;display:inline-block"></span><span style="color:#22d3ee">cp.async / TMA</span></span>
+        </div>
       </div>
     </div>
   </div>
@@ -563,6 +582,7 @@ position:absolute; top:-12px; width:100%; text-align:center; white-space:nowrap;
         <div class="stat-item"><div class="stat-value" id="stat-misses" style="color:var(--l1)">0</div><div class="stat-label">Misses</div></div>
         <div class="stat-item"><div class="stat-value" id="stat-inv" style="color:var(--coherency)">0</div><div class="stat-label">Invalidations</div></div>
         <div class="stat-item"><div class="stat-value" id="stat-wb" style="color:var(--l2)">0</div><div class="stat-label">Write-Backs</div></div>
+        <div class="stat-item"><div class="stat-value" id="stat-flush" style="color:#f97316">0</div><div class="stat-label">Flushes</div></div>
       </div>
     </div>
     <div class="info-card explainer" id="explainer-card">
@@ -728,6 +748,12 @@ var SCENARIO_INFO = {
     color: '#22d3ee',
     desc: 'Ampere\'s async copy instruction loads data from global memory directly into shared memory — without touching registers and without stalling the issuing warp. The warp immediately continues computing while data arrives in the background.',
     watch: 'Notice: the cp.async particle bypasses the register file entirely. Simultaneously, a compute particle pulses inside the SM — the warp keeps working. This is how Ampere achieves full compute-memory overlap without software tricks.'
+  },
+  flush: {
+    title: 'Cache Flush  (__threadfence / cudaDeviceSynchronize)',
+    color: '#f97316',
+    desc: '__threadfence() forces all dirty L1 lines from every SM to write back to L2, then L2 dirty lines drain to DRAM. cudaDeviceSynchronize goes further — it blocks the CPU until all outstanding memory ops complete. Used at kernel boundaries and before CPU reads.',
+    watch: 'Watch all SM dirty lines fire WB packets simultaneously to L2. Then L2 dirty lines cascade down to DRAM via the crossbar and memory controllers. At the end every cache level is clean — L1s go Shared, L2 is clean, HBM holds the authoritative data.'
   },
   tma_load: {
     title: 'TMA Load — Bulk Tensor Tile → SMEM',
@@ -1112,7 +1138,7 @@ var ARCHS = {
 
 var currentArch = 'pascal';
 var prevArch = null;
-var stats = { hits:0, misses:0, inv:0, wb:0 };
+var stats = { hits:0, misses:0, inv:0, wb:0, flush:0 };
 var autoMode = true, autoTimer = 0;
 var particles = [], flashEffects = [], stepTimers = [], bubbles = [];
 var SPEED_SCALE = 0.55;  // global multiplier — all particle speeds divided by this; <1 = slower
@@ -1144,15 +1170,20 @@ var OP_COLORS = {
 };
 
 // Return the render color for a single L1 line slot object {s, op}.
+// Unified color scheme: Dirty = orange (#ffa94d), Clean = blue (#339af0).
+// Op type adds a tint overlay but STATE drives the base color.
 // s: 0=empty, 1=clean, 2=dirty
+var STATE_COLORS = {
+  dirty: '#ffa94d',   // orange — needs writeback, L2 stale
+  clean: '#339af0',   // blue   — matches L2, safe to evict
+};
 function lineColor(line, blockState) {
   if (!line || line.s === 0) return '#2a2d3a';
-  if (line.op && OP_COLORS[line.op]) {
-    return line.s === 2 ? OP_COLORS[line.op] : OP_COLORS[line.op] + '70';
-  }
-  // no op tag — fall back to state-based color
-  if (line.s === 2) return '#51cf66';
-  return blockState === 'shared' ? '#339af0' : '#51cf6688';
+  var base = line.s === 2 ? STATE_COLORS.dirty : STATE_COLORS.clean;
+  // If op is tagged, blend op hue as a subtle tint on top of state color
+  // Dirty: full state color with slight op-hue shift; Clean: 55% opacity
+  if (line.s === 2) return base;          // dirty — full orange always
+  return base + '80';                     // clean — blue at 50% opacity
 }
 
 // Make an empty line slot object
@@ -1593,7 +1624,7 @@ function updateSelPanel(hit) {
       connList.appendChild(el);
     }
   }
-  // ── Cache line inspector — only for L1 blocks ──────────────────────────────
+  // ── Cache line inspector — L1 and L2 blocks ────────────────────────────────
   renderCacheLineTable(hit);
 }
 
@@ -1613,58 +1644,109 @@ function renderCacheLineTable(hit) {
   var tbody   = document.getElementById('cl-tbody');
   if (!section || !tbody) return;
 
-  // Only show for L1 blocks
-  if (hit.type !== 'l1') { section.style.display = 'none'; return; }
-
-  var cs = cacheState[hit.smIdx];
-  if (!cs) { section.style.display = 'none'; return; }
+  var isL1 = hit.type === 'l1';
+  var isL2 = hit.type === 'l2';
+  if (!isL1 && !isL2) { section.style.display = 'none'; return; }
 
   section.style.display = 'block';
   tbody.innerHTML = '';
 
-  var lines = cs.l1;
-  for (var i = 0; i < lines.length; i++) {
-    var ln = lines[i];
-    var s  = ln ? ln.s : 0;
-    var op = ln ? ln.op : null;
+  // Update section title
+  var titleEl = document.getElementById('cl-section-title');
+  if (titleEl) titleEl.textContent = isL2 ? 'L2 Cache Line State (' + NUM_L2_LINES + ' lines)' : 'L1 Cache Line State';
 
-    var tr = document.createElement('tr');
+  // ── L1 ────────────────────────────────────────────────────────────────────
+  if (isL1) {
+    var cs = cacheState[hit.smIdx];
+    if (!cs) { section.style.display = 'none'; return; }
+    var lines = cs.l1;
+    for (var i = 0; i < lines.length; i++) {
+      var ln = lines[i];
+      var s  = ln ? ln.s : 0;
+      var op = ln ? ln.op : null;
+      var tr = document.createElement('tr');
+      if (s === 2) tr.className = 'cl-row-dirty';
+      else if (s === 1) tr.className = 'cl-row-clean';
+      var stateLabel, stateColor;
+      if (s === 2)      { stateLabel = 'Dirty'; stateColor = '#ffa94d'; }
+      else if (s === 1) { stateLabel = 'Clean'; stateColor = '#339af0'; }
+      else              { stateLabel = 'Empty'; stateColor = '#3a3d50'; }
+      var opInfo = op ? (OP_LABELS[op] || { label: op, color: '#aaa' }) : null;
+      var tdIdx   = document.createElement('td'); tdIdx.className = 'cl-idx'; tdIdx.textContent = i;
+      var tdState = document.createElement('td');
+      tdState.innerHTML =
+        '<span class="cl-swatch" style="background:' + stateColor + ';opacity:' + (s === 0 ? '0.2' : '0.85') + '"></span>' +
+        '<span class="cl-state" style="color:' + stateColor + '">' + stateLabel + '</span>';
+      var tdOp = document.createElement('td');
+      tdOp.className = s === 0 ? 'cl-empty' : 'cl-op';
+      tdOp.innerHTML = opInfo
+        ? '<span style="color:' + opInfo.color + '">' + opInfo.label + '</span>'
+        : (s === 0 ? '—' : '<span style="color:#6b7090">unknown</span>');
+      tr.appendChild(tdIdx); tr.appendChild(tdState); tr.appendChild(tdOp);
+      tbody.appendChild(tr);
+    }
+    // Update header for L1
+    var hdr = document.getElementById('cl-table-header');
+    if (hdr) hdr.innerHTML = '<tr><th class="cl-idx">#</th><th>State</th><th>Last Op</th></tr>';
+    return;
+  }
 
-    // Row class for subtle bg tint
-    if (s === 2) tr.className = 'cl-row-dirty';
-    else if (s === 1) tr.className = 'cl-row-clean';
+  // ── L2 ────────────────────────────────────────────────────────────────────
+  // Update header for L2 (no op tag — L2 is unified/shared, no per-op tracking)
+  var hdr2 = document.getElementById('cl-table-header');
+  if (hdr2) hdr2.innerHTML = '<tr><th class="cl-idx">#</th><th>State</th><th>Status</th></tr>';
 
-    // State label + color
-    var stateLabel, stateColor;
-    if (s === 2)      { stateLabel = 'Dirty';  stateColor = '#51cf66'; }
-    else if (s === 1) { stateLabel = 'Clean';  stateColor = '#339af090'; }
-    else              { stateLabel = 'Empty';  stateColor = '#3a3d50'; }
+  // Gather which SMs are currently Modified or Shared (for live status annotation)
+  var modSMs = [], shrSMs = [];
+  for (var smi = 0; smi < layout.sms.length; smi++) {
+    var smst = layout.sms[smi] ? layout.sms[smi].l1.state : 'invalid';
+    if (smst === 'modified') modSMs.push('SM'+smi);
+    else if (smst === 'shared') shrSMs.push('SM'+smi);
+  }
 
-    // Op info
-    var opInfo = op ? (OP_LABELS[op] || { label: op, color: '#aaa' }) : null;
-    // Swatch reflects STATE (blue=clean, green=dirty, dark=empty)
-    // Op column reflects the operation that filled the line
-    var tdIdx   = document.createElement('td'); tdIdx.className = 'cl-idx'; tdIdx.textContent = i;
-    var tdState = document.createElement('td');
-    tdState.innerHTML =
-      '<span class="cl-swatch" style="background:' + stateColor + ';opacity:' + (s === 0 ? '0.2' : '0.85') + '"></span>' +
-      '<span class="cl-state" style="color:' + stateColor + '">' + stateLabel + '</span>';
-    var tdOp = document.createElement('td');
-    tdOp.className = s === 0 ? 'cl-empty' : 'cl-op';
-    tdOp.innerHTML = opInfo
-      ? '<span style="color:' + opInfo.color + '">' + opInfo.label + '</span>'
-      : (s === 0 ? '—' : '<span style="color:#6b7090">unknown</span>');
+  for (var j = 0; j < NUM_L2_LINES; j++) {
+    var lv = l2Lines[j];
+    var tr2 = document.createElement('tr');
+    var sl2, sc2;
+    if (lv === 2)      { sl2 = 'Dirty'; sc2 = '#ffa94d'; tr2.className = 'cl-row-dirty'; }
+    else if (lv === 1) { sl2 = 'Clean'; sc2 = '#339af090'; tr2.className = 'cl-row-clean'; }
+    else               { sl2 = 'Empty'; sc2 = '#3a3d50'; }
 
-    tr.appendChild(tdIdx);
-    tr.appendChild(tdState);
-    tr.appendChild(tdOp);
-    tbody.appendChild(tr);
+    // Status column — what this line is doing / what needs to happen next
+    var statusHtml;
+    if (lv === 0) {
+      statusHtml = '<span class="cl-empty">—</span>';
+    } else if (lv === 2) {
+      // Dirty: L2 has newer data than DRAM. Must be flushed before eviction.
+      // If an SM is Modified it means that SM's L1 has an even newer copy —
+      // L2 is stale relative to that SM but is the truth for everyone else.
+      var note = modSMs.length > 0
+        ? 'stale — ' + modSMs.join('+') + ' L1 newer'
+        : 'pending flush → DRAM';
+      statusHtml = '<span style="color:#ffa94d">' + note + '</span>';
+    } else {
+      // Clean: L2 and DRAM agree. Safe to evict without writeback.
+      var note1 = shrSMs.length > 0
+        ? 'serving ' + shrSMs.join(', ')
+        : 'cached — safe to evict';
+      statusHtml = '<span style="color:#339af0">' + note1 + '</span>';
+    }
+
+    var tdI = document.createElement('td'); tdI.className = 'cl-idx'; tdI.textContent = j;
+    var tdS = document.createElement('td');
+    tdS.innerHTML =
+      '<span class="cl-swatch" style="background:' + sc2 + ';opacity:' + (lv === 0 ? '0.2' : '0.85') + '"></span>' +
+      '<span class="cl-state" style="color:' + sc2 + '">' + sl2 + '</span>';
+    var tdH = document.createElement('td'); tdH.innerHTML = statusHtml;
+
+    tr2.appendChild(tdI); tr2.appendChild(tdS); tr2.appendChild(tdH);
+    tbody.appendChild(tr2);
   }
 }
 
 // Keep the table live while a block is selected
 function refreshCacheLineTableIfOpen() {
-  if (selectedBlock && selectedBlock.type === 'l1') {
+  if (selectedBlock && (selectedBlock.type === 'l1' || selectedBlock.type === 'l2')) {
     renderCacheLineTable(selectedBlock);
   }
 }
@@ -2882,7 +2964,9 @@ function drawSceneContent(dt, time) {
             var ln = csLbl.l1[lbl];
             if (ln && ln.s > 0) {
               totalFilled++;
-              var tag = ln.op ? ln.op.charAt(0).toUpperCase() : (ln.s===2?'W':'?');
+              // Use 2-char abbreviations to avoid spill/shared both being 'S'
+              var opTagMap = { read:'R', write:'W', atomic:'A', spill:'Sp', cp_async:'Cp', tma:'T', shared:'Sh' };
+              var tag = ln.op ? (opTagMap[ln.op] || ln.op.charAt(0).toUpperCase()) : (ln.s===2?'W':'?');
               opCounts[tag] = (opCounts[tag]||0)+1;
             }
           }
@@ -3703,6 +3787,8 @@ function updateStats() {
   document.getElementById('stat-misses').textContent=stats.misses;
   document.getElementById('stat-inv').textContent=stats.inv;
   document.getElementById('stat-wb').textContent=stats.wb;
+  var fe = document.getElementById('stat-flush');
+  if (fe) fe.textContent=stats.flush;
 }
 
 function triggerScenario(type, silent) {
@@ -3747,6 +3833,24 @@ function triggerScenario(type, silent) {
     }
     for (var mi = 0; mi < layout.sms.length; mi++) {
       if (layout.sms[mi].l1.state === 'modified') { si = mi; sm = layout.sms[si]; break; }
+    }
+  }
+  if (type === 'flush') {
+    // Check physical dirty lines — block-level state can be stale
+    var anyDirty = false;
+    for (var fdi2=0; fdi2<layout.sms.length; fdi2++) {
+      if (!cacheState[fdi2]) continue;
+      for (var fdj=0; fdj<NUM_LINES; fdj++) {
+        if (cacheState[fdi2].l1[fdj].s === 2) { anyDirty = true; break; }
+      }
+      if (anyDirty) break;
+    }
+    var anyL2Dirty = false;
+    for (var fdi=0; fdi<NUM_L2_LINES; fdi++) { if (l2Lines[fdi] === 2) { anyL2Dirty = true; break; } }
+    if (!anyDirty && !anyL2Dirty) {
+      if (!silent) notifyUser('Nothing to flush',
+        'No dirty lines in L1 or L2. Run SM Write or Write-Back first to create dirty data.', '#f97316');
+      return;
     }
   }
   if (type === 'atomic' && currentArch === 'apex' && arbiterState.active) {
@@ -3932,8 +4036,10 @@ function triggerScenario(type, silent) {
                     setTimeout(function(){
                       var bcInvWH = { x: l2Top().x, y: layout.bus.y };
                       spawnParticle(l2Top(), l1Pos(idx), '#f06595', 'INV', 2.8, function(){
-                        layout.sms[idx].l1.state='invalid';
                         invalidateL1Lines(idx, 1 + Math.floor(Math.random()*2));
+                        var invRemain5c = 0;
+                        if (cacheState[idx]) for (var ir5c=0;ir5c<NUM_LINES;ir5c++) if(cacheState[idx].l1[ir5c].s>0) invRemain5c++;
+                        layout.sms[idx].l1.state = invRemain5c > 0 ? 'shared' : 'invalid';
                         flash(layout.sms[idx].l1,'#f06595');
                         bubble(l1Pos(idx).x,l1Pos(idx).y,'line dropped','#f06595',{life:1.3,sub:'targeted INV'});
                         logEvent('SM'+idx+': line invalidated (targeted)','#f06595');
@@ -3950,8 +4056,10 @@ function triggerScenario(type, silent) {
                   setTimeout(function(){
                     particles.push(new Particle(busP(si),busP(idx),'#f06595','INV',3,function(){
                       particles.push(new Particle(busP(idx),l1Pos(idx),'#f06595','INV',2,function(){
-                        layout.sms[idx].l1.state='invalid';
                         invalidateL1Lines(idx, 1 + Math.floor(Math.random()*2));
+                        var invRem5d = 0;
+                        if (cacheState[idx]) for (var ir5d=0;ir5d<NUM_LINES;ir5d++) if(cacheState[idx].l1[ir5d].s>0) invRem5d++;
+                        layout.sms[idx].l1.state = invRem5d > 0 ? 'shared' : 'invalid';
                         flash(layout.sms[idx].l1,'#f06595');
                         bubble(l1Pos(idx).x,l1Pos(idx).y,'line dropped','#f06595',{life:1.3,sub:'addr match'});
                         logEvent('SM'+idx+': line invalidated','#f06595');
@@ -3992,8 +4100,10 @@ function triggerScenario(type, silent) {
               setTimeout(function(){
                 var bcInvB = { x: l2Top().x, y: layout.bus.y };
                 spawnParticle(l2Top(), l1Pos(idx), '#f06595', 'INV', 2.8, function(){
-                  layout.sms[idx].l1.state = 'invalid';
                   invalidateL1Lines(idx, 1 + Math.floor(Math.random()*2));
+                  var invRem5a = 0;
+                  if (cacheState[idx]) for (var ir5a=0;ir5a<NUM_LINES;ir5a++) if(cacheState[idx].l1[ir5a].s>0) invRem5a++;
+                  layout.sms[idx].l1.state = invRem5a > 0 ? 'shared' : 'invalid';
                   flash(layout.sms[idx].l1,'#f06595');
                   bubble(l1Pos(idx).x,l1Pos(idx).y,'line(s) dropped','#f06595',{life:1.2,sub:'targeted'});
                 }, [bcInvB, busP(idx)]);
@@ -4010,9 +4120,11 @@ function triggerScenario(type, silent) {
               var from={x:(layout.bus.x1+layout.bus.x2)/2,y:layout.bus.y};
               particles.push(new Particle(from,busP(idx),'#f06595','INV',3,function(){
                 particles.push(new Particle(busP(idx),l1Pos(idx),'#f06595','INV',2,function(){
-                  layout.sms[idx].l1.state='invalid';
-                  // Drop only the lines matching the invalidated address — 1 to 2 lines
                   invalidateL1Lines(idx, 1 + Math.floor(Math.random()*2));
+                  // State reflects what physically remains
+                  var invRemain5b = 0;
+                  if (cacheState[idx]) for (var ir5b=0;ir5b<NUM_LINES;ir5b++) if(cacheState[idx].l1[ir5b].s>0) invRemain5b++;
+                  layout.sms[idx].l1.state = invRemain5b > 0 ? 'shared' : 'invalid';
                   flash(layout.sms[idx].l1,'#f06595');
                   bubble(l1Pos(idx).x,l1Pos(idx).y,'line(s) dropped','#f06595',{life:1.2,sub:'addr match'});
                   logEvent('SM'+idx+': L1 line(s) invalidated','#f06595');
@@ -4032,12 +4144,18 @@ function triggerScenario(type, silent) {
         spawnPassthrough(si,'#ffa94d','WB',2.5,function(){
           // WB arrives at L2: evict exactly the one dirty line from L1, install it in L2
           evictOneL1Line(si);
-          // If L1 still has valid lines, keep it modified; otherwise go invalid
-          var stillHasDirty = false;
+          // After eviction: check what's left in L1
+          var wbDirtyLeft = 0, wbCleanLeft = 0;
           if (cacheState[si]) {
-            for (var wbi=0;wbi<NUM_LINES;wbi++) if(cacheState[si].l1[wbi].s>0){stillHasDirty=true;break;}
+            for (var wbi=0;wbi<NUM_LINES;wbi++) {
+              var ws = cacheState[si].l1[wbi].s;
+              if (ws === 2) wbDirtyLeft++;
+              else if (ws === 1) wbCleanLeft++;
+            }
           }
-          if (!stillHasDirty) sm.l1.state='invalid';
+          if (wbDirtyLeft > 0)        sm.l1.state = 'modified'; // still owns dirty lines
+          else if (wbCleanLeft > 0)   sm.l1.state = 'shared';   // only clean lines — L2 is authority
+          else                         sm.l1.state = 'invalid';  // L1 completely empty
           // Animate a particle hitting a specific L2 slot
           var l2SlotIdx = -1;
           for (var l2s=0;l2s<NUM_L2_LINES;l2s++){if(l2Lines[l2s]===0){l2SlotIdx=l2s;break;}}
@@ -4079,30 +4197,40 @@ function triggerScenario(type, silent) {
       var smemBlock=null;
       for(var sbi=0;sbi<sm.sub.length;sbi++){if(sm.sub[sbi].type==='smem')smemBlock=sm.sub[sbi];}
       if(!smemBlock) break;
-      logEvent('SM'+si+': SMEM access','#51cf66');
-      flash(smemBlock,'#51cf66'); stats.hits++;
-      fillSmem(si);
-      bubble(sm.x+sm.w/2,sm.y+14,'no coherency','#51cf66',{sub:'SM-private scratchpad'});
       var regsBlockEl=null;
       for(var ri=0;ri<sm.sub.length;ri++){if(sm.sub[ri].type==='regs')regsBlockEl=sm.sub[ri];}
       var sfrom={x:sm.x+sm.w/2,y:regsBlockEl?regsBlockEl.y+3:sm.y+40};
-      // ST.S: register → SMEM (store)
-      particles.push(new Particle(sfrom,{x:smemBlock.x+smemBlock.w/2,y:smemBlock.y+smemBlock.h/2},'#51cf66','ST.S',1.5,function(){
-        bubble(smemBlock.x+smemBlock.w/2,smemBlock.y,'~20 cycles','#51cf66',{life:1.4,sub:'SRAM write'});
-        logEvent('SM'+si+': ST.S — data written to SMEM','#51cf66');
-        // LDS: SMEM → register (load back, as other threads read it)
+      var smemCentre={x:smemBlock.x+smemBlock.w/2, y:smemBlock.y+smemBlock.h/2};
+
+      // Phase 1: threads compute, then issue STS (store to SMEM)
+      logEvent('SM'+si+': threads computing, then STS issued','#51cf66');
+      bubble(sfrom.x, sfrom.y, 'STS issued','#51cf66',{sub:'writing to SMEM'});
+
+      // Phase 2: ST.S particle travels regs → SMEM. Only on arrival do we fill + flash SMEM.
+      particles.push(new Particle(sfrom, smemCentre, '#51cf66', 'ST.S', 1.5, function(){
+        // Data arrives at SMEM — now update visual state
+        fillSmem(si);
+        flash(smemBlock, '#51cf66');
+        stats.hits++;
+        bubble(smemBlock.x+smemBlock.w/2, smemBlock.y, '~20 cycles','#51cf66',{life:1.6,sub:'SRAM write complete'});
+        logEvent('SM'+si+': ST.S complete — data in SMEM (~20 cycles)','#51cf66');
+
+        // Phase 3: __syncthreads() — all threads must reach barrier before any LDS
         setTimeout(function(){
-          logEvent('SM'+si+': LDS — threads reading from SMEM','#51cf66');
-          bubble(smemBlock.x+smemBlock.w/2,smemBlock.y,'LDS issued','#51cf66',{sub:'threads reading'});
-          spawnParticle(
-            {x:smemBlock.x+smemBlock.w/2,y:smemBlock.y+smemBlock.h/2},
-            sfrom, '#51cf66','LDS',1.5,
-            function(){
-              bubble(sfrom.x,sfrom.y,'reg filled','#51cf66',{sub:'~20 cycle SMEM hit',life:1.4});
-              logEvent('SM'+si+': LDS hit — data in registers (~20 cycles, no bus)','#51cf66');
-            }
-          );
-        }, 700);
+          bubble(sm.x+sm.w/2, sm.y+14, '__syncthreads()','#f59e0b',{sub:'barrier — all threads sync',life:2.0});
+          logEvent('SM'+si+': __syncthreads() — waiting for all threads','#f59e0b');
+
+          // Phase 4: LDS after barrier — threads read back from SMEM
+          setTimeout(function(){
+            logEvent('SM'+si+': LDS — all threads reading from SMEM','#51cf66');
+            bubble(smemBlock.x+smemBlock.w/2, smemBlock.y,'LDS','#51cf66',{sub:'no coherency cost'});
+            spawnParticle(smemCentre, sfrom, '#51cf66', 'LDS', 1.5, function(){
+              bubble(sfrom.x, sfrom.y,'reg filled','#51cf66',{sub:'~20 cycle SMEM hit',life:1.4});
+              logEvent('SM'+si+': LDS hit — data in registers, no bus traffic','#51cf66');
+              bubble(sm.x+sm.w/2, sm.y+14, 'no coherency','#51cf66',{sub:'SM-private scratchpad',life:1.8});
+            });
+          }, 900);
+        }, 600);
       }));
       if (currentArch==='hopper'&&layout.sms.length>1) {
         var other=(si+1)%layout.sms.length;
@@ -4125,6 +4253,112 @@ function triggerScenario(type, silent) {
         }
       }
       break;
+    case 'flush': {
+      // ── Cache Flush: __threadfence / cudaDeviceSynchronize ──────────────────
+      // Phase 1: All SMs with dirty L1 lines fire WB packets simultaneously to L2.
+      // Phase 2: All L2 dirty lines drain to DRAM via crossbar → memory controller → HBM.
+      // Result: all caches clean, HBM holds authoritative data.
+      stats.flush++;
+      logEvent('FLUSH initiated — draining all dirty lines to DRAM', '#f97316');
+      bubble((layout.bus.x1+layout.bus.x2)/2, layout.bus.y, '__threadfence()', '#f97316',
+        {sub:'flushing all dirty lines', life:2.2});
+
+      // Collect all SMs with dirty L1
+      // Collect SMs with physically dirty lines — don't rely on block-level state
+      var dirtySMs = [];
+      for (var fi=0; fi<layout.sms.length; fi++) {
+        if (!cacheState[fi]) continue;
+        for (var fci=0; fci<NUM_LINES; fci++) {
+          if (cacheState[fi].l1[fci].s === 2) { dirtySMs.push(fi); break; }
+        }
+      }
+
+      var l2FlushDone = false;  // gate: only start L2→DRAM after all L1 WBs land
+
+      // Phase 1: fan-out — all dirty SMs fire WB simultaneously
+      if (dirtySMs.length === 0) {
+        // No dirty L1s — skip straight to L2 flush
+        l2FlushDone = false;
+        doL2Flush();
+      } else {
+        var wbLanded = 0;
+        for (var fj=0; fj<dirtySMs.length; fj++) {
+          (function(smI) {
+            var fsmState = layout.sms[smI];
+            logEvent('SM'+smI+': flushing dirty lines → L2', '#f97316');
+            bubble(l1Pos(smI).x, l1Pos(smI).y, 'WB flush', '#f97316', {sub:'all dirty lines'});
+            // WB packet: L1 → bus → L2
+            particles.push(new Particle(l1Pos(smI), busP(smI), '#f97316', 'WB', 2.2, function() {
+              var busCtr = { x: l2Top().x, y: layout.bus.y };
+              spawnParticle(busP(smI), l2Top(), '#f97316', 'WB', 2.2, function() {
+                // All dirty lines from this SM land in L2 as dirty
+                if (cacheState[smI]) {
+                  for (var fk=0; fk<NUM_LINES; fk++) {
+                    if (cacheState[smI].l1[fk].s === 2) {
+                      cacheState[smI].l1[fk] = makeLine(1, cacheState[smI].l1[fk].op); // downgrade to clean
+                      l2AbsorbDirty(); // each dirty line lands in L2 dirty
+                    }
+                  }
+                }
+                fsmState.l1.state = 'shared'; // L1 is now clean — L2 is authority
+                flash(fsmState.l1, '#f97316');
+                stats.wb++;
+                logEvent('SM'+smI+': all lines written back, L1 → Shared', '#51cf66');
+                bubble(l1Pos(smI).x, l1Pos(smI).y, 'L1 clean', '#51cf66', {sub:'WB complete', life:1.4});
+                wbLanded++;
+                if (wbLanded === dirtySMs.length) {
+                  // All L1 WBs landed — now flush L2 → DRAM
+                  flash(layout.l2, '#f97316');
+                  bubble(l2Top().x, l2Top().y, 'L2 flushing', '#f97316', {sub:'→ DRAM', life:1.6});
+                  logEvent('L2: all dirty lines draining to DRAM', '#f97316');
+                  setTimeout(doL2Flush, 400);
+                }
+              }, [busCtr]);
+            }));
+          })(dirtySMs[fj]);
+        }
+      }
+
+      function doL2Flush() {
+        // Count dirty L2 lines to drain
+        var dirtyL2 = 0;
+        for (var dl=0; dl<NUM_L2_LINES; dl++) if (l2Lines[dl] === 2) dirtyL2++;
+
+        if (dirtyL2 === 0) {
+          logEvent('FLUSH complete — no dirty L2 lines, all clean', '#51cf66');
+          bubble(l2Top().x, l2Top().y, 'flush done', '#51cf66', {sub:'all caches clean', life:2.0});
+          updateStats();
+          return;
+        }
+
+        // Fire one EVICT particle representing the dirty drain
+        logEvent('L2: '+dirtyL2+' dirty line(s) draining to DRAM', '#f97316');
+        particles.push(new Particle(l2Bot(), cbP(), '#f97316', 'FLUSH', 2.0, function() {
+          particles.push(new Particle(cbP(), gmTop(), '#f97316', 'WR', 2.0, function() {
+            flash(layout.globalMem, '#f97316');
+            bubble(gmTop().x, gmTop().y, 'MC write', '#f97316', {sub:dirtyL2+' lines → HBM', life:1.4});
+            particles.push(new Particle(gmTop(), gmBot(), '#f97316', 'WR', 1.8, function() {
+              particles.push(new Particle(gmBot(), hbmTop(), '#845ef7', 'STORE', 1.5, function() {
+                flash(layout.hbm, '#845ef7');
+                bubble(hbmTop().x, hbmTop().y, 'persisted', '#845ef7',
+                  {sub:dirtyL2+' lines written', life:2.0});
+                logEvent('HBM: '+dirtyL2+' dirty line(s) written — flush complete', '#845ef7');
+                // Clean all L2 dirty lines — flush is done
+                for (var cl=0; cl<NUM_L2_LINES; cl++) {
+                  if (l2Lines[cl] === 2) l2Lines[cl] = 1; // dirty → clean (data stays, just clean now)
+                }
+                flash(layout.l2, '#51cf66');
+                bubble(l2Top().x, l2Top().y, 'L2 clean', '#51cf66', {sub:'flush complete', life:2.0});
+                logEvent('FLUSH complete — all caches clean, HBM authoritative', '#51cf66');
+                updateStats();
+              }));
+            }));
+          }));
+        }));
+      }
+      break;
+    }
+
     case 'atomic':
       triggerAtomic();
       return;
@@ -4172,9 +4406,9 @@ function triggerScenario(type, silent) {
           bubble(l1P.x, l1P.y, 'L1 full!', '#ff6b6b', {sub:'spill → L2'});
           logEvent('SM'+si+': L1 full — spill cascades to L2 (~200 cycles)', '#ff6b6b');
           spawnPassthrough(si, '#fb923c', 'SPILL', 2.2, function() {
-            l2AbsorbOne(); flash(layout.l2, '#fb923c');
+            l2AbsorbDirty(); flash(layout.l2, '#fb923c');  // spill is new data → dirty in L2
             bubble(l2Top().x, l2Top().y, 'spill in L2', '#fb923c', {sub:'~200 cycle penalty'});
-            logEvent('L2: spill absorbed', '#fb923c');
+            logEvent('L2: spill absorbed (dirty — new register data)', '#fb923c');
 
             setTimeout(function() {
               logEvent('SM'+si+': RELOAD ← L2', '#fb923c');
@@ -4322,7 +4556,7 @@ function toggleAuto() {
 
 function resetAll(silent) {
   particles=[]; flashEffects=[]; bubbles=[];
-  stats={hits:0,misses:0,inv:0,wb:0}; updateStats();
+  stats={hits:0,misses:0,inv:0,wb:0,flush:0}; updateStats();
   for(var ri=0;ri<layout.sms.length;ri++){layout.sms[ri].l1.state='invalid';}
   initCacheState();
   document.getElementById('event-log').innerHTML='';
@@ -4799,9 +5033,17 @@ function triggerAtomic() {
                       // Step 5: DATA routes from bus level → SM bus junction → L1
                       // spawnRoutedFromArbiter starts at arbiterBusEntry (bus level), no air-travel
                       spawnRoutedFromArbiter(capturedIdx, '#ffa94d', 'DATA', 2.2, function() {
-                        layout.sms[capturedIdx].l1.state = 'modified';
-                        setL1Dirty(capturedIdx, 'atomic');
+                        // RMW happened at L2 — result goes to registers, NOT into L1 as a dirty line.
+                        // If L1 had a copy of this address, it's now stale — invalidate it.
+                        invalidateL1Lines(capturedIdx, 1);
+                        var remAfter = 0;
+                        if (cacheState[capturedIdx]) for (var ra=0;ra<NUM_LINES;ra++) if(cacheState[capturedIdx].l1[ra].s>0) remAfter++;
+                        layout.sms[capturedIdx].l1.state = remAfter > 0 ? 'shared' : 'invalid';
                         flash(layout.sms[capturedIdx].l1, '#f59e0b');
+                        // Result lands in registers
+                        var regsT = regsPos(capturedIdx);
+                        bubble(regsT.x, regsT.y, 'atomic result', '#f59e0b', {sub:'value in regs', life:1.4});
+                        logEvent('SM'+capturedIdx+': atomicAdd result in registers, L1 copy invalidated', '#f59e0b');
                         stats.hits++; updateStats();
                       });
                     });
@@ -4864,8 +5106,15 @@ function triggerAtomic() {
               setTimeout(function() {
                 // DATA returns: l2Top → busP (horizontal along bus) → l1Pos (down to SM)
                 spawnParticle(l2Top(), l1Pos(idx2), '#ffa94d', 'DATA', 2, function() {
-                  layout.sms[idx2].l1.state = 'modified'; setL1Dirty(idx2, 'atomic');
+                  // RMW at L2 — result goes to registers, not L1. Invalidate any L1 copy.
+                  invalidateL1Lines(idx2, 1);
+                  var remAfter2 = 0;
+                  if (cacheState[idx2]) for (var ra2=0;ra2<NUM_LINES;ra2++) if(cacheState[idx2].l1[ra2].s>0) remAfter2++;
+                  layout.sms[idx2].l1.state = remAfter2 > 0 ? 'shared' : 'invalid';
                   flash(layout.sms[idx2].l1, '#f59e0b');
+                  var regsT2 = regsPos(idx2);
+                  bubble(regsT2.x, regsT2.y, 'atomic result', '#f59e0b', {sub:'value in regs', life:1.4});
+                  logEvent('SM'+idx2+': atomicAdd result in registers, L1 copy invalidated', '#f59e0b');
                   stats.hits++; updateStats();
                 }, [busP(idx2)]);
               }, 100 + Math.random() * 600); // random L2 lock contention
