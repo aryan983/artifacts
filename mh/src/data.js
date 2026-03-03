@@ -333,5 +333,8 @@ var cacheState = [];
 // Shared across all SMs — L2 is unified. NUM_L2_LINES shown as occupancy bars.
 var NUM_L2_LINES = 24;
 var l2Lines = new Array(NUM_L2_LINES).fill(0);
+var l2Tags  = new Array(NUM_L2_LINES).fill(null);  // address tag stored in each L2 line
+var l2LastHitLine = -1;   // index of most recently hit L2 line (-1 = none)
+var l2LastHitTime = 0;    // ms timestamp for tooltip fade-out
 
 
