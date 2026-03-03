@@ -75,6 +75,12 @@ position:relative;
 .controls button.atomic-btn:hover { background:#f59e0b18; border-color:#f59e0b; color:#fbbf24; }
 .controls button.atomic-btn.apex-only { display:none; }
 
+/* ── Flush button ── */
+.controls button.flush-btn {
+  border-color: #f9731650; color: #f97316;
+}
+.controls button.flush-btn:hover { background:#f9731618; border-color:#f97316; color:#fb923c; }
+
 /* ── cp.async + TMA buttons ── */
 .controls button.cp-async-btn {
   background: transparent; border-color: #22d3ee50; color: #22d3ee;
@@ -476,8 +482,8 @@ position:absolute; top:-12px; width:100%; text-align:center; white-space:nowrap;
 #cl-table .cl-state { font-weight:700; }
 #cl-table .cl-op { color:#aaa; }
 #cl-table .cl-empty { color:#3a3d50; font-style:italic; }
-#cl-table tr.cl-row-dirty td { background:#51cf6606; }
-#cl-table tr.cl-row-clean td { background:#339af006; }
+#cl-table tr.cl-row-dirty td { background:#ffa94d08; }
+#cl-table tr.cl-row-clean td { background:#339af008; }
 </style>
 </head>
 <body>
@@ -511,6 +517,7 @@ position:absolute; top:-12px; width:100%; text-align:center; white-space:nowrap;
   <button class="scenario-btn tma-btn" data-scenario="tma_load" onclick="triggerScenario('tma_load')" id="btn-tma-load" style="display:none">TMA Load</button>
   <button id="btn-pause" class="pause-btn" onclick="togglePause()">⏸ Pause</button>
   <button id="btn-auto" class="active" onclick="toggleAuto()">Auto</button>
+  <button class="scenario-btn flush-btn" data-scenario="flush" onclick="triggerScenario('flush')" id="btn-flush">⚡ Flush</button>
   <button class="reset-btn" onclick="resetAll()">Reset</button>
 </div>
 
@@ -536,15 +543,27 @@ position:absolute; top:-12px; width:100%; text-align:center; white-space:nowrap;
         <div class="conn-list" id="conn-list"></div>
       </div>
       <div class="cl-section" id="cl-section" style="display:none">
-        <h5>Cache Line State</h5>
+        <h5 id="cl-section-title">Cache Line State</h5>
         <table id="cl-table">
-          <thead><tr>
+          <thead id="cl-table-header"><tr>
             <th class="cl-idx">#</th>
             <th>State</th>
             <th>Last Op</th>
           </tr></thead>
           <tbody id="cl-tbody"></tbody>
         </table>
+        <div id="cl-legend" style="margin-top:8px;display:flex;flex-wrap:wrap;gap:8px;font-family:'JetBrains Mono',monospace;font-size:.58rem;">
+          <div style="font-size:.56rem;color:var(--dim);width:100%;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px">Line color legend</div>
+          <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:#ffa94d;display:inline-block"></span><span style="color:#ffa94d">Dirty</span><span style="color:var(--dim)">— newer than L2/DRAM</span></span>
+          <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:#339af0;display:inline-block"></span><span style="color:#339af0">Clean</span><span style="color:var(--dim)">— matches L2</span></span>
+          <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:#2a2d3a;border:1px solid #3a3d50;display:inline-block"></span><span style="color:var(--dim)">Empty</span><span style="color:var(--dim)">— no data</span></span>
+          <div style="width:100%;margin-top:4px;font-size:.56rem;color:var(--dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:2px">Last op colors</div>
+          <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:#339af0;display:inline-block"></span><span style="color:#339af0">SM Read</span></span>
+          <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:#51cf66;display:inline-block"></span><span style="color:#51cf66">SM Write</span></span>
+          <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:#f59e0b;display:inline-block"></span><span style="color:#f59e0b">Atomic</span></span>
+          <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:#fb923c;display:inline-block"></span><span style="color:#fb923c">Reg Spill</span></span>
+          <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:#22d3ee;display:inline-block"></span><span style="color:#22d3ee">cp.async / TMA</span></span>
+        </div>
       </div>
     </div>
   </div>
@@ -563,6 +582,7 @@ position:absolute; top:-12px; width:100%; text-align:center; white-space:nowrap;
         <div class="stat-item"><div class="stat-value" id="stat-misses" style="color:var(--l1)">0</div><div class="stat-label">Misses</div></div>
         <div class="stat-item"><div class="stat-value" id="stat-inv" style="color:var(--coherency)">0</div><div class="stat-label">Invalidations</div></div>
         <div class="stat-item"><div class="stat-value" id="stat-wb" style="color:var(--l2)">0</div><div class="stat-label">Write-Backs</div></div>
+        <div class="stat-item"><div class="stat-value" id="stat-flush" style="color:#f97316">0</div><div class="stat-label">Flushes</div></div>
       </div>
     </div>
     <div class="info-card explainer" id="explainer-card">
