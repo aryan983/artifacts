@@ -461,6 +461,23 @@ position:absolute; top:-12px; width:100%; text-align:center; white-space:nowrap;
 .info-card { flex:1; min-width:260px; }
 .bottom-grid { grid-template-columns:1fr; }
 }
+
+/* ── Cache line inspector (sel-panel) ─────────────────────────────────────── */
+#sel-panel .cl-section { margin-top: 12px; }
+#sel-panel .cl-section h5 { font-size:.6rem; font-family:'JetBrains Mono',monospace;
+  text-transform:uppercase; letter-spacing:1.5px; color:var(--dim); margin-bottom:7px; }
+#cl-table { width:100%; border-collapse:collapse; font-size:.68rem; font-family:'JetBrains Mono',monospace; }
+#cl-table th { color:var(--dim); font-weight:600; text-align:left; padding:3px 5px;
+  border-bottom:1px solid #2a2d3a; font-size:.58rem; letter-spacing:.8px; text-transform:uppercase; }
+#cl-table td { padding:3px 5px; border-bottom:1px solid #1e2030; vertical-align:middle; }
+#cl-table tr:last-child td { border-bottom:none; }
+#cl-table .cl-idx { color:var(--dim); width:28px; }
+#cl-table .cl-swatch { width:10px; height:10px; border-radius:2px; display:inline-block; margin-right:4px; vertical-align:middle; flex-shrink:0; }
+#cl-table .cl-state { font-weight:700; }
+#cl-table .cl-op { color:#aaa; }
+#cl-table .cl-empty { color:#3a3d50; font-style:italic; }
+#cl-table tr.cl-row-dirty td { background:#51cf6606; }
+#cl-table tr.cl-row-clean td { background:#339af006; }
 </style>
 </head>
 <body>
@@ -517,6 +534,17 @@ position:absolute; top:-12px; width:100%; text-align:center; white-space:nowrap;
       <div class="sel-connections">
         <h5>Connects To</h5>
         <div class="conn-list" id="conn-list"></div>
+      </div>
+      <div class="cl-section" id="cl-section" style="display:none">
+        <h5>Cache Line State</h5>
+        <table id="cl-table">
+          <thead><tr>
+            <th class="cl-idx">#</th>
+            <th>State</th>
+            <th>Last Op</th>
+          </tr></thead>
+          <tbody id="cl-tbody"></tbody>
+        </table>
       </div>
     </div>
   </div>
