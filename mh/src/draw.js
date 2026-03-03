@@ -598,7 +598,30 @@ function drawSceneContent(dt, time) {
         ctx.font='600 '+FONT_BLOCK_LG+'px monospace';
         ctx.fillStyle = b.state === 'invalid' ? '#9095b0' : sc;
         ctx.textAlign='center';
-        ctx.fillText(b.label+' ['+b.state.charAt(0).toUpperCase()+']', b.x+b.w/2, b.y+b.h/2+1);
+        // Build per-line-count label: e.g. "L1  3R 1W" showing op types present
+        var labelParts = [];
+        var csLbl = cacheState[si];
+        if (csLbl) {
+          var opCounts = {};
+          var totalFilled = 0;
+          for (var lbl=0;lbl<NUM_LINES;lbl++) {
+            var ln = csLbl.l1[lbl];
+            if (ln && ln.s > 0) {
+              totalFilled++;
+              var tag = ln.op ? ln.op.charAt(0).toUpperCase() : (ln.s===2?'W':'?');
+              opCounts[tag] = (opCounts[tag]||0)+1;
+            }
+          }
+          var opKeys2 = Object.keys(opCounts);
+          if (opKeys2.length > 0) {
+            for (var oki=0;oki<opKeys2.length;oki++) {
+              labelParts.push(opCounts[opKeys2[oki]]+opKeys2[oki]);
+            }
+          }
+        }
+        var stateChar = b.state === 'modified' ? 'M' : b.state === 'shared' ? 'S' : 'I';
+        var bracketLabel = labelParts.length > 0 ? '['+labelParts.join(' ')+']' : '['+stateChar+']';
+        ctx.fillText(b.label+' '+bracketLabel, b.x+b.w/2, b.y+b.h/2+1);
       } else {
         var cBg, cBr, cLbl;
         if (b.type==='texCache')             { cBg='#e599f712'; cBr='#e599f760'; cLbl='#e599f7'; }

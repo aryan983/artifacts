@@ -149,15 +149,34 @@ function tickRegPressure(dt) {
   }
 }
 
-// op: operation type string ('read','write','atomic','spill','cp_async','tma') or null
+// Add exactly ONE cache line from an operation — realistic: each fetch installs one line.
+// op: 'read','write','atomic','spill','cp_async','tma' or null
 function fillL1Random(smIdx, dirty, op) {
+  if (!cacheState[smIdx]) return;
+  var lines = cacheState[smIdx].l1;
+  // Find an empty slot; if none, evict the oldest non-op line (LRU approximation)
+  var slot = -1;
+  for (var i = 0; i < NUM_LINES; i++) {
+    if (lines[i].s === 0) { slot = i; break; }
+  }
+  if (slot === -1) {
+    // No empty slot — evict a clean line first, then a dirty line
+    for (var i2 = 0; i2 < NUM_LINES; i2++) {
+      if (lines[i2].s === 1) { slot = i2; break; }
+    }
+    if (slot === -1) slot = 0; // evict first dirty line as last resort
+  }
+  lines[slot] = makeLine(dirty ? 2 : 1, op || null);
+}
+
+// Fill multiple lines at once — used only for initialization / reset seeding
+function fillL1Many(smIdx, dirty, op) {
   if (!cacheState[smIdx]) return;
   var lines = cacheState[smIdx].l1;
   var count = 6 + Math.floor(Math.random() * 8);
   for (var i = 0; i < NUM_LINES; i++) {
     lines[i] = makeLine(i < count ? (dirty ? 2 : 1) : 0, i < count ? (op || null) : null);
   }
-  // shuffle
   for (var j = NUM_LINES - 1; j > 0; j--) {
     var k = Math.floor(Math.random() * (j + 1));
     var tmp = lines[j]; lines[j] = lines[k]; lines[k] = tmp;
@@ -167,26 +186,40 @@ function fillL1Random(smIdx, dirty, op) {
 function setL1Dirty(smIdx, op) {
   if (!cacheState[smIdx]) return;
   var lines = cacheState[smIdx].l1;
-  var filled = lines.filter(function(v){ return v.s > 0; }).length;
-  if (filled < 4) { fillL1Random(smIdx, false, op || null); }
-  var dirtied = 0;
-  for (var i = 0; i < NUM_LINES && dirtied < 3; i++) {
-    if (lines[i].s === 1 && Math.random() > 0.5) {
-      lines[i] = makeLine(2, op || lines[i].op);
-      dirtied++;
+  // Ensure at least one line exists to dirty
+  var hasLine = false;
+  for (var i = 0; i < NUM_LINES; i++) { if (lines[i].s > 0) { hasLine = true; break; } }
+  if (!hasLine) { fillL1Random(smIdx, false, op || null); }
+  // Mark exactly ONE existing clean line dirty — or install a new dirty line
+  for (var i2 = 0; i2 < NUM_LINES; i2++) {
+    if (lines[i2].s === 1) {
+      lines[i2] = makeLine(2, op || lines[i2].op);
+      return;
     }
   }
-  if (dirtied === 0) {
-    var idx = Math.floor(Math.random()*NUM_LINES);
-    lines[idx] = makeLine(2, op || null);
-  }
+  // No clean line found — add a new dirty line
+  fillL1Random(smIdx, true, op || null);
 }
 
-// Full wipe
+// Full wipe — only for arch switch / full reset / complete writeback eviction
 function invalidateL1(smIdx) {
   if (!cacheState[smIdx]) return;
   var lines = cacheState[smIdx].l1;
   for (var i = 0; i < NUM_LINES; i++) lines[i] = makeLine(0, null);
+}
+
+// Evict exactly one line (the written-back line) — used by writeback scenario
+function evictOneL1Line(smIdx) {
+  if (!cacheState[smIdx]) return;
+  var lines = cacheState[smIdx].l1;
+  // Evict first dirty line (it was written back)
+  for (var i = 0; i < NUM_LINES; i++) {
+    if (lines[i].s === 2) { lines[i] = makeLine(0, null); return; }
+  }
+  // No dirty — evict first clean line
+  for (var i2 = 0; i2 < NUM_LINES; i2++) {
+    if (lines[i2].s === 1) { lines[i2] = makeLine(0, null); return; }
+  }
 }
 
 // Targeted invalidation — drops 1 to `count` specific lines, leaving the rest intact

@@ -209,8 +209,23 @@ function triggerScenario(type, silent) {
 
   switch(type) {
     case 'read': {
-      // L1 miss — force invalid so the read request is clearly needed
-      if (sm.l1.state !== 'invalid') { sm.l1.state = 'invalid'; }
+      // ── L1 Hit path (if L1 already has a valid line for this address) ────────
+      if (sm.l1.state === 'shared' || sm.l1.state === 'modified') {
+        stats.hits++;
+        logEvent('SM'+si+': L1 hit — no bus traffic','#339af0');
+        bubble(l1Pos(si).x, l1Pos(si).y, 'L1 hit!', '#339af0', {sub:'data already cached', life:1.8});
+        flash(sm.l1, '#339af0');
+        // Show data returning from L1 directly to registers — no bus movement
+        var regsTarget = regsPos(si);
+        spawnParticle(l1Pos(si), regsTarget, '#339af0', 'DATA', 2.5, function(){
+          flash(layout.sms[si], '#339af0');
+          bubble(regsTarget.x, regsTarget.y, 'reg filled', '#339af0', {sub:'~28 cycles', life:1.4});
+          logEvent('SM'+si+': data delivered to registers from L1','#339af0');
+        });
+        break;
+      }
+
+      // ── L1 Miss path ─────────────────────────────────────────────────────────
       stats.misses++;
 
       // Check L2 occupancy — if <25% filled treat as L2 miss → go to DRAM
@@ -423,15 +438,26 @@ function triggerScenario(type, silent) {
     case 'writeback':
       // Precondition already ensures sm is Modified — only coerce lines if not already dirty
       if (sm.l1.state !== 'modified') { sm.l1.state='modified'; setL1Dirty(si, 'write'); }
-      logEvent('SM'+si+': Write-back → L2','#ffa94d');
-      bubble(l1Pos(si).x,l1Pos(si).y,'dirty evict','#ffa94d',{sub:'must flush out'});
+      logEvent('SM'+si+': Write-back → L2 (1 dirty line evicted)','#ffa94d');
+      bubble(l1Pos(si).x,l1Pos(si).y,'dirty evict','#ffa94d',{sub:'1 line flushed'});
       particles.push(new Particle(l1Pos(si),busP(si),'#ffa94d','WB',2,function(){
         spawnPassthrough(si,'#ffa94d','WB',2.5,function(){
-          // WB arrives at L2: mark L1 clean (evicted from L1), dirty line now lives in L2
-          sm.l1.state='invalid'; invalidateL1(si); l2Dirty(); stats.wb++;
+          // WB arrives at L2: evict exactly the one dirty line from L1, install it in L2
+          evictOneL1Line(si);
+          // If L1 still has valid lines, keep it modified; otherwise go invalid
+          var stillHasDirty = false;
+          if (cacheState[si]) {
+            for (var wbi=0;wbi<NUM_LINES;wbi++) if(cacheState[si].l1[wbi].s>0){stillHasDirty=true;break;}
+          }
+          if (!stillHasDirty) sm.l1.state='invalid';
+          // Animate a particle hitting a specific L2 slot
+          var l2SlotIdx = -1;
+          for (var l2s=0;l2s<NUM_L2_LINES;l2s++){if(l2Lines[l2s]===0){l2SlotIdx=l2s;break;}}
+          if (l2SlotIdx===-1) for(var l2s2=0;l2s2<NUM_L2_LINES;l2s2++){if(l2Lines[l2s2]===1){l2SlotIdx=l2s2;break;}}
+          l2Dirty(); stats.wb++;
           flash(layout.l2,'#ffa94d');
-          bubble(l2Top().x,l2Top().y,'L2 absorbed','#ffa94d',{life:1.4,sub:'dirty → L2'});
-          logEvent('L2: Write-back received — line dirty in L2','#ffa94d');
+          bubble(l2Top().x,l2Top().y,'1 line absorbed','#ffa94d',{life:1.4,sub:'dirty → L2 slot'});
+          logEvent('L2: Write-back received — 1 dirty line installed','#ffa94d');
           // L2 eviction cascade: only fires if L2 is >75% full (realistic pressure)
           var l2FilledCount = 0;
           for (var li=0;li<NUM_L2_LINES;li++) if(l2Lines[li]>0) l2FilledCount++;
@@ -472,8 +498,23 @@ function triggerScenario(type, silent) {
       var regsBlockEl=null;
       for(var ri=0;ri<sm.sub.length;ri++){if(sm.sub[ri].type==='regs')regsBlockEl=sm.sub[ri];}
       var sfrom={x:sm.x+sm.w/2,y:regsBlockEl?regsBlockEl.y+3:sm.y+40};
+      // ST.S: register → SMEM (store)
       particles.push(new Particle(sfrom,{x:smemBlock.x+smemBlock.w/2,y:smemBlock.y+smemBlock.h/2},'#51cf66','ST.S',1.5,function(){
-        bubble(smemBlock.x+smemBlock.w/2,smemBlock.y,'~20 cycles','#51cf66',{life:1.4,sub:'fast SRAM hit'});
+        bubble(smemBlock.x+smemBlock.w/2,smemBlock.y,'~20 cycles','#51cf66',{life:1.4,sub:'SRAM write'});
+        logEvent('SM'+si+': ST.S — data written to SMEM','#51cf66');
+        // LDS: SMEM → register (load back, as other threads read it)
+        setTimeout(function(){
+          logEvent('SM'+si+': LDS — threads reading from SMEM','#51cf66');
+          bubble(smemBlock.x+smemBlock.w/2,smemBlock.y,'LDS issued','#51cf66',{sub:'threads reading'});
+          spawnParticle(
+            {x:smemBlock.x+smemBlock.w/2,y:smemBlock.y+smemBlock.h/2},
+            sfrom, '#51cf66','LDS',1.5,
+            function(){
+              bubble(sfrom.x,sfrom.y,'reg filled','#51cf66',{sub:'~20 cycle SMEM hit',life:1.4});
+              logEvent('SM'+si+': LDS hit — data in registers (~20 cycles, no bus)','#51cf66');
+            }
+          );
+        }, 700);
       }));
       if (currentArch==='hopper'&&layout.sms.length>1) {
         var other=(si+1)%layout.sms.length;
@@ -515,7 +556,7 @@ function triggerScenario(type, silent) {
       spawnParticle(regsP, l1P, '#fb923c', 'SPILL', 2.2, function() {
         var l1Full = (function() {
           var cs = cacheState[si]; if (!cs) return false;
-          var filled = 0; for (var i=0;i<NUM_LINES;i++) if(cs.l1[i]>0) filled++;
+          var filled = 0; for (var i=0;i<NUM_LINES;i++) if(cs.l1[i].s>0) filled++;
           return filled >= NUM_LINES - 2;
         })();
 
