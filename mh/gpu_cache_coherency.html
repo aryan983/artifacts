@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>GPU Cache Coherency — Architecture Explorer</title>
 <style>
-/* System font stack — no external requests, works in preview */
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Outfit:wght@300;400;600;700;800&display=swap');
 :root {
   --bg: #0a0b0f; --surface: #12141a; --surface2: #1a1d26;
   --border: #2a2d3a; --text: #e0e2ec; --dim: #6b7094;
@@ -14,7 +14,7 @@
   --new-block: #22d3ee; --changed: #facc15;
 }
 * { margin:0; padding:0; box-sizing:border-box; }
-body { background:var(--bg); color:var(--text); font-family:'Outfit','Inter','Segoe UI',system-ui,sans-serif; min-height:100vh; overflow-x:hidden; }
+body { background:var(--bg); color:var(--text); font-family:'Outfit',sans-serif; min-height:100vh; overflow-x:hidden; }
 .grain { position:fixed; inset:0; pointer-events:none; z-index:999; opacity:.03;
   background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
 
@@ -22,12 +22,12 @@ header { text-align:center; padding:20px 16px 10px; }
 header h1 { font-size:clamp(1.6rem,3.5vw,2.6rem); font-weight:800; letter-spacing:-1px;
 background:linear-gradient(135deg,#ff6b6b,#ffa94d,#51cf66,#339af0,#845ef7);
 -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
-header p { color:var(--dim); font-family:'JetBrains Mono','Fira Code','Cascadia Code','Consolas',monospace; font-size:.75rem; margin-top:4px; letter-spacing:2px; text-transform:uppercase; }
+header p { color:var(--dim); font-family:'JetBrains Mono',monospace; font-size:.75rem; margin-top:4px; letter-spacing:2px; text-transform:uppercase; }
 
 .arch-tabs { display:flex; justify-content:center; gap:0; padding:10px 16px 6px; flex-wrap:wrap; }
 .arch-tab {
 background:var(--surface); border:1px solid var(--border); color:var(--dim);
-font-family:'JetBrains Mono','Fira Code','Cascadia Code','Consolas',monospace; font-size:.7rem; padding:8px 14px;
+font-family:'JetBrains Mono',monospace; font-size:.7rem; padding:8px 14px;
 cursor:pointer; transition:all .2s; letter-spacing:.3px; position:relative;
 border-right:none;
 }
@@ -52,7 +52,7 @@ font-size:.75rem; line-height:1.5; display:none; text-align:center;
 .controls { display:flex; justify-content:center; gap:12px; padding:12px 20px; flex-wrap:wrap; }
 .controls button {
 background:var(--surface2); border:1px solid var(--border); color:var(--text);
-font-family:'JetBrains Mono','Fira Code','Cascadia Code','Consolas',monospace; font-size:.75rem; padding:8px 16px;
+font-family:'JetBrains Mono',monospace; font-size:.75rem; padding:8px 16px;
 border-radius:6px; cursor:pointer; transition:all .2s; letter-spacing:.5px;
 position:relative;
 }
@@ -74,6 +74,8 @@ position:relative;
 }
 .controls button.atomic-btn:hover { background:#f59e0b18; border-color:#f59e0b; color:#fbbf24; }
 .controls button.atomic-btn.apex-only { display:none; }
+
+/* ── cp.async + TMA buttons ── */
 .controls button.cp-async-btn {
   background: transparent; border-color: #22d3ee50; color: #22d3ee;
 }
@@ -232,7 +234,7 @@ position:relative;
 }
 #scenario-tooltip.visible { opacity:1; transform:translateY(0); }
 #scenario-tooltip .st-title {
-  font-family:'JetBrains Mono','Fira Code','Cascadia Code','Consolas',monospace; font-weight:700; font-size:.82rem;
+  font-family:'JetBrains Mono',monospace; font-weight:700; font-size:.82rem;
   margin-bottom:8px; display:flex; align-items:center; gap:8px;
 }
 #scenario-tooltip .st-dot { width:8px; height:8px; border-radius:2px; flex-shrink:0; }
@@ -242,7 +244,7 @@ position:relative;
   padding:8px 10px;
 }
 #scenario-tooltip .st-detail-label {
-  font-family:'JetBrains Mono','Fira Code','Cascadia Code','Consolas',monospace; font-size:.55rem; font-weight:700;
+  font-family:'JetBrains Mono',monospace; font-size:.55rem; font-weight:700;
   text-transform:uppercase; letter-spacing:1.5px; color:#339af099; margin-bottom:3px;
 }
 #scenario-tooltip .st-detail-text { color:#90c8f0; font-size:.72rem; line-height:1.5; }
@@ -267,12 +269,12 @@ canvas { width:100%; height:720px; background:var(--surface); border-radius:12px
 #block-tooltip .tt-desc { color:var(--dim); margin-bottom:7px; }
 #block-tooltip .tt-meta { display:flex; flex-wrap:wrap; gap:5px; }
 #block-tooltip .tt-chip {
-  font-family:'JetBrains Mono','Fira Code','Cascadia Code','Consolas',monospace; font-size:.6rem; font-weight:600;
+  font-family:'JetBrains Mono',monospace; font-size:.6rem; font-weight:600;
   padding:2px 7px; border-radius:4px;
 }
 #block-tooltip .tt-hint {
   margin-top:8px; padding-top:6px; border-top:1px solid var(--border);
-  font-size:.65rem; color:#6b7094; font-family:'JetBrains Mono','Fira Code','Cascadia Code','Consolas',monospace;
+  font-size:.65rem; color:#6b7094; font-family:'JetBrains Mono',monospace;
   display:flex; align-items:center; gap:5px;
 }
 #block-tooltip .tt-hint::before { content:'◉'; font-size:.7rem; }
@@ -289,13 +291,13 @@ canvas { width:100%; height:720px; background:var(--surface); border-radius:12px
 }
 #instr-tooltip.visible { opacity:1; transform:translateY(0); }
 #instr-tooltip .it-name {
-  font-family:'JetBrains Mono','Fira Code','Cascadia Code','Consolas',monospace; font-weight:700; font-size:.82rem;
+  font-family:'JetBrains Mono',monospace; font-weight:700; font-size:.82rem;
   margin-bottom:8px; display:flex; align-items:center; gap:8px;
 }
 #instr-tooltip .it-dot { width:8px; height:8px; border-radius:2px; flex-shrink:0; }
 #instr-tooltip .it-section { margin-bottom:8px; }
 #instr-tooltip .it-label {
-  font-family:'JetBrains Mono','Fira Code','Cascadia Code','Consolas',monospace; font-size:.55rem; font-weight:700;
+  font-family:'JetBrains Mono',monospace; font-size:.55rem; font-weight:700;
   text-transform:uppercase; letter-spacing:1.5px; color:#6b7094; margin-bottom:3px;
 }
 #instr-tooltip .it-text { color:#c8cce0; font-size:.74rem; line-height:1.55; }
@@ -313,11 +315,11 @@ canvas { width:100%; height:720px; background:var(--surface); border-radius:12px
 }
 #sel-panel { max-height: 70vh; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #2a2d3a transparent; }
 #sel-panel.visible { display:block; }
-#sel-panel h4 { font-size:.65rem; font-family:'JetBrains Mono','Fira Code','Cascadia Code','Consolas',monospace; text-transform:uppercase; letter-spacing:2px; color:var(--dim); margin-bottom:10px; }
+#sel-panel h4 { font-size:.65rem; font-family:'JetBrains Mono',monospace; text-transform:uppercase; letter-spacing:2px; color:var(--dim); margin-bottom:10px; }
 #sel-panel .sel-name { font-weight:700; font-size:.95rem; margin-bottom:6px; }
 #sel-panel .sel-desc { font-size:.78rem; color:var(--dim); line-height:1.55; margin-bottom:10px; }
 #sel-panel .sel-connections { }
-#sel-panel .sel-connections h5 { font-size:.6rem; font-family:'JetBrains Mono','Fira Code','Cascadia Code','Consolas',monospace; text-transform:uppercase; letter-spacing:1.5px; color:var(--dim); margin-bottom:7px; }
+#sel-panel .sel-connections h5 { font-size:.6rem; font-family:'JetBrains Mono',monospace; text-transform:uppercase; letter-spacing:1.5px; color:var(--dim); margin-bottom:7px; }
 #sel-panel .conn-list { display:flex; flex-direction:column; gap:5px; }
 #sel-panel .conn-item {
   display:flex; align-items:flex-start; gap:8px; padding:7px 10px;
@@ -325,22 +327,22 @@ canvas { width:100%; height:720px; background:var(--surface); border-radius:12px
   font-size:.75rem; line-height:1.45; cursor:pointer; transition:border-color .15s;
 }
 #sel-panel .conn-item:hover { border-color: #4a4d5a; }
-#sel-panel .conn-item .ci-arrow { font-family:'JetBrains Mono','Fira Code','Cascadia Code','Consolas',monospace; font-size:.7rem; flex-shrink:0; margin-top:1px; }
+#sel-panel .conn-item .ci-arrow { font-family:'JetBrains Mono',monospace; font-size:.7rem; flex-shrink:0; margin-top:1px; }
 #sel-panel .conn-item .ci-body { flex:1; }
 #sel-panel .conn-item .ci-target { font-weight:600; }
 #sel-panel .conn-item .ci-why { color:var(--dim); font-size:.7rem; display:block; }
-#sel-panel .close-btn { float:right; font-size:.7rem; color:var(--dim); cursor:pointer; font-family:'JetBrains Mono','Fira Code','Cascadia Code','Consolas',monospace; padding:2px 6px; border:1px solid var(--border); border-radius:4px; }
+#sel-panel .close-btn { float:right; font-size:.7rem; color:var(--dim); cursor:pointer; font-family:'JetBrains Mono',monospace; padding:2px 6px; border:1px solid var(--border); border-radius:4px; }
 #sel-panel .close-btn:hover { color:var(--text); }
 
 .info-panel { width:360px; flex-shrink:0; display:flex; flex-direction:column; gap:12px; }
 .info-card { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:14px; }
-.info-card h3 { font-size:.65rem; font-family:'JetBrains Mono','Fira Code','Cascadia Code','Consolas',monospace; text-transform:uppercase; letter-spacing:2px; color:var(--dim); margin-bottom:10px; }
+.info-card h3 { font-size:.65rem; font-family:'JetBrains Mono',monospace; text-transform:uppercase; letter-spacing:2px; color:var(--dim); margin-bottom:10px; }
 
 /* Instruction reference chips */
 .instr-section { margin-top:0; }
 .instr-chips { display:flex; flex-wrap:wrap; gap:8px; }
 .instr-chip {
-  font-family:'JetBrains Mono','Fira Code','Cascadia Code','Consolas',monospace; font-size:.72rem; font-weight:700;
+  font-family:'JetBrains Mono',monospace; font-size:.72rem; font-weight:700;
   padding:5px 11px; border-radius:6px; cursor:pointer;
   border:1px solid transparent; transition:all .15s;
   user-select:none;
@@ -362,7 +364,7 @@ canvas { width:100%; height:720px; background:var(--surface); border-radius:12px
 .acc-head:active { opacity:.7; }
 .acc-dot { width:8px; height:8px; border-radius:3px; flex-shrink:0; }
 .acc-title { flex:1; font-weight:600; font-size:.8rem; }
-.acc-meta { font-family:'JetBrains Mono','Fira Code','Cascadia Code','Consolas',monospace; font-size:.6rem; color:var(--dim); }
+.acc-meta { font-family:'JetBrains Mono',monospace; font-size:.6rem; color:var(--dim); }
 .acc-chev { font-size:.65rem; color:var(--dim); transition:transform .25s; }
 .acc-item.open .acc-chev { transform:rotate(90deg); }
 .acc-body { max-height:0; overflow:hidden; transition:max-height .3s,padding .3s; padding:0 0 0 16px; }
@@ -374,7 +376,7 @@ canvas { width:100%; height:720px; background:var(--surface); border-radius:12px
 
 .stats-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
 .stat-item { background:var(--bg); border-radius:6px; padding:8px; text-align:center; }
-.stat-value { font-size:1.3rem; font-weight:700; font-family:'JetBrains Mono','Fira Code','Cascadia Code','Consolas',monospace; }
+.stat-value { font-size:1.3rem; font-weight:700; font-family:'JetBrains Mono',monospace; }
 .stat-label { font-size:.6rem; color:var(--dim); text-transform:uppercase; letter-spacing:1px; margin-top:1px; }
 
 .state-row { display:flex; align-items:center; gap:8px; margin-bottom:6px; font-size:.8rem; }
@@ -394,16 +396,15 @@ background:linear-gradient(90deg,var(--l1),var(--l2),var(--smem),var(--global),v
 .step-list li.visible { opacity:1; transform:translateX(0); }
 .step-list li.active { opacity:1; transform:translateX(0); }
 .step-list li.past { opacity:.4; }
-.step-num { font-family:'JetBrains Mono','Fira Code','Cascadia Code','Consolas',monospace; font-size:.65rem; font-weight:600; min-width:18px; height:18px; display:flex; align-items:center; justify-content:center; border-radius:4px; flex-shrink:0; }
+.step-num { font-family:'JetBrains Mono',monospace; font-size:.65rem; font-weight:600; min-width:18px; height:18px; display:flex; align-items:center; justify-content:center; border-radius:4px; flex-shrink:0; }
 .step-text { flex:1; }
-.step-text .micro { display:block; font-size:.68rem; color:var(--dim); font-family:'JetBrains Mono','Fira Code','Cascadia Code','Consolas',monospace; margin-top:1px; }
+.step-text .micro { display:block; font-size:.68rem; color:var(--dim); font-family:'JetBrains Mono',monospace; margin-top:1px; }
 .explainer-summary { margin-top:8px; padding-top:8px; border-top:1px solid var(--border); font-size:.73rem; color:var(--dim); font-style:italic; opacity:0; transition:opacity .5s; }
 .explainer-summary.visible { opacity:1; }
 
-.key-label { font-size:.62rem; font-family:'JetBrains Mono',monospace; color:var(--dim); text-transform:uppercase; letter-spacing:1px; margin-bottom:5px; }
 .event-log { max-height:160px; overflow-y:auto; overscroll-behavior:contain; scrollbar-width:thin; scrollbar-color:var(--border) transparent; }
 .event-log::-webkit-scrollbar{width:4px} .event-log::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
-.log-entry { font-family:'JetBrains Mono','Fira Code','Cascadia Code','Consolas',monospace; font-size:.65rem; padding:3px 0; border-bottom:1px solid rgba(42,45,58,.5); color:var(--dim); animation:fadeIn .3s; }
+.log-entry { font-family:'JetBrains Mono',monospace; font-size:.65rem; padding:3px 0; border-bottom:1px solid rgba(42,45,58,.5); color:var(--dim); animation:fadeIn .3s; }
 .log-entry .tag { display:inline-block; padding:1px 5px; border-radius:3px; font-size:.6rem; margin-right:3px; }
 @keyframes fadeIn { from{opacity:0;transform:translateY(-4px)} to{opacity:1;transform:translateY(0)} }
 
@@ -413,7 +414,7 @@ background:var(--surface); border:1px solid var(--border); border-radius:10px;
 padding:14px 16px; display:flex; gap:14px; align-items:flex-start;
 }
 .arch-intro-badge {
-font-family:'JetBrains Mono','Fira Code','Cascadia Code','Consolas',monospace; font-size:.6rem; font-weight:700;
+font-family:'JetBrains Mono',monospace; font-size:.6rem; font-weight:700;
 padding:4px 10px; border-radius:5px; white-space:nowrap; flex-shrink:0; margin-top:2px;
 }
 .arch-intro-text { font-size:.8rem; line-height:1.55; color:var(--dim); }
@@ -439,19 +440,19 @@ padding:4px 10px; border-radius:5px; white-space:nowrap; flex-shrink:0; margin-t
 
 .perf-card h3 { margin-bottom:12px; }
 .perf-row { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
-.perf-label { font-size:.7rem; font-family:'JetBrains Mono','Fira Code','Cascadia Code','Consolas',monospace; color:var(--dim); min-width:65px; flex-shrink:0; }
+.perf-label { font-size:.7rem; font-family:'JetBrains Mono',monospace; color:var(--dim); min-width:65px; flex-shrink:0; }
 .perf-bars { flex:1; display:flex; gap:2px; height:28px; align-items:flex-end; }
 .perf-bar {
 flex:1; border-radius:2px 2px 0 0; position:relative; min-height:2px;
 transition:height .4s ease; display:flex; align-items:flex-end; justify-content:center;
 }
 .perf-bar-val {
-font-family:'JetBrains Mono','Fira Code','Cascadia Code','Consolas',monospace; font-size:.5rem; font-weight:600;
+font-family:'JetBrains Mono',monospace; font-size:.5rem; font-weight:600;
 position:absolute; top:-12px; width:100%; text-align:center; white-space:nowrap;
 }
 .perf-bar.active { outline:1px solid #fff3; outline-offset:1px; }
 .perf-legend { display:flex; gap:10px; margin-top:10px; flex-wrap:wrap; justify-content:center; }
-.perf-legend-item { display:flex; align-items:center; gap:4px; font-size:.6rem; font-family:'JetBrains Mono','Fira Code','Cascadia Code','Consolas',monospace; color:var(--dim); }
+.perf-legend-item { display:flex; align-items:center; gap:4px; font-size:.6rem; font-family:'JetBrains Mono',monospace; color:var(--dim); }
 .perf-legend-dot { width:8px; height:8px; border-radius:2px; }
 
 @media(max-width:1100px) {
@@ -460,6 +461,23 @@ position:absolute; top:-12px; width:100%; text-align:center; white-space:nowrap;
 .info-card { flex:1; min-width:260px; }
 .bottom-grid { grid-template-columns:1fr; }
 }
+
+/* ── Cache line inspector (sel-panel) ─────────────────────────────────────── */
+#sel-panel .cl-section { margin-top: 12px; }
+#sel-panel .cl-section h5 { font-size:.6rem; font-family:'JetBrains Mono',monospace;
+  text-transform:uppercase; letter-spacing:1.5px; color:var(--dim); margin-bottom:7px; }
+#cl-table { width:100%; border-collapse:collapse; font-size:.68rem; font-family:'JetBrains Mono',monospace; }
+#cl-table th { color:var(--dim); font-weight:600; text-align:left; padding:3px 5px;
+  border-bottom:1px solid #2a2d3a; font-size:.58rem; letter-spacing:.8px; text-transform:uppercase; }
+#cl-table td { padding:3px 5px; border-bottom:1px solid #1e2030; vertical-align:middle; }
+#cl-table tr:last-child td { border-bottom:none; }
+#cl-table .cl-idx { color:var(--dim); width:28px; }
+#cl-table .cl-swatch { width:10px; height:10px; border-radius:2px; display:inline-block; margin-right:4px; vertical-align:middle; flex-shrink:0; }
+#cl-table .cl-state { font-weight:700; }
+#cl-table .cl-op { color:#aaa; }
+#cl-table .cl-empty { color:#3a3d50; font-style:italic; }
+#cl-table tr.cl-row-dirty td { background:#51cf6606; }
+#cl-table tr.cl-row-clean td { background:#339af006; }
 </style>
 </head>
 <body>
@@ -498,7 +516,7 @@ position:absolute; top:-12px; width:100%; text-align:center; white-space:nowrap;
 
 <div class="main-container">
   <div class="viz-area">
-    <canvas id="canvas" width="900" height="640"></canvas>
+    <canvas id="canvas"></canvas>
     <!-- paused badge removed -->
     <!-- Block tooltip -->
     <div id="block-tooltip">
@@ -517,36 +535,21 @@ position:absolute; top:-12px; width:100%; text-align:center; white-space:nowrap;
         <h5>Connects To</h5>
         <div class="conn-list" id="conn-list"></div>
       </div>
+      <div class="cl-section" id="cl-section" style="display:none">
+        <h5>Cache Line State</h5>
+        <table id="cl-table">
+          <thead><tr>
+            <th class="cl-idx">#</th>
+            <th>State</th>
+            <th>Last Op</th>
+          </tr></thead>
+          <tbody id="cl-tbody"></tbody>
+        </table>
+      </div>
     </div>
   </div>
   <div class="info-panel">
-    <div class="info-card" id="key-card">
-      <h3>Signal Address Key</h3>
-      <div style="display:flex;flex-direction:column;gap:8px;font-size:.72rem">
-
-        <div style="padding:8px;background:#1a1c2a;border-radius:6px;border:1px solid var(--border)">
-          <div class="key-label">Local read / write</div>
-          <code style="color:#ff6b6b">RdReq[A4]</code> &nbsp;→&nbsp; <code style="color:#ffa94d">DATA[A4]</code>
-          <div style="color:var(--dim);margin-top:4px;line-height:1.5"><strong style="color:#aaa">A4</strong> = memory address 4. L2 bar #4 holds this line. When DATA returns, it fills whichever <em>L1 slot</em> is free — shown separately as <code>L1[N] ← A4</code>.</div>
-        </div>
-
-        <div style="padding:8px;background:#1a1c2a;border-radius:6px;border:1px solid var(--border)">
-          <div class="key-label">Cross-SM invalidate / atomic</div>
-          <code style="color:#f06595">INV[SM0·L4]</code>
-          <div style="color:var(--dim);margin-top:4px;line-height:1.5"><strong style="color:#aaa">SM0·L4</strong> = bar #4 inside <em>SM0's</em> L1. Find SM0, count to bar 4, watch it go dark on arrival.</div>
-        </div>
-
-        <div style="padding:8px;background:#1a1c2a;border-radius:6px;border:1px solid var(--border)">
-          <div class="key-label">Write / write-back</div>
-          <code style="color:#51cf66">WR[SM1·L7]</code> &nbsp;→&nbsp; <code style="color:#ffa94d">WB[SM1·L7]</code>
-          <div style="color:var(--dim);margin-top:4px;line-height:1.5">SM1 wrote bar #7. That bar turns <span style="color:#51cf66">green (Modified)</span>, then WB flushes it to L2.</div>
-        </div>
-
-        <div style="font-size:.68rem;color:var(--dim);line-height:1.5;padding-top:2px">
-          The same label on every hop of a round trip confirms it is the same cache line end-to-end.
-        </div>
-      </div>
-    </div>
+    <div class="info-card" id="key-card"></div>
     <div class="info-card">
       <h3>Cache States (MSI)</h3>
       <div class="state-row"><div class="state-dot" style="background:#51cf66"></div><span class="state-label">Modified</span><span class="state-desc">Dirty, exclusive</span></div>
@@ -628,7 +631,7 @@ position:absolute; top:-12px; width:100%; text-align:center; white-space:nowrap;
 
 <!-- Instruction tooltip at body level so fixed positioning works correctly -->
 <div id="instr-tooltip">
-  <div class="it-name"><div class="it-dot" id="it-dot"></div><span id="it-name"></span><span id="it-addr" style="margin-left:8px;font-size:.65rem;color:#ffa94d;font-family:'JetBrains Mono',monospace;opacity:0;transition:opacity .15s"></span></div>
+  <div class="it-name"><div class="it-dot" id="it-dot"></div><span id="it-name"></span></div>
   <div class="it-section">
     <div class="it-label">What it does</div>
     <div class="it-text" id="it-what"></div>
@@ -638,8 +641,9 @@ position:absolute; top:-12px; width:100%; text-align:center; white-space:nowrap;
     <div class="it-text" id="it-why"></div>
   </div>
 </div>
-  <script>
-// globals.js
+<script>
+
+// ── globals.js ──────────────────────────────────────────
 // globals.js — GPU Cache Coherency Demo
 
 // Global state, constants, pause toggle, scenario tooltip data
@@ -783,7 +787,8 @@ document.querySelectorAll('.scenario-btn').forEach(function(btn) {
 
 
 
-// data.js
+
+// ── data.js ──────────────────────────────────────────
 // data.js — GPU Cache Coherency Demo
 
 // Architecture definitions, block metadata, instruction reference
@@ -1109,7 +1114,7 @@ var currentArch = 'pascal';
 var prevArch = null;
 var stats = { hits:0, misses:0, inv:0, wb:0 };
 var autoMode = true, autoTimer = 0;
-var particles = [], flashEffects = [], lineFlashes = [], stepTimers = [], bubbles = [];
+var particles = [], flashEffects = [], stepTimers = [], bubbles = [];
 var SPEED_SCALE = 0.55;  // global multiplier — all particle speeds divided by this; <1 = slower
 var layout = {};
 
@@ -1119,256 +1124,40 @@ var cacheState = [];
 // Shared across all SMs — L2 is unified. NUM_L2_LINES shown as occupancy bars.
 var NUM_L2_LINES = 24;
 var l2Lines = new Array(NUM_L2_LINES).fill(0);
-var l2Tags = new Array(NUM_L2_LINES).fill(null);  // tag stored in each L2 line (null = empty)
-var l2LastHitLine = -1;   // index of most recently hit L2 cache line (-1 = none yet)
-var l2LastHitTime = 0;    // timestamp (ms) of last hit for fade-out in tooltip
 
 
-
-// cache.js
+// ── cache.js ──────────────────────────────────────────
 // cache.js — GPU Cache Coherency Demo
 
-// ════════════════════════════════════════════════════════════════
-// PER-LINE L1 CACHE STATE MODEL
-//
-// Real GPU L1 caches are set-associative: each line has independent
-// state. This replaces the old single-state-per-SM model with a
-// proper 16-line array where each slot tracks:
-//   { mesi: 'I'|'S'|'M',  tag: <address_token>|null }
-//
-// MESI meanings (GPU simplified):
-//   I  = Invalid  — line not present
-//   S  = Shared   — clean, coherent copy
-//   M  = Modified — dirty, SM owns this line
-//
-// Displayed "state" label is DERIVED from actual line states:
-//   any M lines  → "modified"
-//   any S, no M  → "shared"
-//   all I        → "invalid"
-//
-// Tags are simulated address tokens (e.g. "A3") so INVs can be
-// address-targeted — an INV for "A3" only drops lines tagged "A3".
-// ════════════════════════════════════════════════════════════════
+// Cache line state, L2 state helpers, resize, drawing utilities
 
-var ADDR_POOL = [
-  'A0','A1','A2','A3','A4','A5','A6','A7',
-  'B0','B1','B2','B3','B4','B5','B6','B7',
-  'C0','C1','C2','C3','D0','D1','D2','D3',
-  'E0','E1','F0','F1','G0','G1','H0','H1',
-];
+// ── Operation type → color map ────────────────────────────────────────────────
+// Used by draw.js to color individual L1 line slots by the op that filled them.
+var OP_COLORS = {
+  read:     '#339af0',   // blue   — global load / L2 fetch
+  write:    '#51cf66',   // green  — store / write-evict
+  atomic:   '#f59e0b',   // amber  — atomicAdd / RMW
+  spill:    '#fb923c',   // orange — register spill
+  cp_async: '#22d3ee',   // cyan   — cp.async load
+  tma:      '#22d3ee',   // cyan   — TMA tile load
+  shared:   '#6ee09a',   // light-green — shared mem / DSMEM
+};
 
-// Per-SM L1 line arrays (authoritative state)
-// l1Lines[smIdx] = Array(NUM_LINES) of { mesi:'I'|'S'|'M', tag:string|null }
-var l1Lines = [];
-
-// ── Aggregate state ───────────────────────────────────────────────
-function getL1AggState(smIdx) {
-  var lines = l1Lines[smIdx];
-  if (!lines) return 'invalid';
-  var hasM = false, hasS = false;
-  for (var i = 0; i < lines.length; i++) {
-    if (lines[i].mesi === 'M') { hasM = true; break; }
-    if (lines[i].mesi === 'S') hasS = true;
+// Return the render color for a single L1 line slot object {s, op}.
+// s: 0=empty, 1=clean, 2=dirty
+function lineColor(line, blockState) {
+  if (!line || line.s === 0) return '#2a2d3a';
+  if (line.op && OP_COLORS[line.op]) {
+    return line.s === 2 ? OP_COLORS[line.op] : OP_COLORS[line.op] + '70';
   }
-  if (hasM) return 'modified';
-  if (hasS) return 'shared';
-  return 'invalid';
+  // no op tag — fall back to state-based color
+  if (line.s === 2) return '#51cf66';
+  return blockState === 'shared' ? '#339af0' : '#51cf6688';
 }
 
-// Sync the legacy sm.l1.state string from actual per-line state.
-function syncL1State(smIdx) {
-  if (!layout.sms || !layout.sms[smIdx]) return;
-  layout.sms[smIdx].l1.state = getL1AggState(smIdx);
-}
-function syncAllL1States() {
-  if (!layout.sms) return;
-  for (var i = 0; i < layout.sms.length; i++) syncL1State(i);
-}
+// Make an empty line slot object
+function makeLine(s, op) { return { s: s || 0, op: op || null }; }
 
-// Returns numeric array (0=I, 1=S, 2=M) for draw bars.
-function getL1Numeric(smIdx) {
-  var lines = l1Lines[smIdx];
-  if (!lines) return new Array(NUM_LINES).fill(0);
-  var out = new Array(NUM_LINES);
-  for (var i = 0; i < lines.length; i++) {
-    out[i] = lines[i].mesi === 'M' ? 2 : (lines[i].mesi === 'S' ? 1 : 0);
-  }
-  return out;
-}
-
-// ── Line lookup helpers ───────────────────────────────────────────
-function findLine(smIdx, tag) {
-  var lines = l1Lines[smIdx];
-  if (!lines) return -1;
-  // Fast path: L-format tags encode their slot directly
-  var direct = tagToIdx(tag);
-  if (direct >= 0 && direct < lines.length) {
-    return (lines[direct].mesi !== 'I') ? direct : -1;
-  }
-  // Fallback: linear scan for legacy tags
-  for (var i = 0; i < lines.length; i++) {
-    if (lines[i].tag === tag) return i;
-  }
-  return -1;
-}
-function findFreeLine(smIdx) {
-  var lines = l1Lines[smIdx];
-  if (!lines) return -1;
-  for (var i = 0; i < lines.length; i++) {
-    if (lines[i].mesi === 'I') return i;
-  }
-  return -1;
-}
-// LRU-approx eviction: prefer Shared (clean/free evict) over Modified (needs writeback).
-function pickEvictLine(smIdx) {
-  var lines = l1Lines[smIdx];
-  if (!lines) return -1;
-  for (var i = 0; i < lines.length; i++) { if (lines[i].mesi === 'S') return i; }
-  for (var j = 0; j < lines.length; j++) { if (lines[j].mesi === 'M') return j; }
-  return -1;
-}
-function freshTag(smIdx) {
-  // Tag = 'L'+slotIndex so the label directly identifies the visible bar.
-  // Pick a random Invalid slot; if all full, pick a random slot (will evict).
-  var lines = l1Lines[smIdx];
-  if (!lines) return 'L0';
-  var free = [];
-  for (var i = 0; i < lines.length; i++) { if (lines[i].mesi === 'I') free.push(i); }
-  if (free.length) return 'L' + free[Math.floor(Math.random() * free.length)];
-  // All slots occupied — pick any slot (eviction will follow)
-  return 'L' + Math.floor(Math.random() * lines.length);
-}
-
-// Convert a tag like 'L4' to its slot index (4). Returns -1 if not L-format.
-function tagToIdx(tag) {
-  if (typeof tag === 'string' && tag[0] === 'L') return parseInt(tag.slice(1), 10);
-  return -1;
-}
-
-// Global label for a line visible from another SM: 'SM0·L4'
-function globalTag(smIdx, tag) {
-  return 'SM' + smIdx + '·' + tag;
-}
-
-// ── Core per-line operations ──────────────────────────────────────
-
-// Fill one line as Shared (L1 read miss fill). Returns {idx, tag, evictedMod}.
-function l1FillShared(smIdx, tag) {
-  var lines = l1Lines[smIdx];
-  if (!lines) { l1Lines[smIdx] = new Array(NUM_LINES).fill(null).map(function(){ return {mesi:'I',tag:null}; }); lines = l1Lines[smIdx]; }
-  tag = tag || freshTag(smIdx);
-  // Tag encodes slot: always fill at that exact slot index
-  var idx = tagToIdx(tag);
-  if (idx < 0 || idx >= lines.length) idx = findFreeLine(smIdx);
-  if (idx === -1) idx = pickEvictLine(smIdx);
-  var evictedMod = (lines[idx].mesi === 'M');
-  lines[idx] = { mesi: 'S', tag: tag };
-  syncL1State(smIdx);
-  return { idx: idx, tag: tag, evictedMod: evictedMod };
-}
-
-// Mark a line Modified (write hit or write-allocate). Returns {idx, tag}.
-function l1MarkModified(smIdx, tag) {
-  var lines = l1Lines[smIdx];
-  if (!lines) { l1Lines[smIdx] = new Array(NUM_LINES).fill(null).map(function(){ return {mesi:'I',tag:null}; }); lines = l1Lines[smIdx]; }
-  tag = tag || freshTag(smIdx);
-  var idx = tagToIdx(tag);
-  if (idx < 0 || idx >= lines.length) idx = findFreeLine(smIdx);
-  if (idx === -1) idx = pickEvictLine(smIdx);
-  lines[idx] = { mesi: 'M', tag: tag };
-  syncL1State(smIdx);
-  return { idx: idx, tag: tag };
-}
-
-// Invalidate by tag (address-targeted INV). If tag=null, drop 1-2 random valid lines.
-function l1InvalidateTag(smIdx, tag) {
-  var lines = l1Lines[smIdx];
-  if (!lines) return 0;
-  var count = 0;
-  if (tag) {
-    // Direct slot access for L-format tags
-    var idx = tagToIdx(tag);
-    if (idx < 0 || idx >= lines.length) idx = findLine(smIdx, tag);
-    if (idx !== -1 && lines[idx].mesi !== 'I') { lines[idx] = { mesi:'I', tag:null }; count = 1; }
-  } else {
-    var valid = [];
-    for (var i = 0; i < lines.length; i++) { if (lines[i].mesi !== 'I') valid.push(i); }
-    for (var j = valid.length-1; j > 0; j--) {
-      var k = Math.floor(Math.random()*(j+1)); var t=valid[j]; valid[j]=valid[k]; valid[k]=t;
-    }
-    var toDrop = Math.min(1 + Math.floor(Math.random()*2), valid.length);
-    for (var d = 0; d < toDrop; d++) { lines[valid[d]] = { mesi:'I', tag:null }; count++; }
-  }
-  syncL1State(smIdx);
-  return count;
-}
-
-// Writeback: M → S for all Modified lines (data now safely in L2).
-function l1WritebackLines(smIdx) {
-  var lines = l1Lines[smIdx];
-  if (!lines) return 0;
-  var count = 0;
-  for (var i = 0; i < lines.length; i++) {
-    if (lines[i].mesi === 'M') { lines[i].mesi = 'S'; count++; }
-  }
-  syncL1State(smIdx);
-  return count;
-}
-
-// Evict one dirty line (capacity eviction). Returns tag or null.
-function l1EvictDirty(smIdx) {
-  var lines = l1Lines[smIdx];
-  if (!lines) return null;
-  for (var i = 0; i < lines.length; i++) {
-    if (lines[i].mesi === 'M') {
-      var t = lines[i].tag;
-      lines[i] = { mesi:'I', tag:null };
-      syncL1State(smIdx);
-      return t;
-    }
-  }
-  return null;
-}
-
-// Full invalidation (reset / arch switch).
-function l1FullInvalidate(smIdx) {
-  // Guard: l1Lines[smIdx] may not exist yet (e.g. resetAll before initCacheState)
-  if (!l1Lines[smIdx]) {
-    l1Lines[smIdx] = new Array(NUM_LINES).fill(null).map(function(){ return { mesi:'I', tag:null }; });
-    syncL1State(smIdx);
-    return;
-  }
-  var lines = l1Lines[smIdx];
-  for (var i = 0; i < lines.length; i++) { lines[i] = { mesi:'I', tag:null }; }
-  syncL1State(smIdx);
-}
-
-// Realistic seed: 35-60% occupancy, mostly S, some M.
-function l1SeedRandom(smIdx) {
-  // Seed with slot-indexed tags: lines[i].tag = 'L'+i always.
-  // This means the tag directly identifies the visible bar position.
-  var lines = l1Lines[smIdx];
-  if (!lines) return;
-  var fillCount = Math.floor(NUM_LINES * (0.35 + Math.random() * 0.25));
-  var dirtyCount = Math.floor(fillCount * (0.15 + Math.random() * 0.15));
-  // Build a shuffled list of slot indices to decide which ones get filled
-  var slots = []; for (var s = 0; s < NUM_LINES; s++) slots.push(s);
-  for (var j = NUM_LINES-1; j > 0; j--) {
-    var k = Math.floor(Math.random()*(j+1)); var t=slots[j]; slots[j]=slots[k]; slots[k]=t;
-  }
-  // Start all invalid, then fill selected slots
-  for (var i = 0; i < NUM_LINES; i++) lines[i] = { mesi:'I', tag:null };
-  for (var f = 0; f < fillCount && f < slots.length; f++) {
-    var sl = slots[f];
-    lines[sl] = { mesi: f < dirtyCount ? 'M' : 'S', tag: 'L' + sl };
-  }
-  syncL1State(smIdx);
-}
-
-// ── SMEM ──────────────────────────────────────────────────────────
-var smemLines = [];  // smemLines[smIdx] = Array(NUM_LINES) of 0|1
-
-// ── Canvas helpers ────────────────────────────────────────────────
 function resize() {
   dpr = window.devicePixelRatio || 1;
   var r = canvas.getBoundingClientRect();
@@ -1386,6 +1175,7 @@ function resize() {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   if (initialized) buildLayout();
 }
+
 window.addEventListener('resize', resize);
 
 function rrect(x, y, w, h, r) {
@@ -1397,29 +1187,28 @@ function rrect(x, y, w, h, r) {
   ctx.arcTo(x,y,x+r,y,r); ctx.closePath();
 }
 
-// ── L2 helpers (coarse occupancy model) ───────────────────────────
 function l2Fill(dirty) {
   var count = 10 + Math.floor(Math.random() * 10);
-  for (var i = 0; i < NUM_L2_LINES; i++) { l2Lines[i] = i < count ? (dirty ? 2 : 1) : 0; l2Tags[i] = null; }
+  for (var i = 0; i < NUM_L2_LINES; i++) l2Lines[i] = i < count ? (dirty ? 2 : 1) : 0;
   for (var j = NUM_L2_LINES-1; j > 0; j--) {
     var k = Math.floor(Math.random()*(j+1));
     var t = l2Lines[j]; l2Lines[j]=l2Lines[k]; l2Lines[k]=t;
-    var tt = l2Tags[j]; l2Tags[j]=l2Tags[k]; l2Tags[k]=tt;
   }
 }
-function l2AbsorbOne(tag) {
+function l2AbsorbOne() {
   for (var i = 0; i < NUM_L2_LINES; i++) {
-    if (l2Lines[i] === 0) { l2Lines[i] = 1; l2Tags[i] = tag || null; return i; }
+    if (l2Lines[i] === 0) { l2Lines[i] = 1; return; }
   }
   for (var i2 = 0; i2 < NUM_L2_LINES; i2++) {
-    if (l2Lines[i2] === 1) { return i2; }  // already present, no-op
+    if (l2Lines[i2] === 1) { l2Lines[i2] = 1; return; }
   }
-  l2Lines[0] = 1; l2Tags[0] = tag || null; return 0;
+  l2Lines[0] = 1;
 }
 function l2Absorb() {
   var filled = 0;
   for (var i = 0; i < NUM_L2_LINES; i++) if (l2Lines[i] > 0) filled++;
-  var toFill = Math.min(NUM_L2_LINES - filled, 2 + Math.floor(Math.random()*3));
+  var empty = NUM_L2_LINES - filled;
+  var toFill = Math.min(empty, 2 + Math.floor(Math.random()*3));
   var added = 0;
   for (var i2 = 0; i2 < NUM_L2_LINES && added < toFill; i2++) {
     if (l2Lines[i2] === 0) { l2Lines[i2] = 1; added++; }
@@ -1443,182 +1232,170 @@ function l2Dirty() {
 }
 function l2Evict() {
   for (var i = 0; i < NUM_L2_LINES; i++) {
-    if (l2Lines[i] === 2) { l2Lines[i] = 0; l2Tags[i] = null; return; }
+    if (l2Lines[i] === 2) { l2Lines[i] = 0; return; }
   }
   for (var i2 = 0; i2 < NUM_L2_LINES; i2++) {
-    if (l2Lines[i2] === 1) { l2Lines[i2] = 0; l2Tags[i2] = null; return; }
+    if (l2Lines[i2] === 1) { l2Lines[i2] = 0; return; }
   }
 }
 
-// ── Cache init ────────────────────────────────────────────────────
 function initCacheState() {
-  var n = layout.sms ? layout.sms.length : 4;
-  l1Lines = [];
-  smemLines = [];
-  for (var i = 0; i < n; i++) {
-    l1Lines.push(new Array(NUM_LINES).fill(null).map(function(){ return { mesi:'I', tag:null }; }));
-    smemLines.push(new Array(NUM_LINES).fill(0));
-    l1SeedRandom(i);
-  }
-
-  // Legacy cacheState shim (draw code uses it for regs + smem)
   cacheState = [];
-  for (var ci = 0; ci < n; ci++) {
+  var l2Count = Math.floor(NUM_L2_LINES * (0.38 + Math.random() * 0.14));
+  l2Lines = new Array(NUM_L2_LINES).fill(0);
+  for (var li = 0; li < l2Count; li++) l2Lines[li] = 1;
+  for (var lj = NUM_L2_LINES - 1; lj > 0; lj--) {
+    var lk = Math.floor(Math.random() * (lj + 1));
+    var lt = l2Lines[lj]; l2Lines[lj] = l2Lines[lk]; l2Lines[lk] = lt;
+  }
+  var n = layout.sms ? layout.sms.length : 4;
+  for (var i = 0; i < n; i++) {
     var base = 0.72 + Math.random() * 0.10;
+    // l1: array of {s, op} objects instead of plain integers
+    var l1lines = [];
+    for (var li2 = 0; li2 < NUM_LINES; li2++) l1lines.push(makeLine(0, null));
     cacheState.push({
-      smem: smemLines[ci],
+      l1:   l1lines,
+      smem: new Array(NUM_LINES).fill(0),
       regsPressure: base,
       regsPressureTarget: base,
     });
   }
-
-  // Pre-fill L2 ~45%
-  var l2Count = Math.floor(NUM_L2_LINES * (0.38 + Math.random() * 0.14));
-  l2Lines = new Array(NUM_L2_LINES).fill(0);
-  l2Tags  = new Array(NUM_L2_LINES).fill(null);
-  l2LastHitLine = -1; l2LastHitTime = 0;
-  // Fill first l2Count slots, each tagged 'L<slotIndex>' so hit lookups are exact
-  for (var li = 0; li < NUM_L2_LINES; li++) {
-    if (li < l2Count) { l2Lines[li] = 1; l2Tags[li] = 'L' + li; }
-  }
-  // Shuffle both arrays together so the visual bars are randomised but tags stay with their lines
-  for (var lj = NUM_L2_LINES-1; lj > 0; lj--) {
-    var lk = Math.floor(Math.random()*(lj+1));
-    var lt = l2Lines[lj]; l2Lines[lj]=l2Lines[lk]; l2Lines[lk]=lt;
-    var ltg = l2Tags[lj];  l2Tags[lj] =l2Tags[lk]; l2Tags[lk]=ltg;
-  }
-
-  syncAllL1States();
 }
 
-// ── Register pressure ─────────────────────────────────────────────
 function setRegPressure(smIdx, target) {
   if (!cacheState[smIdx]) return;
   cacheState[smIdx].regsPressureTarget = Math.max(0, Math.min(1.15, target));
 }
+
 function tickRegPressure(dt) {
   for (var i = 0; i < cacheState.length; i++) {
     var cs = cacheState[i];
     if (!cs) continue;
     var diff = cs.regsPressureTarget - cs.regsPressure;
-    cs.regsPressure += diff * (diff > 0 ? 3.5 : 1.2) * dt;
+    var rate = diff > 0 ? 3.5 : 1.2;
+    cs.regsPressure += diff * rate * dt;
   }
 }
 
-// ── SMEM helpers ──────────────────────────────────────────────────
-function fillSmem(smIdx) {
-  var lines = smemLines[smIdx];
-  if (!lines) return;
-  var count = 8 + Math.floor(Math.random() * 7);
-  for (var i = 0; i < NUM_LINES; i++) lines[i] = i < count ? 1 : 0;
-  for (var j = NUM_LINES-1; j > 0; j--) {
-    var kk = Math.floor(Math.random()*(j+1)); var tt=lines[j]; lines[j]=lines[kk]; lines[kk]=tt;
+// Add exactly ONE cache line from an operation — realistic: each fetch installs one line.
+// op: 'read','write','atomic','spill','cp_async','tma' or null
+function fillL1Random(smIdx, dirty, op) {
+  if (!cacheState[smIdx]) return;
+  var lines = cacheState[smIdx].l1;
+  // Find an empty slot; if none, evict the oldest non-op line (LRU approximation)
+  var slot = -1;
+  for (var i = 0; i < NUM_LINES; i++) {
+    if (lines[i].s === 0) { slot = i; break; }
   }
-  if (cacheState[smIdx]) cacheState[smIdx].smem = lines;
+  if (slot === -1) {
+    // No empty slot — evict a clean line first, then a dirty line
+    for (var i2 = 0; i2 < NUM_LINES; i2++) {
+      if (lines[i2].s === 1) { slot = i2; break; }
+    }
+    if (slot === -1) slot = 0; // evict first dirty line as last resort
+  }
+  lines[slot] = makeLine(dirty ? 2 : 1, op || null);
 }
 
-// ── Back-compat stubs ─────────────────────────────────────────────
-// Called from scenarios.js and atomic.js — delegate to per-line API.
-
-function fillL1Random(smIdx, dirty) {
-  var lines = l1Lines[smIdx];
-  if (!lines) return;
-  var pool = ADDR_POOL.slice();
-  for (var j = pool.length-1; j > 0; j--) {
-    var k = Math.floor(Math.random()*(j+1)); var t=pool[j]; pool[j]=pool[k]; pool[k]=t;
-  }
+// Fill multiple lines at once — used only for initialization / reset seeding
+function fillL1Many(smIdx, dirty, op) {
+  if (!cacheState[smIdx]) return;
+  var lines = cacheState[smIdx].l1;
   var count = 6 + Math.floor(Math.random() * 8);
-  var filled = 0;
-  for (var i = 0; i < NUM_LINES && filled < count; i++) {
-    if (lines[i].mesi === 'I') {
-      lines[i] = { mesi: dirty ? 'M' : 'S', tag: pool[filled % pool.length] };
-      filled++;
-    }
+  for (var i = 0; i < NUM_LINES; i++) {
+    lines[i] = makeLine(i < count ? (dirty ? 2 : 1) : 0, i < count ? (op || null) : null);
   }
-  syncL1State(smIdx);
+  for (var j = NUM_LINES - 1; j > 0; j--) {
+    var k = Math.floor(Math.random() * (j + 1));
+    var tmp = lines[j]; lines[j] = lines[k]; lines[k] = tmp;
+  }
 }
 
-function setL1Dirty(smIdx) {
-  var lines = l1Lines[smIdx];
-  if (!lines) return null;
-  var hasLines = false;
-  for (var i = 0; i < NUM_LINES; i++) if (lines[i].mesi !== 'I') { hasLines = true; break; }
-  if (!hasLines) fillL1Random(smIdx, false);
-
-  var dirtied = 0; var dirtyTag = null;
-  for (var i2 = 0; i2 < NUM_LINES && dirtied < 3; i2++) {
-    if (lines[i2].mesi === 'S' && Math.random() > 0.4) {
-      lines[i2].mesi = 'M';
-      if (!dirtyTag) dirtyTag = lines[i2].tag;
-      dirtied++;
+function setL1Dirty(smIdx, op) {
+  if (!cacheState[smIdx]) return;
+  var lines = cacheState[smIdx].l1;
+  // Ensure at least one line exists to dirty
+  var hasLine = false;
+  for (var i = 0; i < NUM_LINES; i++) { if (lines[i].s > 0) { hasLine = true; break; } }
+  if (!hasLine) { fillL1Random(smIdx, false, op || null); }
+  // Mark exactly ONE existing clean line dirty — or install a new dirty line
+  for (var i2 = 0; i2 < NUM_LINES; i2++) {
+    if (lines[i2].s === 1) {
+      lines[i2] = makeLine(2, op || lines[i2].op);
+      return;
     }
   }
-  if (dirtied === 0) {
-    var idx = findFreeLine(smIdx);
-    if (idx === -1) idx = pickEvictLine(smIdx);
-    if (idx !== -1) { dirtyTag = freshTag(smIdx); lines[idx] = { mesi:'M', tag:dirtyTag }; }
-  }
-  syncL1State(smIdx);
-  return dirtyTag;
+  // No clean line found — add a new dirty line
+  fillL1Random(smIdx, true, op || null);
 }
 
+// Full wipe — only for arch switch / full reset / complete writeback eviction
 function invalidateL1(smIdx) {
-  l1FullInvalidate(smIdx);
+  if (!cacheState[smIdx]) return;
+  var lines = cacheState[smIdx].l1;
+  for (var i = 0; i < NUM_LINES; i++) lines[i] = makeLine(0, null);
 }
 
-function invalidateL1Lines(smIdx, count, specificTag) {
-  var lines = l1Lines[smIdx];
-  if (!lines) return [];
-  // If a specific tag is given (from INV signal), invalidate that exact slot
-  if (specificTag) {
-    var exactIdx = tagToIdx(specificTag);
-    if (exactIdx < 0 || exactIdx >= lines.length) exactIdx = findLine(smIdx, specificTag);
-    if (exactIdx !== -1 && lines[exactIdx].mesi !== 'I') {
-      lines[exactIdx] = { mesi:'I', tag:null };
-      syncL1State(smIdx);
-      return ['L' + exactIdx];
-    }
-    // Tag not found — fall through to random drop so something visible happens
+// Evict exactly one line (the written-back line) — used by writeback scenario
+function evictOneL1Line(smIdx) {
+  if (!cacheState[smIdx]) return;
+  var lines = cacheState[smIdx].l1;
+  // Evict first dirty line (it was written back)
+  for (var i = 0; i < NUM_LINES; i++) {
+    if (lines[i].s === 2) { lines[i] = makeLine(0, null); return; }
   }
-  var valid = [];
-  for (var i = 0; i < NUM_LINES; i++) { if (lines[i].mesi !== 'I') valid.push(i); }
-  for (var j = valid.length-1; j > 0; j--) {
-    var k = Math.floor(Math.random()*(j+1)); var t=valid[j]; valid[j]=valid[k]; valid[k]=t;
+  // No dirty — evict first clean line
+  for (var i2 = 0; i2 < NUM_LINES; i2++) {
+    if (lines[i2].s === 1) { lines[i2] = makeLine(0, null); return; }
   }
-  var toDrop = Math.min(count || 1, valid.length);
-  var droppedTags = [];
-  for (var d = 0; d < toDrop; d++) {
-    var slotIdx = valid[d];
-    // Slot-indexed tag: always 'L'+slotIndex
-    droppedTags.push('L' + slotIdx);
-    lines[slotIdx] = { mesi:'I', tag:null };
+}
+
+// Targeted invalidation — drops 1 to `count` specific lines, leaving the rest intact
+function invalidateL1Lines(smIdx, count) {
+  if (!cacheState[smIdx]) return;
+  var lines = cacheState[smIdx].l1;
+  count = count || 1;
+  var occupied = [];
+  for (var i = 0; i < NUM_LINES; i++) { if (lines[i].s > 0) occupied.push(i); }
+  for (var j = occupied.length - 1; j > 0; j--) {
+    var k = Math.floor(Math.random() * (j + 1));
+    var tmp = occupied[j]; occupied[j] = occupied[k]; occupied[k] = tmp;
   }
-  syncL1State(smIdx);
-  return droppedTags;
+  var toDrop = Math.min(count, occupied.length);
+  for (var d = 0; d < toDrop; d++) { lines[occupied[d]] = makeLine(0, null); }
 }
 
 function writebackL1(smIdx) {
-  l1WritebackLines(smIdx);
+  if (!cacheState[smIdx]) return;
+  var lines = cacheState[smIdx].l1;
+  for (var i = 0; i < NUM_LINES; i++) {
+    if (lines[i].s === 2) lines[i] = makeLine(1, lines[i].op);
+  }
+}
+
+function fillSmem(smIdx) {
+  if (!cacheState[smIdx]) return;
+  var lines = cacheState[smIdx].smem;
+  var count = 8 + Math.floor(Math.random() * 7);
+  for (var i = 0; i < NUM_LINES; i++) lines[i] = i < count ? 1 : 0;
+  for (var j = NUM_LINES - 1; j > 0; j--) {
+    var kk = Math.floor(Math.random() * (j + 1));
+    var tt = lines[j]; lines[j] = lines[kk]; lines[kk] = tt;
+  }
 }
 
 function getCacheStats(smIdx, kind) {
-  if (kind === 'l1') {
-    var lines = l1Lines[smIdx];
-    if (!lines) return { filled:0, dirty:0, empty:NUM_LINES };
-    var filled = 0, dirty = 0;
-    for (var i = 0; i < lines.length; i++) {
-      if (lines[i].mesi === 'M') { filled++; dirty++; }
-      else if (lines[i].mesi === 'S') { filled++; }
-    }
-    return { filled:filled, dirty:dirty, empty:NUM_LINES - filled };
+  if (!cacheState[smIdx]) return { filled:0, dirty:0, empty:NUM_LINES };
+  var arr = cacheState[smIdx][kind];
+  var filled = 0, dirty = 0;
+  for (var i = 0; i < arr.length; i++) {
+    // support both old integer format (smem) and new object format (l1)
+    var sv = (arr[i] && typeof arr[i] === 'object') ? arr[i].s : arr[i];
+    if (sv === 1) filled++;
+    else if (sv === 2) { filled++; dirty++; }
   }
-  if (kind === 'smem') {
-    var arr = smemLines[smIdx] || [];
-    var f = 0;
-    for (var i2 = 0; i2 < arr.length; i2++) if (arr[i2] === 1) f++;
-    return { filled:f, dirty:0, empty:NUM_LINES - f };
-  }
-  return { filled:0, dirty:0, empty:NUM_LINES };
+  return { filled: filled, dirty: dirty, empty: NUM_LINES - filled };
 }
 
 var hoveredBlock = null;
@@ -1628,15 +1405,16 @@ var mouseX = 0, mouseY = 0;
 var lastClientX = 0, lastClientY = 0;
 
 var ARB_PHASES = {
-  queued:    { label:'QUEUED',   color:'#f59e0b', desc:'Waiting in request queue for grant' },
-  granted:   { label:'GRANTED',  color:'#51cf66', desc:'Grant issued — SM has exclusive access' },
-  rmw:       { label:'RMW→L2',  color:'#339af0', desc:'Read-Modify-Write in progress at L2' },
-  ack:       { label:'ACK←L2',  color:'#ffa94d', desc:'Acknowledgement returning from L2' },
-  retiring:  { label:'RETIRING', color:'#a78bfa', desc:'ROB retiring — data routing to SM' },
+  queued:    { label: 'QUEUED',    color: '#f59e0b', desc: 'Waiting in request queue for grant' },
+  granted:   { label: 'GRANTED',   color: '#51cf66', desc: 'Grant issued — SM has exclusive access' },
+  rmw:       { label: 'RMW→L2',   color: '#339af0', desc: 'Read-Modify-Write in progress at L2' },
+  ack:       { label: 'ACK←L2',   color: '#ffa94d', desc: 'Acknowledgement returning from L2' },
+  retiring:  { label: 'RETIRING',  color: '#a78bfa', desc: 'ROB retiring — data routing to SM' },
 };
 var hitRects = [];
 
-// tooltip.js
+
+// ── tooltip.js ──────────────────────────────────────────
 // tooltip.js — GPU Cache Coherency Demo
 
 // Hit testing, block selection, tooltip rendering
@@ -1734,7 +1512,7 @@ canvas.addEventListener('mousemove', function(e) {
 
   var pHit = hitTestParticleLabels(mouseX, mouseY);
   if (pHit && INSTRUCTION_INFO[pHit.key]) {
-    showInstrTooltip(pHit.key, pHit.clientX, pHit.clientY - 20, pHit.addrLine);
+    showInstrTooltip(pHit.key, pHit.clientX, pHit.clientY - 20);
     hoveredBlock = null;
     hideTooltip();
     canvas.style.cursor = 'help';
@@ -1798,22 +1576,96 @@ function updateSelPanel(hit) {
   connList.innerHTML = '';
   if (!info.connects || info.connects.length === 0) {
     connList.innerHTML = '<div style="font-size:.75rem;color:var(--dim);padding:6px 0">No direct connections defined.</div>';
-    return;
+  } else {
+    for (var i = 0; i < info.connects.length; i++) {
+      var c = info.connects[i];
+      var targetInfo = BLOCK_INFO[c.to] || {};
+      var el = document.createElement('div');
+      el.className = 'conn-item';
+      el.innerHTML = '<span class="ci-arrow" style="color:' + (targetInfo.color||'#6b7094') + '">' + c.arrow + '</span><div class="ci-body"><span class="ci-target" style="color:' + (targetInfo.color||'#aaa') + '">' + (targetInfo.name || c.to) + '</span><span class="ci-why">' + c.why + '</span></div>';
+      (function(connTo) {
+        el.addEventListener('click', function(e) {
+          e.stopPropagation();
+          var targetHit = getBlockRect(connTo, hit.smIdx) || getBlockRect(connTo);
+          if (targetHit) selectBlock(targetHit);
+        });
+      })(c.to);
+      connList.appendChild(el);
+    }
   }
-  for (var i = 0; i < info.connects.length; i++) {
-    var c = info.connects[i];
-    var targetInfo = BLOCK_INFO[c.to] || {};
-    var el = document.createElement('div');
-    el.className = 'conn-item';
-    el.innerHTML = '<span class="ci-arrow" style="color:' + (targetInfo.color||'#6b7094') + '">' + c.arrow + '</span><div class="ci-body"><span class="ci-target" style="color:' + (targetInfo.color||'#aaa') + '">' + (targetInfo.name || c.to) + '</span><span class="ci-why">' + c.why + '</span></div>';
-    (function(connTo) {
-      el.addEventListener('click', function(e) {
-        e.stopPropagation();
-        var targetHit = getBlockRect(connTo, hit.smIdx) || getBlockRect(connTo);
-        if (targetHit) selectBlock(targetHit);
-      });
-    })(c.to);
-    connList.appendChild(el);
+  // ── Cache line inspector — only for L1 blocks ──────────────────────────────
+  renderCacheLineTable(hit);
+}
+
+// Op type labels and colors for the inspector table
+var OP_LABELS = {
+  read:     { label: 'SM Read',    color: '#339af0' },
+  write:    { label: 'SM Write',   color: '#51cf66' },
+  atomic:   { label: 'atomicAdd',  color: '#f59e0b' },
+  spill:    { label: 'Reg Spill',  color: '#fb923c' },
+  cp_async: { label: 'cp.async',   color: '#22d3ee' },
+  tma:      { label: 'TMA Load',   color: '#22d3ee' },
+  shared:   { label: 'Shared Mem', color: '#6ee09a' },
+};
+
+function renderCacheLineTable(hit) {
+  var section = document.getElementById('cl-section');
+  var tbody   = document.getElementById('cl-tbody');
+  if (!section || !tbody) return;
+
+  // Only show for L1 blocks
+  if (hit.type !== 'l1') { section.style.display = 'none'; return; }
+
+  var cs = cacheState[hit.smIdx];
+  if (!cs) { section.style.display = 'none'; return; }
+
+  section.style.display = 'block';
+  tbody.innerHTML = '';
+
+  var lines = cs.l1;
+  for (var i = 0; i < lines.length; i++) {
+    var ln = lines[i];
+    var s  = ln ? ln.s : 0;
+    var op = ln ? ln.op : null;
+
+    var tr = document.createElement('tr');
+
+    // Row class for subtle bg tint
+    if (s === 2) tr.className = 'cl-row-dirty';
+    else if (s === 1) tr.className = 'cl-row-clean';
+
+    // State label + color
+    var stateLabel, stateColor;
+    if (s === 2)      { stateLabel = 'Dirty';  stateColor = '#51cf66'; }
+    else if (s === 1) { stateLabel = 'Clean';  stateColor = '#339af090'; }
+    else              { stateLabel = 'Empty';  stateColor = '#3a3d50'; }
+
+    // Op info
+    var opInfo = op ? (OP_LABELS[op] || { label: op, color: '#aaa' }) : null;
+    var swatchColor = op ? opInfo.color : stateColor;
+
+    var tdIdx   = document.createElement('td'); tdIdx.className = 'cl-idx'; tdIdx.textContent = i;
+    var tdState = document.createElement('td');
+    tdState.innerHTML =
+      '<span class="cl-swatch" style="background:' + swatchColor + ';opacity:' + (s === 0 ? '0.2' : '1') + '"></span>' +
+      '<span class="cl-state" style="color:' + stateColor + '">' + stateLabel + '</span>';
+    var tdOp = document.createElement('td');
+    tdOp.className = s === 0 ? 'cl-empty' : 'cl-op';
+    tdOp.innerHTML = opInfo
+      ? '<span style="color:' + opInfo.color + '">' + opInfo.label + '</span>'
+      : (s === 0 ? '—' : '<span style="color:#6b7090">unknown</span>');
+
+    tr.appendChild(tdIdx);
+    tr.appendChild(tdState);
+    tr.appendChild(tdOp);
+    tbody.appendChild(tr);
+  }
+}
+
+// Keep the table live while a block is selected
+function refreshCacheLineTableIfOpen() {
+  if (selectedBlock && selectedBlock.type === 'l1') {
+    renderCacheLineTable(selectedBlock);
   }
 }
 
@@ -1832,55 +1684,18 @@ function getInstrEl() {
   return instrTooltipEl;
 }
 
-// Format particle address label for tooltip display.
-// Handles: 'L4' → '→ line L4 (slot 4)'
-//          'SM0·L4' → '→ SM0 · line L4 (slot 4)'
-//          'SM1·L7' → '→ SM1 · line L7 (slot 7)'
-//          legacy 'A3' → '→ addr A3'
-function formatAddrLine(addrLine) {
-  if (!addrLine) return '';
-  // Cross-SM format: SMx·Ly
-  var crossSM = addrLine.match(/^(SM\d+)[··]([A-Z]\d+)$/);
-  if (crossSM) {
-    var smPart = crossSM[1];
-    var linePart = crossSM[2];
-    var slotNum = linePart[0] === 'L' ? linePart.slice(1) : null;
-    return '→ ' + smPart + ' · line ' + linePart + (slotNum !== null ? ' (slot ' + slotNum + ')' : '');
-  }
-  // Local L-format: Lx
-  var localL = addrLine.match(/^L(\d+)$/);
-  if (localL) {
-    return '→ line L' + localL[1] + ' (slot ' + localL[1] + ')';
-  }
-  // Fallback
-  return '→ ' + addrLine;
-}
-
-function showInstrTooltip(key, clientX, clientY, addrLine) {
+function showInstrTooltip(key, clientX, clientY) {
   var info = INSTRUCTION_INFO[key];
   if (!info) return;
   var el = getInstrEl();
   if (!el) return;
-  if (instrHovered === key) {
-    // update address even when key hasn't changed (different particle same type)
-    var addrEl = document.getElementById('it-addr');
-    if (addrEl) {
-      var addrDisplay = addrLine ? formatAddrLine(addrLine) : '';
-      addrEl.textContent = addrDisplay; addrEl.style.opacity = addrDisplay ? '1' : '0';
-    }
-    positionInstrTooltip(clientX, clientY); return;
-  }
+  if (instrHovered === key) { positionInstrTooltip(clientX, clientY); return; }
   instrHovered = key;
   document.getElementById('it-dot').style.background = info.color;
   el.style.borderColor = info.color + '40';
   document.getElementById('it-name').textContent = info.name;
   document.getElementById('it-what').textContent = info.what;
   document.getElementById('it-why').textContent = info.why;
-  var addrEl2 = document.getElementById('it-addr');
-  if (addrEl2) {
-    var addrDisplay2 = addrLine ? formatAddrLine(addrLine) : '';
-    addrEl2.textContent = addrDisplay2; addrEl2.style.opacity = addrDisplay2 ? '1' : '0';
-  }
   el.querySelector('.it-why-box').style.borderColor = info.color + '30';
   positionInstrTooltip(clientX, clientY);
   el.classList.add('visible');
@@ -1918,10 +1733,7 @@ function buildParticleLabelRects() {
     var cx2 = ppos.x, cy2 = ppos.y;
     var clientX = cr.left + cx2;
     var clientY = cr.top  + cy2;
-    var baseKey = p.label.replace(/[#\[·\s].*$/, '');
-    var addrMatch = p.label.match(/\[([^\]]+)\]/);
-    var addrLine = addrMatch ? addrMatch[1] : null;
-    particleLabelRects.push({ key: baseKey, fullLabel: p.label, addrLine: addrLine, cx: cx2, cy: cy2, clientX: clientX, clientY: clientY });
+    particleLabelRects.push({ key: p.label, cx: cx2, cy: cy2, clientX: clientX, clientY: clientY });
   }
 }
 
@@ -1991,8 +1803,6 @@ function updateTooltip(hit, clientX, clientY) {
           '</div>' +
           // Live line grid
           '<div style="display:flex;gap:2px;height:10px;margin-bottom:4px">' + gridCells + '</div>' +
-          // Last-hit indicator
-          '<div id="tt-l2-hit-info" style="font-family:JetBrains Mono,monospace;font-size:.62rem;color:#51cf66;font-weight:700;height:14px;margin-bottom:2px;transition:opacity .3s;opacity:0"></div>' +
           // Legend
           '<div style="display:flex;gap:10px;font-family:JetBrains Mono,monospace;font-size:.56rem;margin-bottom:5px">' +
             '<span style="color:#339af0">■ clean</span>' +
@@ -2327,36 +2137,11 @@ function refreshTooltipL2Data() {
   if (dirtyEl) dirtyEl.textContent = l2Dirty > 0 ? l2Dirty + ' dirty' : '';
 
   // Line cells — update background in-place so CSS transition fires
-  var _hitAge = Date.now() - l2LastHitTime;
-  var _hitAlpha = l2LastHitLine >= 0 && _hitAge < 2000 ? Math.max(0, 1 - _hitAge / 2000) : 0;
   for (var gi = 0; gi < NUM_L2_LINES; gi++) {
     var cell = document.getElementById('tt-l2-cell-' + gi);
     if (!cell) continue;
     var lv = l2Lines[gi];
-    if (gi === l2LastHitLine && _hitAlpha > 0) {
-      // Pulse the hit line: blend toward bright green tick colour
-      var baseR = lv === 2 ? [255,169,77] : lv === 1 ? [51,154,240] : [30,32,48];
-      var hitR = [81,207,102]; // #51cf66
-      var r = Math.round(baseR[0] + (hitR[0]-baseR[0])*_hitAlpha);
-      var g = Math.round(baseR[1] + (hitR[1]-baseR[1])*_hitAlpha);
-      var b = Math.round(baseR[2] + (hitR[2]-baseR[2])*_hitAlpha);
-      cell.style.background = 'rgb('+r+','+g+','+b+')';
-      cell.style.boxShadow = 'inset 0 0 0 1px rgba(81,207,102,'+(0.8*_hitAlpha).toFixed(2)+')';
-    } else {
-      cell.style.background = lv === 2 ? '#ffa94d' : lv === 1 ? '#339af060' : '#1e2030';
-      cell.style.boxShadow = '';
-    }
-  }
-
-  // Show last-hit info line below grid
-  var hitInfoEl = document.getElementById('tt-l2-hit-info');
-  if (hitInfoEl) {
-    if (l2LastHitLine >= 0 && _hitAlpha > 0) {
-      hitInfoEl.style.opacity = _hitAlpha.toFixed(2);
-      hitInfoEl.textContent = '✓ L2 hit on line ' + l2LastHitLine;
-    } else {
-      hitInfoEl.style.opacity = '0';
-    }
+    cell.style.background = lv === 2 ? '#ffa94d' : lv === 1 ? '#339af060' : '#1e2030';
   }
 
   // Occupancy bar
@@ -2388,10 +2173,17 @@ function refreshTooltipCacheData(hit, info) {
   if (hit.type !== 'l1' && hit.type !== 'smem') return;
 
   var cs = getCacheStats(hit.smIdx, kind);
-  // For L1: use per-line numeric array (0=I,1=S,2=M). For smem: use smemLines.
-  var arr = kind === 'l1'
-    ? getL1Numeric(hit.smIdx)
-    : (smemLines[hit.smIdx] || []);
+  var arr = cacheState[hit.smIdx] ? cacheState[hit.smIdx][kind] : [];
+  // Resolve current L1 block state for op-color context
+  var blockState = 'invalid';
+  if (hit.type === 'l1' && layout.sms[hit.smIdx]) {
+    for (var bsi = 0; bsi < layout.sms[hit.smIdx].sub.length; bsi++) {
+      if (layout.sms[hit.smIdx].sub[bsi].type === 'l1') {
+        blockState = layout.sms[hit.smIdx].sub[bsi].state || 'invalid'; break;
+      }
+    }
+  }
+  hit.blockState = blockState;
 
   var fillLbl = document.getElementById('tt-fill-label');
   if (fillLbl) fillLbl.textContent = cs.filled + '/' + NUM_LINES + ' filled';
@@ -2410,12 +2202,41 @@ function refreshTooltipCacheData(hit, info) {
       }
     }
     for (var li2 = 0; li2 < NUM_LINES; li2++) {
-      var lv = arr[li2] || 0;
+      var lineObj = arr[li2];
       var lc;
-      if (lv === 2)      lc = '#51cf66';
-      else if (lv === 1) lc = hit.type === 'l1' ? inf.color + 'cc' : '#51cf6688';
-      else               lc = '#1e2030';
+      if (hit.type === 'l1' && lineObj && typeof lineObj === 'object') {
+        // Use op-type color for L1 line slots
+        lc = lineColor(lineObj, hit.blockState || 'invalid');
+      } else {
+        var lv = (lineObj && typeof lineObj === 'object') ? lineObj.s : (lineObj || 0);
+        if (lv === 2)      lc = '#51cf66';
+        else if (lv === 1) lc = '#51cf6688';
+        else               lc = '#1e2030';
+      }
       grid.children[li2].style.background = lc;
+    }
+    // Op-type legend row for L1
+    var opLegend = document.getElementById('tt-op-legend');
+    if (hit.type === 'l1') {
+      if (!opLegend) {
+        opLegend = document.createElement('div');
+        opLegend.id = 'tt-op-legend';
+        opLegend.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;margin-bottom:4px;font-family:JetBrains Mono,monospace;font-size:.58rem;';
+        grid.parentNode.insertBefore(opLegend, grid.nextSibling);
+      }
+      var opsSeen = {};
+      for (var opi = 0; opi < arr.length; opi++) {
+        if (arr[opi] && arr[opi].s > 0 && arr[opi].op) opsSeen[arr[opi].op] = true;
+      }
+      var opKeys = Object.keys(opsSeen);
+      opLegend.innerHTML = opKeys.length === 0 ? '' : opKeys.map(function(op) {
+        var col = OP_COLORS[op] || '#aaa';
+        return '<span style="display:flex;align-items:center;gap:3px;color:' + col + '">' +
+               '<span style="width:7px;height:7px;border-radius:50%;background:' + col + ';flex-shrink:0"></span>' +
+               op + '</span>';
+      }).join('');
+    } else if (opLegend) {
+      opLegend.innerHTML = '';
     }
   }
 
@@ -2459,7 +2280,8 @@ function hideTooltip() {
 }
 
 
-// draw.js
+
+// ── draw.js ──────────────────────────────────────────
 // draw.js — GPU Cache Coherency Demo
 
 // Layout building, arch switching, all canvas rendering
@@ -2894,6 +2716,8 @@ function drawAnimatedFrame(dt, time) {
   if (hoveredBlock && (hoveredBlock.type === 'l1' || hoveredBlock.type === 'smem')) {
     refreshTooltipCacheData(hoveredBlock, BLOCK_INFO[hoveredBlock.type]);
   }
+  // Live refresh of the cache-line inspector table in the selection panel
+  refreshCacheLineTableIfOpen();
   // Live tooltip refresh for register file — pressure changes during scenarios
   if (hoveredBlock && hoveredBlock.type === 'regs' && tooltipEl.classList.contains('visible')) {
     refreshTooltipRegsData(hoveredBlock.smIdx);
@@ -3027,41 +2851,51 @@ function drawSceneContent(dt, time) {
         ctx.fillStyle = b.state === 'invalid' ? '#6b709018' : sc+'22'; ctx.fill();
         ctx.strokeStyle = b.state === 'invalid' ? '#5a5e78' : sc; ctx.lineWidth=1.5; ctx.stroke();
 
-        // Draw per-line occupancy bars using authoritative l1Lines state
-        var lineNums = getL1Numeric(si);
-        var gx = b.x + 4, gw = b.w - 8;
-        var slotW = gw / NUM_LINES;
-        var gy = b.y + b.h - 6;
-        for (var li = 0; li < NUM_LINES; li++) {
-          var lv = lineNums[li];
-          // 0=Invalid (dark), 1=Shared (blue), 2=Modified (green)
-          var lc = lv === 2 ? '#51cf66' : (lv === 1 ? '#339af0' : '#2a2d3a');
-          ctx.fillStyle = lc;
-          ctx.fillRect(gx + li*slotW + 0.5, gy, slotW - 1, 4);
+        var csm2 = cacheState[si];
+        if (csm2) {
+          var lines2 = csm2.l1;
+          var gx = b.x + 4, gw = b.w - 8;
+          var slotW = gw / NUM_LINES;
+          var gy = b.y + b.h - 6;
+          // Track which op types are present so we can draw a legend badge
+          var opsSeen = {};
+          for (var li = 0; li < NUM_LINES; li++) {
+            var lineObj = lines2[li];
+            var lc = lineColor(lineObj, b.state);
+            ctx.fillStyle = lc;
+            ctx.fillRect(gx + li*slotW + 0.5, gy, slotW - 1, 4);
+            if (lineObj && lineObj.s > 0 && lineObj.op) opsSeen[lineObj.op] = true;
+          }
+          // op legend is shown in the bracket label text — no dots needed
         }
 
-        // Show per-line breakdown in label: "L1 [3M 8S 5I]" — far more informative
-        var lineNums2 = getL1Numeric(si);
-        var mCount = 0, sCount = 0;
-        for (var lc2 = 0; lc2 < NUM_LINES; lc2++) {
-          if (lineNums2[lc2] === 2) mCount++;
-          else if (lineNums2[lc2] === 1) sCount++;
-        }
-        var iCount = NUM_LINES - mCount - sCount;
-        var labelDetail;
-        if (mCount === 0 && sCount === 0) {
-          labelDetail = '[all I]';
-        } else {
-          var parts2 = [];
-          if (mCount > 0) parts2.push(mCount + 'M');
-          if (sCount > 0) parts2.push(sCount + 'S');
-          if (iCount > 0) parts2.push(iCount + 'I');
-          labelDetail = '[' + parts2.join(' ') + ']';
-        }
         ctx.font='600 '+FONT_BLOCK_LG+'px monospace';
         ctx.fillStyle = b.state === 'invalid' ? '#9095b0' : sc;
         ctx.textAlign='center';
-        ctx.fillText(b.label + ' ' + labelDetail, b.x+b.w/2, b.y+b.h/2+1);
+        // Build per-line-count label: e.g. "L1  3R 1W" showing op types present
+        var labelParts = [];
+        var csLbl = cacheState[si];
+        if (csLbl) {
+          var opCounts = {};
+          var totalFilled = 0;
+          for (var lbl=0;lbl<NUM_LINES;lbl++) {
+            var ln = csLbl.l1[lbl];
+            if (ln && ln.s > 0) {
+              totalFilled++;
+              var tag = ln.op ? ln.op.charAt(0).toUpperCase() : (ln.s===2?'W':'?');
+              opCounts[tag] = (opCounts[tag]||0)+1;
+            }
+          }
+          var opKeys2 = Object.keys(opCounts);
+          if (opKeys2.length > 0) {
+            for (var oki=0;oki<opKeys2.length;oki++) {
+              labelParts.push(opCounts[opKeys2[oki]]+opKeys2[oki]);
+            }
+          }
+        }
+        var stateChar = b.state === 'modified' ? 'M' : b.state === 'shared' ? 'S' : 'I';
+        var bracketLabel = labelParts.length > 0 ? '['+labelParts.join(' ')+']' : '['+stateChar+']';
+        ctx.fillText(b.label+' '+bracketLabel, b.x+b.w/2, b.y+b.h/2+1);
       } else {
         var cBg, cBr, cLbl;
         if (b.type==='texCache')             { cBg='#e599f712'; cBr='#e599f760'; cLbl='#e599f7'; }
@@ -3074,13 +2908,16 @@ function drawSceneContent(dt, time) {
         ctx.strokeStyle=cBr; ctx.lineWidth=1; ctx.stroke();
 
         if (b.type === 'smem') {
-          var slines = smemLines[si] || [];
-          var sgx = b.x + 4, sgw = b.w - 8;
-          var sslotW = sgw / NUM_LINES;
-          var sgy = b.y + b.h - 5;
-          for (var sli2 = 0; sli2 < NUM_LINES; sli2++) {
-            ctx.fillStyle = slines[sli2] === 1 ? '#51cf6680' : '#1e2030';
-            ctx.fillRect(sgx + sli2*sslotW + 0.5, sgy, sslotW - 1, 3);
+          var csm3 = cacheState[si];
+          if (csm3) {
+            var slines = csm3.smem;
+            var sgx = b.x + 4, sgw = b.w - 8;
+            var sslotW = sgw / NUM_LINES;
+            var sgy = b.y + b.h - 5;
+            for (var sli2 = 0; sli2 < NUM_LINES; sli2++) {
+              ctx.fillStyle = slines[sli2] === 1 ? '#51cf6680' : '#1e2030';
+              ctx.fillRect(sgx + sli2*sslotW + 0.5, sgy, sslotW - 1, 3);
+            }
           }
         }
 
@@ -3458,46 +3295,6 @@ function drawSceneContent(dt, time) {
     return true;
   });
 
-  // Per-line blink flashes (L1 and L2 individual bars)
-  lineFlashes = lineFlashes.filter(function(f) {
-    if (!paused) f.t += 0.025;
-    if (f.t >= f.dur) return false;
-    var prog = f.t / f.dur;
-    var alpha = Math.round((1 - prog) * 0.85 * 255).toString(16).padStart(2,'0');
-    var color = f.hit ? '#51cf66' : '#ff6b6b';
-    if (f.type === 'l1' && layout.sms && layout.sms[f.smIdx]) {
-      var sm = layout.sms[f.smIdx];
-      var l1b = null;
-      for (var bi = 0; bi < sm.sub.length; bi++) { if (sm.sub[bi].type === 'l1') { l1b = sm.sub[bi]; break; } }
-      if (l1b) {
-        var gx = l1b.x + 4, gw = l1b.w - 8;
-        var slotW = gw / NUM_LINES;
-        var bx = gx + f.lineIdx * slotW;
-        var by = l1b.y + l1b.h - 6;
-        ctx.fillStyle = color + alpha;
-        ctx.fillRect(bx + 0.5, by, slotW - 1, 4);
-        // glow outline
-        ctx.strokeStyle = color + alpha;
-        ctx.lineWidth = 1;
-        ctx.strokeRect(bx + 0.5, by, slotW - 1, 4);
-      }
-    } else if (f.type === 'l2' && layout.l2) {
-      var l2 = layout.l2;
-      var fs2 = Math.min(1, W / 900);
-      var l2BarY = l2.y + 24 * fs2;
-      var l2BarH = 8 * fs2;
-      var l2BarGutter = 10;
-      var l2BarW = (l2.w - l2BarGutter * 2) / NUM_L2_LINES;
-      var bx2 = l2.x + l2BarGutter + f.lineIdx * l2BarW;
-      ctx.fillStyle = color + alpha;
-      ctx.fillRect(bx2, l2BarY, l2BarW - 1, l2BarH);
-      ctx.strokeStyle = color + alpha;
-      ctx.lineWidth = 1;
-      ctx.strokeRect(bx2, l2BarY, l2BarW - 1, l2BarH);
-    }
-    return true;
-  });
-
   // Bubble repulsion: pairs within 52px push each other apart gently
   if (!paused && bubbles.length > 1) {
     var REPEL_DIST = 52, REPEL_FORCE = 0.18, DAMP = 0.82;
@@ -3617,7 +3414,7 @@ var lastTime=0;
 // Waypoints are intermediate stops; particle chains through them automatically.
 
 
-// particles.js
+// ── particles.js ──────────────────────────────────────────
 // particles.js — GPU Cache Coherency Demo
 
 // Particle animation, coordinate helpers, flash
@@ -3727,38 +3524,6 @@ function gmBot() { return {x:layout.globalMem.x+layout.globalMem.w/2,y:layout.gl
 function hbmTop() { return {x:layout.hbm.x+layout.hbm.w/2,y:layout.hbm.y}; }
 function flash(b,c) { flashEffects.push({x:b.x,y:b.y,w:b.w,h:b.h,c:c,t:0,dur:.5}); }
 
-// Per-line flash: blink one L1 or L2 bar and emit a small ✓/✗ bubble
-var lineFlashes = [];
-function flashLine(type, smIdx, lineIdx, hit) {
-  // type: 'l1' or 'l2'
-  lineFlashes.push({ type:type, smIdx:smIdx, lineIdx:lineIdx, hit:hit, t:0, dur:0.7 });
-  // Small tick/cross bubble above the bar
-  var bx, by;
-  if (type === 'l1' && layout.sms && layout.sms[smIdx]) {
-    var sm = layout.sms[smIdx];
-    var l1b = null;
-    for (var bi = 0; bi < sm.sub.length; bi++) { if (sm.sub[bi].type === 'l1') { l1b = sm.sub[bi]; break; } }
-    if (l1b) {
-      var gx = l1b.x + 4, gw = l1b.w - 8;
-      var slotW = gw / NUM_LINES;
-      bx = gx + lineIdx * slotW + slotW / 2;
-      by = l1b.y + l1b.h - 6;
-    }
-  } else if (type === 'l2' && layout.l2) {
-    if (hit) { l2LastHitLine = lineIdx; l2LastHitTime = Date.now(); }
-    var l2 = layout.l2;
-    var fs2 = Math.min(1, W / 900);
-    var l2BarY = l2.y + 24 * fs2;
-    var l2BarGutter = 10;
-    var l2BarW = (l2.w - l2BarGutter * 2) / NUM_L2_LINES;
-    bx = l2.x + l2BarGutter + lineIdx * l2BarW + l2BarW / 2;
-    by = l2BarY;
-  }
-  if (bx !== undefined) {
-    bubble(bx, by - 4, hit ? '✓ L'+lineIdx : '✗ L'+lineIdx, hit ? '#51cf66' : '#ff6b6b', { life: 1.4, rise: 14 });
-  }
-}
-
 // Get the register file block for SM i (returns null if not found)
 function regsBlock(i) {
   var sm = layout.sms[i];
@@ -3779,7 +3544,8 @@ function subBlock(smIdx, type) {
 }
 
 
-// scenarios.js
+
+// ── scenarios.js ──────────────────────────────────────────
 // scenarios.js — GPU Cache Coherency Demo
 
 // Cache scenario triggers, explanations, auto mode
@@ -3897,7 +3663,6 @@ function getExplanation(type) {
 }
 
 function showExplanation(type) {
-  logResetTimer();  // reset relative timestamp whenever a new scenario begins
   var exp = getExplanation(type); if (!exp) return;
   stepTimers.forEach(function(t){clearTimeout(t);}); stepTimers=[];
   var titleEl=document.getElementById('explainer-title');
@@ -3905,18 +3670,13 @@ function showExplanation(type) {
   titleEl.style.color=exp.color;
   var listEl=document.getElementById('step-list'); listEl.innerHTML='';
   var sumEl=document.getElementById('explainer-summary'); sumEl.textContent=''; sumEl.classList.remove('visible');
-  var _scenarioStart = Date.now();
   exp.steps.forEach(function(s,i) {
     var li=document.createElement('li');
     var microText = s.micro;
     var microHtml = microText.replace(/\b(LD\.E|ST\.E|LDS|STS|ST\.S|RdReq|INV|DATA|WR|WB|RMW|EVICT|STORE|DSMEM|cp\.async|SPILL|RELOAD|TILE)\b/g, function(m) {
       return '<span class="micro-instr" data-instr="'+m+'" style="cursor:help;text-decoration:underline dotted;text-decoration-color:rgba(255,255,255,0.3)">'+m+'</span>';
     });
-    var tsMs = s.delay;
-    var tsLabel = tsMs < 1000 ? '+'+tsMs+'ms' : '+'+(tsMs/1000).toFixed(1)+'s';
-    li.innerHTML='<span class="step-num" style="background:'+exp.color+'20;color:'+exp.color+'">'+(i+1)+'</span>'
-      +'<span class="step-ts" style="font-size:.65rem;color:'+exp.color+'70;font-family:monospace;margin-right:4px">'+tsLabel+'</span>'
-      +'<span class="step-text">'+s.text+'<span class="micro">'+microHtml+'</span></span>';
+    li.innerHTML='<span class="step-num" style="background:'+exp.color+'20;color:'+exp.color+'">'+(i+1)+'</span><span class="step-text">'+s.text+'<span class="micro">'+microHtml+'</span></span>';
     listEl.appendChild(li);
     stepTimers.push(setTimeout(function() {
       var actives=listEl.querySelectorAll('li.active');
@@ -3931,22 +3691,11 @@ function showExplanation(type) {
   }, exp.steps[exp.steps.length-1].delay+1000));
 }
 
-// Scenario-relative timestamp: resets to 0 when a new scenario fires
-var _logT0 = Date.now();
-function logResetTimer() { _logT0 = Date.now(); }
-
 function logEvent(msg, color) {
   var log=document.getElementById('event-log');
   var e=document.createElement('div'); e.className='log-entry';
-  var elapsed = Date.now() - _logT0;
-  var ts;
-  if (elapsed < 1000) {
-    ts = '+' + elapsed + 'ms';
-  } else {
-    ts = '+' + (elapsed / 1000).toFixed(2) + 's';
-  }
-  e.innerHTML='<span class="tag" style="background:'+color+'30;color:'+color+'">'+ts+'</span> '+msg;
-  log.prepend(e); if(log.children.length>60) log.lastChild.remove();
+  e.innerHTML='<span class="tag" style="background:'+color+'30;color:'+color+'">'+new Date().toLocaleTimeString().slice(0,8)+'</span> '+msg;
+  log.prepend(e); if(log.children.length>40) log.lastChild.remove();
 }
 
 function updateStats() {
@@ -4008,95 +3757,84 @@ function triggerScenario(type, silent) {
 
   switch(type) {
     case 'read': {
-      // L1 read miss — the requested line is absent. Other lines in L1 are untouched.
-      // Real hardware: L1 tag lookup fails for this address only; the cache is not flushed.
+      // ── L1 Hit path ──────────────────────────────────────────────────────────
+      // Hit if state says valid AND there are actually lines present.
+      // State alone can be stale after reset/init — check physical fill count too.
+      var l1FilledCount = 0;
+      if (cacheState[si]) {
+        for (var rh=0; rh<NUM_LINES; rh++) if (cacheState[si].l1[rh].s > 0) l1FilledCount++;
+      }
+      var l1HasData = (sm.l1.state === 'shared' || sm.l1.state === 'modified') && l1FilledCount > 0;
+      if (l1HasData) {
+        stats.hits++;
+        logEvent('SM'+si+': L1 hit — no bus traffic','#339af0');
+        bubble(l1Pos(si).x, l1Pos(si).y, 'L1 hit!', '#339af0', {sub:'data already cached', life:1.8});
+        flash(sm.l1, '#339af0');
+        // Show data returning from L1 directly to registers — no bus movement
+        var regsTarget = regsPos(si);
+        spawnParticle(l1Pos(si), regsTarget, '#339af0', 'DATA', 2.5, function(){
+          flash(layout.sms[si], '#339af0');
+          bubble(regsTarget.x, regsTarget.y, 'reg filled', '#339af0', {sub:'~28 cycles', life:1.4});
+          logEvent('SM'+si+': data delivered to registers from L1','#339af0');
+        });
+        break;
+      }
+
+      // ── L1 Miss path ─────────────────────────────────────────────────────────
       stats.misses++;
 
-      // Pick the address by choosing which L2 line to target:
-      // For a hit: pick a filled L2 line index as the address.
-      // For a miss: pick an empty L2 line index as the address.
-      // This way the particle label directly maps to a real L2 bar, with no L1-slot confusion.
-      var l2Filled = 0, _filledIdxs = [], _emptyIdxs = [];
-      for (var rl = 0; rl < NUM_L2_LINES; rl++) {
-        if (l2Lines[rl] > 0) { l2Filled++; _filledIdxs.push(rl); }
-        else _emptyIdxs.push(rl);
-      }
-      // Hit probability scales with occupancy: at 45% fill → ~55% hit chance, at 100% fill → ~90%
-      // This makes L2 misses genuinely observable even with a half-full cache.
-      var _hitProb = _filledIdxs.length > 0 ? 0.3 + (l2Filled / NUM_L2_LINES) * 0.6 : 0;
-      var l2Hit = (Math.random() < _hitProb) && _filledIdxs.length > 0;
-      // If no empty slots left, force a hit
-      if (_emptyIdxs.length === 0) l2Hit = true;
-
-      // Address = 'A' + l2SlotIndex so it directly identifies the L2 bar.
-      // L1 slot is chosen independently by l1FillShared when data arrives.
-      var _rdAddr;
-      var _targetL2Slot; // the specific L2 bar this request is for
-      if (l2Hit) {
-        _targetL2Slot = _filledIdxs[Math.floor(Math.random() * _filledIdxs.length)];
-        _rdAddr = 'A' + _targetL2Slot;
-        l2Tags[_targetL2Slot] = _rdAddr;
-      } else {
-        _targetL2Slot = _emptyIdxs[Math.floor(Math.random() * _emptyIdxs.length)];
-        _rdAddr = 'A' + _targetL2Slot;
-      }
-      var _rdTag = _rdAddr;
+      // Check L2 occupancy — if <25% filled treat as L2 miss → go to DRAM
+      var l2Filled = 0;
+      for (var rl = 0; rl < NUM_L2_LINES; rl++) if (l2Lines[rl] > 0) l2Filled++;
+      var l2Hit = l2Filled > Math.floor(NUM_L2_LINES * 0.25);
 
       if (l2Hit) {
-        logEvent('SM'+si+': L1 miss ['+_rdTag+'] → L2 hit','#ff6b6b');
-        bubble(l1Pos(si).x,l1Pos(si).y,'L1 miss','#ff6b6b',{sub:'tag: '+_rdTag});
-        particles.push(new Particle(l1Pos(si),busP(si),'#ff6b6b','RdReq['+_rdTag+']',2,function(){
-          spawnPassthrough(si,'#ff6b6b','RdReq['+_rdTag+']',2.5,function(){
-            logEvent('L2: hit ['+_rdTag+'] — serving to SM'+si,'#ffa94d');
-            // Flash the exact L2 line — its index is encoded in the address
-            var l2HitIdx = -1;
-            for (var _li=0; _li<NUM_L2_LINES; _li++) { if (l2Lines[_li]>0 && l2Tags[_li]===_rdTag) { l2HitIdx=_li; break; } }
-            if (l2HitIdx >= 0) flashLine('l2', -1, l2HitIdx, true);
-            bubble(l2Top().x,l2Top().y,'L2 hit','#51cf66',{life:1.5,sub:'line: '+_rdTag});
-            spawnParticle(l2Top(), l1Pos(si), '#ffa94d', 'DATA['+_rdTag+']', 2, function(){
-              var fillResult = l1FillShared(si, null); flash(sm.l1,'#339af0');
-              flashLine('l1', si, fillResult.idx, true);
-              bubble(l1Pos(si).x,l1Pos(si).y,'cached ['+_rdTag+']','#339af0',{life:1.6,sub:'L1['+fillResult.idx+'] → Shared'});
-              logEvent('SM'+si+': L1['+fillResult.idx+'] ← '+_rdTag+' → Shared','#339af0');
+        logEvent('SM'+si+': L1 miss → L2 hit','#ff6b6b');
+        bubble(l1Pos(si).x,l1Pos(si).y,'L1 miss','#ff6b6b',{sub:'checking L2'});
+        particles.push(new Particle(l1Pos(si),busP(si),'#ff6b6b','RdReq',2,function(){
+          spawnPassthrough(si,'#ff6b6b','RdReq',2.5,function(){
+            logEvent('L2: hit — line found, serving to SM'+si,'#ffa94d');
+            bubble(l2Top().x,l2Top().y,'L2 hit','#51cf66',{life:1.5,sub:'data ready'});
+            var busAtL2hit = { x: l2Top().x, y: layout.bus.y };
+            spawnParticle(l2Top(), l1Pos(si), '#ffa94d', 'DATA', 2, function(){
+              sm.l1.state='shared'; fillL1Random(si, false, 'read'); flash(sm.l1,'#339af0');
+              bubble(l1Pos(si).x,l1Pos(si).y,'line cached','#339af0',{life:1.6,sub:'L1 → Shared'});
+              logEvent('SM'+si+': L1 → Shared (filled from L2)','#339af0');
               stats.hits++;
-            }, [{x: l2Top().x, y: layout.bus.y}, busP(si)]);
+            }, [busAtL2hit, busP(si)]);
           });
         }));
       } else {
         // L2 miss — request goes all the way to DRAM, L2 fills on return
-        logEvent('SM'+si+': L1 miss ['+_rdTag+'] → L2 miss → DRAM','#ff6b6b');
-        bubble(l1Pos(si).x,l1Pos(si).y,'L1 miss','#ff6b6b',{sub:'tag: '+_rdTag});
-        particles.push(new Particle(l1Pos(si),busP(si),'#ff6b6b','RdReq['+_rdTag+']',2,function(){
-          spawnPassthrough(si,'#ff6b6b','RdReq['+_rdTag+']',2.5,function(){
-            // Flash the targeted L2 slot red — it's empty (miss)
-            flashLine('l2', -1, _targetL2Slot, false);
-            bubble(l2Top().x,l2Top().y,'L2 miss','#ff6b6b',{life:1.4,sub:'→ DRAM for '+_rdTag});
-            logEvent('L2: miss ['+_rdTag+'] — forwarding to global memory','#ff6b6b');
+        logEvent('SM'+si+': L1 miss → L2 miss → DRAM fetch','#ff6b6b');
+        bubble(l1Pos(si).x,l1Pos(si).y,'L1 miss','#ff6b6b',{sub:'L2 empty → DRAM'});
+        particles.push(new Particle(l1Pos(si),busP(si),'#ff6b6b','RdReq',2,function(){
+          spawnPassthrough(si,'#ff6b6b','RdReq',2.5,function(){
+            bubble(l2Top().x,l2Top().y,'L2 miss','#ff6b6b',{life:1.4,sub:'→ global mem'});
+            logEvent('L2: miss — forwarding to global memory','#ff6b6b');
             // RdReq continues down: L2 → globalMem → HBM
-            spawnParticle(l2Top(), gmTop(), '#ff6b6b', 'RdReq['+_rdTag+']', 2.2, function(){
+            spawnParticle(l2Top(), gmTop(), '#ff6b6b', 'RdReq', 2.2, function(){
               flash(layout.globalMem,'#339af0');
               bubble(gmTop().x,gmTop().y,'DRAM fetch','#339af0',{life:1.4,sub:'~400 cycles'});
-              logEvent('GlobalMem: reading ['+_rdTag+'] from HBM','#339af0');
-              spawnParticle(gmTop(), hbmTop(), '#339af0', 'RdReq['+_rdTag+']', 2.0, function(){
+              logEvent('GlobalMem: reading from HBM','#339af0');
+              spawnParticle(gmTop(), hbmTop(), '#339af0', 'RdReq', 2.0, function(){
                 flash(layout.hbm,'#845ef7');
-                bubble(hbmTop().x,hbmTop().y,'HBM read','#845ef7',{life:1.2,sub:'line: '+_rdTag});
-                // DATA returns: HBM → globalMem → L2 (fills exact target slot) → bus → L1
-                spawnParticle(hbmTop(), gmTop(), '#845ef7', 'DATA['+_rdTag+']', 2.2, function(){
+                bubble(hbmTop().x,hbmTop().y,'HBM read','#845ef7',{life:1.2,sub:'data found'});
+                // DATA returns: HBM → globalMem → L2 (fills L2) → bus → L1
+                spawnParticle(hbmTop(), gmTop(), '#845ef7', 'DATA', 2.2, function(){
                   flash(layout.globalMem,'#339af0');
-                  spawnParticle(gmTop(), l2Top(), '#339af0', 'DATA['+_rdTag+']', 2.2, function(){
-                    // Fill exactly the target slot so the address maps correctly next time
-                    l2Lines[_targetL2Slot] = 1; l2Tags[_targetL2Slot] = _rdTag;
-                    flash(layout.l2,'#ffa94d');
-                    flashLine('l2', -1, _targetL2Slot, true);
-                    bubble(l2Top().x,l2Top().y,'L2 filled ['+_rdTag+']','#ffa94d',{life:1.5,sub:'cached for next time'});
-                    logEvent('L2: ['+_rdTag+'] installed from DRAM','#ffa94d');
-                    spawnParticle(l2Top(), l1Pos(si), '#ffa94d', 'DATA['+_rdTag+']', 2, function(){
-                      var fillResult2 = l1FillShared(si, null); flash(sm.l1,'#339af0');
-                      flashLine('l1', si, fillResult2.idx, true);
-                      bubble(l1Pos(si).x,l1Pos(si).y,'cached ['+_rdTag+']','#339af0',{life:1.6,sub:'L1['+fillResult2.idx+'] → Shared'});
-                      logEvent('SM'+si+': L1['+fillResult2.idx+'] ← '+_rdTag+' → Shared (from DRAM)','#339af0');
+                  spawnParticle(gmTop(), l2Top(), '#339af0', 'DATA', 2.2, function(){
+                    // L2 fills as line comes through
+                    l2AbsorbOne(); flash(layout.l2,'#ffa94d');
+                    bubble(l2Top().x,l2Top().y,'L2 filled','#ffa94d',{life:1.5,sub:'cached for next time'});
+                    logEvent('L2: line installed from DRAM','#ffa94d');
+                    var busAtL2miss = { x: l2Top().x, y: layout.bus.y };
+                    spawnParticle(l2Top(), l1Pos(si), '#ffa94d', 'DATA', 2, function(){
+                      sm.l1.state='shared'; fillL1Random(si,false,'read'); flash(sm.l1,'#339af0');
+                      bubble(l1Pos(si).x,l1Pos(si).y,'line cached','#339af0',{life:1.6,sub:'L1 → Shared'});
+                      logEvent('SM'+si+': L1 → Shared (filled from DRAM via L2)','#339af0');
                       stats.hits++;
-                    }, [{x: l2Top().x, y: layout.bus.y}, busP(si)]);
+                    }, [busAtL2miss, busP(si)]);
                   });
                 });
               });
@@ -4114,92 +3852,118 @@ function triggerScenario(type, silent) {
         stats.hits++;
         var warpSrc = { x: sm.x + sm.w/2, y: sm.y + 18 };
         bubble(warpSrc.x, warpSrc.y, 'write bypass','#51cf66',{sub:'L1 read-only'});
-        // L1 state unchanged — it wasn't involved.
-        // Route along channels: warp → bus tap → bus center → L2 (no diagonal shortcuts)
+        // L1 state unchanged — it wasn't involved
+        var busCenterPW = { x: l2Top().x, y: layout.bus.y };
         spawnParticle(warpSrc, l2Top(), '#51cf66', 'WR', 2, function(){
           flash(layout.l2,'#ffa94d'); l2AbsorbDirty();
           bubble(l2Top().x,l2Top().y,'L2 updated','#ffa94d',{life:1.5,sub:'write absorbed (dirty)'});
           logEvent('L2: Write-through received — line dirty','#ffa94d');
-        }, [busP(si), {x: l2Top().x, y: layout.bus.y}]);
+        }, [busP(si), busCenterPW]);
       } else {
-        // Volta+: Write-evict policy.
-        // Step 1: SM writes the line into L1 → L1 = Modified (the SM owns it now).
-        // Step 2: INV fires to any SM that has a Shared copy of this line.
-        // The line stays in L1 as Modified until capacity pressure evicts it (that's writeback).
-        // We do NOT evict to L2 here — that's a separate scenario.
-        stats.hits++;
-        logEvent('SM'+si+': Write → L1 Modified, INV others (tag determined at L1)','#51cf66');
-        bubble(l1Pos(si).x,l1Pos(si).y,'write hit','#51cf66',{sub:'L1 → Modified'});
+        // Volta+: Write-evict policy (NO write-allocate).
+        //
+        // Write-HIT  (L1 already Shared/Modified for this line):
+        //   → Mark L1 Modified, write stays in L1, WR evict to L2, INV other sharers.
+        //
+        // Write-MISS (L1 Invalid — line not cached):
+        //   → Write goes directly to L2, L1 is NOT filled (write-evict = no allocate on miss).
+        //   → No INV needed — nobody else can have a stale copy if we never had it.
 
-        // Snapshot which SMs have Shared copies right now (before state changes)
-        var staleSMs = [];
-        for (var wi=0;wi<layout.sms.length;wi++) {
-          if (wi!==si && layout.sms[wi].l1.state==='shared') staleSMs.push(wi);
+        var l1HasLine = (sm.l1.state === 'shared' || sm.l1.state === 'modified');
+        var l1WriteFilledCount = 0;
+        if (cacheState[si]) {
+          for (var wfc=0;wfc<NUM_LINES;wfc++) if(cacheState[si].l1[wfc].s>0) l1WriteFilledCount++;
         }
+        var isWriteHit = l1HasLine && l1WriteFilledCount > 0;
 
-        // L1 of writing SM goes Modified immediately (the write happened locally)
-        var _wrResult = l1MarkModified(si); flash(sm.l1,'#51cf66');
-        var _wrTag = _wrResult ? _wrResult.tag : '??';
+        if (!isWriteHit) {
+          // ── Write-Miss: write-evict → straight to L2, L1 untouched ─────────
+          stats.misses++;
+          logEvent('SM'+si+': Write miss → write-evict to L2 (L1 not filled)','#51cf66');
+          bubble(l1Pos(si).x, l1Pos(si).y, 'write miss','#51cf66',{sub:'write-evict → L2'});
+          var warpSrcM = { x: sm.x + sm.w/2, y: sm.y + 18 };
+          // Particle: registers → bus → L2 (bypasses L1 entirely)
+          var busCenterWM = { x: l2Top().x, y: layout.bus.y };
+          spawnParticle(warpSrcM, l2Top(), '#51cf66', 'WR', 2, function(){
+            flash(layout.l2,'#ffa94d'); l2AbsorbDirty();
+            bubble(l2Top().x,l2Top().y,'write landed','#ffa94d',{life:1.5,sub:'L2 dirty (no L1 fill)'});
+            logEvent('L2: write-evict received — line dirty, L1 not allocated','#ffa94d');
+          }, [busP(si), busCenterWM]);
 
-        // WR packet travels to bus to announce the write (triggers INV broadcast)
-        particles.push(new Particle(l1Pos(si),busP(si),'#51cf66','WR[SM'+si+'·'+_wrTag+']',2,function(){
-          bubble(busP(si).x,busP(si).y,'write ['+_wrTag+']','#51cf66',{life:1.2,sub:'INV outgoing'});
+        } else {
+          // ── Write-Hit: line is in L1, mark Modified, evict to L2, INV others ─
+          stats.hits++;
+          logEvent('SM'+si+': Write hit → L1 Modified, write-evict to L2, INV others','#51cf66');
+          bubble(l1Pos(si).x,l1Pos(si).y,'write hit','#51cf66',{sub:'L1 → Modified'});
 
-          if (staleSMs.length === 0) {
-            logEvent('SM'+si+': No other sharers — no INV needed','#51cf66');
-            return;
+          // Snapshot sharers BEFORE state changes
+          var staleSMs = [];
+          for (var wi=0;wi<layout.sms.length;wi++) {
+            if (wi!==si && layout.sms[wi].l1.state==='shared') staleSMs.push(wi);
           }
 
-          // On Apex: route INV via the Coherency Directory (targeted, not broadcast)
-          if (currentArch === 'apex' && layout.cohDir) {
-            var cdCentre = { x: layout.cohDir.x + layout.cohDir.w/2, y: layout.cohDir.y + layout.cohDir.h/2 };
-            // Consult directory: WR → cohDir
-            particles.push(new Particle(busP(si), l2Top(), '#f06595', 'WR→DIR['+_wrTag+']', 2.5, function(){
-              flash(layout.cohDir, '#f06595');
-              bubble(cdCentre.x, cdCentre.y, 'dir lookup','#f06595',{life:1.3,sub:'checking sharers'});
-              logEvent('CohDir: '+staleSMs.length+' sharer(s) found → targeted INV','#f06595');
-              // Directory knows exactly which SMs have copies — fire targeted INV only to them
+          // Mark L1 Modified immediately — the write happened locally
+          sm.l1.state='modified'; setL1Dirty(si, 'write'); flash(sm.l1,'#51cf66');
+
+          // WR travels L1 → bus → L2 (write-evict: data goes to L2 too)
+          particles.push(new Particle(l1Pos(si), busP(si), '#51cf66', 'WR', 2, function(){
+            bubble(busP(si).x, busP(si).y, 'write-evict','#51cf66',{life:1.0,sub:'→ L2 + INV'});
+            // Continue to L2
+            var busCenterWH = { x: l2Top().x, y: layout.bus.y };
+            spawnParticle(busP(si), l2Top(), '#51cf66', 'WR', 2, function(){
+              flash(layout.l2,'#ffa94d'); l2AbsorbDirty();
+              bubble(l2Top().x,l2Top().y,'L2 updated','#ffa94d',{life:1.3,sub:'dirty line installed'});
+              logEvent('L2: write-evict received — line dirty','#ffa94d');
+            }, [busCenterWH]);
+
+            // Simultaneously fire INV to all sharers
+            if (staleSMs.length === 0) {
+              logEvent('SM'+si+': No other sharers — no INV needed','#51cf66');
+            } else if (currentArch === 'apex' && layout.cohDir) {
+              // Apex: targeted INV via Coherency Directory
+              var cdCentre = { x: layout.cohDir.x + layout.cohDir.w/2, y: layout.cohDir.y + layout.cohDir.h/2 };
+              var busCenterDir = { x: l2Top().x, y: layout.bus.y };
+            particles.push(new Particle(busP(si), l2Top(), '#f06595', 'WR→DIR', 2.5, function(){
+                flash(layout.cohDir, '#f06595');
+                bubble(cdCentre.x, cdCentre.y, 'dir lookup','#f06595',{life:1.3,sub:'checking sharers'});
+                logEvent('CohDir: '+staleSMs.length+' sharer(s) found → targeted INV','#f06595');
+                for (var wj=0;wj<staleSMs.length;wj++) {
+                  (function(idx){
+                    setTimeout(function(){
+                      var bcInvWH = { x: l2Top().x, y: layout.bus.y };
+                      spawnParticle(l2Top(), l1Pos(idx), '#f06595', 'INV', 2.8, function(){
+                        layout.sms[idx].l1.state='invalid';
+                        invalidateL1Lines(idx, 1 + Math.floor(Math.random()*2));
+                        flash(layout.sms[idx].l1,'#f06595');
+                        bubble(l1Pos(idx).x,l1Pos(idx).y,'line dropped','#f06595',{life:1.3,sub:'targeted INV'});
+                        logEvent('SM'+idx+': line invalidated (targeted)','#f06595');
+                        stats.inv++; updateStats();
+                      }, [bcInvWH, busP(idx)]);
+                    }, wj*180);
+                  })(staleSMs[wj]);
+                }
+              }));
+            } else {
+              // Non-Apex: broadcast INV from bus to all sharers
               for (var wj=0;wj<staleSMs.length;wj++) {
                 (function(idx){
                   setTimeout(function(){
-                    // Targeted INV travels on the coherency bus: writer busP → victim busP → L1
-                    spawnParticle(busP(si), l1Pos(idx), '#f06595', 'INV[SM'+si+'·'+_wrTag+']', 2.8, function(){
-                                            invalidateL1Lines(idx, 1, _wrTag);
-                      flash(layout.sms[idx].l1,'#f06595');
-                      // Flash the specific bar that was invalidated
-                      var wInvIdx = tagToIdx(_wrTag);
-                      if (wInvIdx >= 0) flashLine('l1', idx, wInvIdx, false);
-                      bubble(l1Pos(idx).x,l1Pos(idx).y,'dropped','#f06595',{life:1.3,sub:'INV[SM'+si+'·'+_wrTag+']'});
-                      logEvent('SM'+idx+': INV['+_wrTag+'] — line dropped','#f06595');
-                      stats.inv++; updateStats();
-                    }, [busP(idx)]);
-                  }, wj*180);
+                    particles.push(new Particle(busP(si),busP(idx),'#f06595','INV',3,function(){
+                      particles.push(new Particle(busP(idx),l1Pos(idx),'#f06595','INV',2,function(){
+                        layout.sms[idx].l1.state='invalid';
+                        invalidateL1Lines(idx, 1 + Math.floor(Math.random()*2));
+                        flash(layout.sms[idx].l1,'#f06595');
+                        bubble(l1Pos(idx).x,l1Pos(idx).y,'line dropped','#f06595',{life:1.3,sub:'addr match'});
+                        logEvent('SM'+idx+': line invalidated','#f06595');
+                        stats.inv++; updateStats();
+                      }));
+                    }));
+                  }, wj*180 + Math.round(Math.random()*60));
                 })(staleSMs[wj]);
               }
-            }));
-          } else {
-            // Non-Apex: broadcast INV to all SMs that have a Shared copy
-            for (var wj=0;wj<staleSMs.length;wj++) {
-              (function(idx){
-                setTimeout(function(){
-                  particles.push(new Particle(busP(si),busP(idx),'#f06595','INV[SM'+si+'·'+_wrTag+']',3,function(){
-                    particles.push(new Particle(busP(idx),l1Pos(idx),'#f06595','INV[SM'+si+'·'+_wrTag+']',2,function(){
-                      // INV carries specific address — only drop 1-2 matching lines, rest of L1 stays
-                      invalidateL1Lines(idx, 1, _wrTag);
-                      flash(layout.sms[idx].l1,'#f06595');
-                      // Flash the specific bar that was invalidated
-                      var wInvIdx2 = tagToIdx(_wrTag);
-                      if (wInvIdx2 >= 0) flashLine('l1', idx, wInvIdx2, false);
-                      bubble(l1Pos(idx).x,l1Pos(idx).y,'line dropped','#f06595',{life:1.3,sub:'addr match'});
-                      logEvent('SM'+idx+': INV['+_wrTag+'] — line dropped','#f06595');
-                      stats.inv++; updateStats();
-                    }));
-                  }));
-                }, wj*180 + Math.round(Math.random()*60));
-              })(staleSMs[wj]);
             }
-          }
-        }));
+          }));
+        }
       }
       break;
     case 'invalidate':
@@ -4219,32 +3983,24 @@ function triggerScenario(type, silent) {
         // Packet goes bus→cohDir, then targeted INV fires only to SMs in directory.
         var cdPos2 = { x: layout.cohDir.x + layout.cohDir.w/2, y: layout.cohDir.y + layout.cohDir.h/2 };
         var busCenter = {x:(layout.bus.x1+layout.bus.x2)/2, y:layout.bus.y};
-        // CohDir lookup: show as a flash on the directory (it's inside L2 block).
-        // The actual INV messages travel on the coherency bus — NOT through L2.
-        flash(layout.cohDir, '#f06595');
-        bubble(cdPos2.x, cdPos2.y, 'dir lookup','#f06595',{life:1.3,sub:validSMs.length+' sharer(s)'});
-        logEvent('CohDir: targeted INV to '+validSMs.length+' SM(s)','#f06595');
-        for (var vi=0;vi<validSMs.length;vi++) {
-          (function(idx){
-            setTimeout(function(){
-              // INV travels on the coherency bus: bus center → SM bus tap → L1
-              (function(captIdx){
-                var _invTag = l1Lines[captIdx] ? (l1Lines[captIdx].filter(function(l){return l.mesi!=='I'&&l.tag;})[0]||{tag:'??'}).tag : '??';
-                spawnParticle(busCenter, l1Pos(captIdx), '#f06595', 'INV[SM'+captIdx+'·'+_invTag+']', 2.8, function(){
-                  var dropped = invalidateL1Lines(captIdx, 1, _invTag);
-                  flash(layout.sms[captIdx].l1,'#f06595');
-                  // Flash the specific bar that was invalidated
-                  if (dropped.length > 0) {
-                    var dIdx = tagToIdx(dropped[0]);
-                    if (dIdx >= 0) flashLine('l1', captIdx, dIdx, false);
-                  }
-                  bubble(l1Pos(captIdx).x,l1Pos(captIdx).y,'dropped [SM'+captIdx+'·'+_invTag+']','#f06595',{life:1.2,sub:'targeted'});
-                  logEvent('SM'+captIdx+': INV[SM'+captIdx+'·'+_invTag+'] — line dropped','#f06595');
-                }, [busP(captIdx)]);
-              })(idx);
-            }, vi*140);
-          })(validSMs[vi]);
-        }
+        particles.push(new Particle(busCenter, l2Top(), '#f06595', 'INV', 2.5, function(){
+          flash(layout.cohDir, '#f06595');
+          bubble(cdPos2.x, cdPos2.y, 'dir lookup','#f06595',{life:1.3,sub:validSMs.length+' sharer(s)'});
+          logEvent('CohDir: targeted INV to '+validSMs.length+' SM(s)','#f06595');
+          for (var vi=0;vi<validSMs.length;vi++) {
+            (function(idx){
+              setTimeout(function(){
+                var bcInvB = { x: l2Top().x, y: layout.bus.y };
+                spawnParticle(l2Top(), l1Pos(idx), '#f06595', 'INV', 2.8, function(){
+                  layout.sms[idx].l1.state = 'invalid';
+                  invalidateL1Lines(idx, 1 + Math.floor(Math.random()*2));
+                  flash(layout.sms[idx].l1,'#f06595');
+                  bubble(l1Pos(idx).x,l1Pos(idx).y,'line(s) dropped','#f06595',{life:1.2,sub:'targeted'});
+                }, [bcInvB, busP(idx)]);
+              }, vi*140);
+            })(validSMs[vi]);
+          }
+        }));
       } else {
         // Non-Apex: broadcast INV from bus centre to all SMs with valid lines.
         // Each INV carries a specific address — it drops 1-2 matching lines, not all of L1.
@@ -4252,20 +4008,16 @@ function triggerScenario(type, silent) {
           (function(idx){
             setTimeout(function(){
               var from={x:(layout.bus.x1+layout.bus.x2)/2,y:layout.bus.y};
-              (function(captIdx, captFrom){
-                var _invTag2 = l1Lines[captIdx] ? (l1Lines[captIdx].filter(function(l){return l.mesi!=='I'&&l.tag;})[0]||{tag:'??'}).tag : '??';
-                particles.push(new Particle(captFrom,busP(captIdx),'#f06595','INV[SM'+captIdx+'·'+_invTag2+']',3,function(){
-                  particles.push(new Particle(busP(captIdx),l1Pos(captIdx),'#f06595','INV[SM'+captIdx+'·'+_invTag2+']',2,function(){
-                    invalidateL1Lines(captIdx, 1, _invTag2);
-                    flash(layout.sms[captIdx].l1,'#f06595');
-                    // Flash the specific bar that was invalidated
-                    var invIdx2 = tagToIdx(_invTag2);
-                    if (invIdx2 >= 0) flashLine('l1', captIdx, invIdx2, false);
-                    bubble(l1Pos(captIdx).x,l1Pos(captIdx).y,'dropped [SM'+captIdx+'·'+_invTag2+']','#f06595',{life:1.2,sub:'addr match'});
-                    logEvent('SM'+captIdx+': INV[SM'+captIdx+'·'+_invTag2+'] — line dropped','#f06595');
-                  }));
+              particles.push(new Particle(from,busP(idx),'#f06595','INV',3,function(){
+                particles.push(new Particle(busP(idx),l1Pos(idx),'#f06595','INV',2,function(){
+                  layout.sms[idx].l1.state='invalid';
+                  // Drop only the lines matching the invalidated address — 1 to 2 lines
+                  invalidateL1Lines(idx, 1 + Math.floor(Math.random()*2));
+                  flash(layout.sms[idx].l1,'#f06595');
+                  bubble(l1Pos(idx).x,l1Pos(idx).y,'line(s) dropped','#f06595',{life:1.2,sub:'addr match'});
+                  logEvent('SM'+idx+': L1 line(s) invalidated','#f06595');
                 }));
-              })(idx, from);
+              }));
             }, vi*120 + Math.round(Math.random()*60));
           })(validSMs[vi]);
         }
@@ -4273,17 +4025,27 @@ function triggerScenario(type, silent) {
       break;
     case 'writeback':
       // Precondition already ensures sm is Modified — only coerce lines if not already dirty
-      var _wbTag = (sm.l1.state !== 'modified') ? setL1Dirty(si) : l1EvictDirty(si);
-      if (!_wbTag) _wbTag = '??';
-      logEvent('SM'+si+': Write-back [SM'+si+'·'+_wbTag+'] → L2','#ffa94d');
-      bubble(l1Pos(si).x,l1Pos(si).y,'dirty evict','#ffa94d',{sub:'line: '+_wbTag});
-      particles.push(new Particle(l1Pos(si),busP(si),'#ffa94d','WB[SM'+si+'·'+_wbTag+']',2,function(){
-        spawnPassthrough(si,'#ffa94d','WB[SM'+si+'·'+_wbTag+']',2.5,function(){
-          // WB arrives at L2: dirty line now lives in L2 (already evicted from L1 above).
+      if (sm.l1.state !== 'modified') { sm.l1.state='modified'; setL1Dirty(si, 'write'); }
+      logEvent('SM'+si+': Write-back → L2 (1 dirty line evicted)','#ffa94d');
+      bubble(l1Pos(si).x,l1Pos(si).y,'dirty evict','#ffa94d',{sub:'1 line flushed'});
+      particles.push(new Particle(l1Pos(si),busP(si),'#ffa94d','WB',2,function(){
+        spawnPassthrough(si,'#ffa94d','WB',2.5,function(){
+          // WB arrives at L2: evict exactly the one dirty line from L1, install it in L2
+          evictOneL1Line(si);
+          // If L1 still has valid lines, keep it modified; otherwise go invalid
+          var stillHasDirty = false;
+          if (cacheState[si]) {
+            for (var wbi=0;wbi<NUM_LINES;wbi++) if(cacheState[si].l1[wbi].s>0){stillHasDirty=true;break;}
+          }
+          if (!stillHasDirty) sm.l1.state='invalid';
+          // Animate a particle hitting a specific L2 slot
+          var l2SlotIdx = -1;
+          for (var l2s=0;l2s<NUM_L2_LINES;l2s++){if(l2Lines[l2s]===0){l2SlotIdx=l2s;break;}}
+          if (l2SlotIdx===-1) for(var l2s2=0;l2s2<NUM_L2_LINES;l2s2++){if(l2Lines[l2s2]===1){l2SlotIdx=l2s2;break;}}
           l2Dirty(); stats.wb++;
           flash(layout.l2,'#ffa94d');
-          bubble(l2Top().x,l2Top().y,'L2 absorbed','#ffa94d',{life:1.4,sub:'dirty → L2'});
-          logEvent('L2: Write-back received — line dirty in L2','#ffa94d');
+          bubble(l2Top().x,l2Top().y,'1 line absorbed','#ffa94d',{life:1.4,sub:'dirty → L2 slot'});
+          logEvent('L2: Write-back received — 1 dirty line installed','#ffa94d');
           // L2 eviction cascade: only fires if L2 is >75% full (realistic pressure)
           var l2FilledCount = 0;
           for (var li=0;li<NUM_L2_LINES;li++) if(l2Lines[li]>0) l2FilledCount++;
@@ -4318,17 +4080,29 @@ function triggerScenario(type, silent) {
       for(var sbi=0;sbi<sm.sub.length;sbi++){if(sm.sub[sbi].type==='smem')smemBlock=sm.sub[sbi];}
       if(!smemBlock) break;
       logEvent('SM'+si+': SMEM access','#51cf66');
+      flash(smemBlock,'#51cf66'); stats.hits++;
+      fillSmem(si);
       bubble(sm.x+sm.w/2,sm.y+14,'no coherency','#51cf66',{sub:'SM-private scratchpad'});
       var regsBlockEl=null;
       for(var ri=0;ri<sm.sub.length;ri++){if(sm.sub[ri].type==='regs')regsBlockEl=sm.sub[ri];}
       var sfrom={x:sm.x+sm.w/2,y:regsBlockEl?regsBlockEl.y+3:sm.y+40};
-      // flash and fillSmem fire ON arrival, not before the particle is spawned
+      // ST.S: register → SMEM (store)
       particles.push(new Particle(sfrom,{x:smemBlock.x+smemBlock.w/2,y:smemBlock.y+smemBlock.h/2},'#51cf66','ST.S',1.5,function(){
-        flash(smemBlock,'#51cf66');
-        fillSmem(si);
-        stats.hits++;
-        bubble(smemBlock.x+smemBlock.w/2,smemBlock.y,'~20 cycles','#51cf66',{life:1.4,sub:'fast SRAM hit'});
-        logEvent('SM'+si+': SMEM written','#51cf66');
+        bubble(smemBlock.x+smemBlock.w/2,smemBlock.y,'~20 cycles','#51cf66',{life:1.4,sub:'SRAM write'});
+        logEvent('SM'+si+': ST.S — data written to SMEM','#51cf66');
+        // LDS: SMEM → register (load back, as other threads read it)
+        setTimeout(function(){
+          logEvent('SM'+si+': LDS — threads reading from SMEM','#51cf66');
+          bubble(smemBlock.x+smemBlock.w/2,smemBlock.y,'LDS issued','#51cf66',{sub:'threads reading'});
+          spawnParticle(
+            {x:smemBlock.x+smemBlock.w/2,y:smemBlock.y+smemBlock.h/2},
+            sfrom, '#51cf66','LDS',1.5,
+            function(){
+              bubble(sfrom.x,sfrom.y,'reg filled','#51cf66',{sub:'~20 cycle SMEM hit',life:1.4});
+              logEvent('SM'+si+': LDS hit — data in registers (~20 cycles, no bus)','#51cf66');
+            }
+          );
+        }, 700);
       }));
       if (currentArch==='hopper'&&layout.sms.length>1) {
         var other=(si+1)%layout.sms.length;
@@ -4369,16 +4143,14 @@ function triggerScenario(type, silent) {
       setRegPressure(si, 1.10);  // overflow — bars visibly exceed capacity
       spawnParticle(regsP, l1P, '#fb923c', 'SPILL', 2.2, function() {
         var l1Full = (function() {
-          // Use authoritative per-line data, not the old cacheState.l1 array
-          var lines = l1Lines[si]; if (!lines) return false;
-          var filled = 0;
-          for (var i = 0; i < NUM_LINES; i++) { if (lines[i].mesi !== 'I') filled++; }
+          var cs = cacheState[si]; if (!cs) return false;
+          var filled = 0; for (var i=0;i<NUM_LINES;i++) if(cs.l1[i].s>0) filled++;
           return filled >= NUM_LINES - 2;
         })();
 
         if (!l1Full) {
-          // L1 hit — spill allocates one line in L1 (like a write-allocate)
-          l1FillShared(si); flash(l1B, '#fb923c');
+          // L1 hit — absorb spill into L1
+          fillL1Random(si, false, 'spill'); flash(l1B, '#fb923c');
           bubble(l1P.x, l1P.y, 'spill hit L1', '#fb923c', {sub:'~28 cycle penalty'});
           logEvent('SM'+si+': spill → L1 hit (~28 cycles)', '#fb923c');
 
@@ -4406,6 +4178,7 @@ function triggerScenario(type, silent) {
 
             setTimeout(function() {
               logEvent('SM'+si+': RELOAD ← L2', '#fb923c');
+              var bcSpill = { x: l2Top().x, y: layout.bus.y };
               spawnParticle(l2Top(), l1P, '#fb923c', 'RELOAD', 2, function() {
                 spawnParticle(l1P, regsP, '#fb923c', 'RELOAD', 2.2, function() {
                   flash(regsBlock(si) || layout.sms[si], '#fb923c');
@@ -4414,7 +4187,7 @@ function triggerScenario(type, silent) {
                   setRegPressure(si, 0.72 + Math.random() * 0.08);  // back to loaded baseline
                   stats.hits++; updateStats();
                 });
-              }, [{x:l2Top().x, y:layout.bus.y}, busP(si)]);
+              }, [bcSpill, busP(si)]);
             }, 700);
           });
         }
@@ -4467,7 +4240,7 @@ function triggerScenario(type, silent) {
             bubble(asyncSrc.x, asyncSrc.y, 'barrier done', '#51cf66', {sub:'tile committed', life:1.4});
             logEvent('SM'+si+': cp.async.wait complete — tile ready', '#51cf66');
           }, 400);
-        }, [{x:l2Top().x, y:layout.bus.y}, busP(si)]);
+        }, [busP(si)]);
       }, [cbP()]);
       break;
     }
@@ -4523,7 +4296,7 @@ function triggerScenario(type, silent) {
                   logEvent('SM'+si+': TMA complete — mbarrier arrived', '#51cf66');
                 }, 300);
               }
-            }, [{x:l2Top().x, y:layout.bus.y}, busP(si)]);
+            }, [busP(si)]);
           }, [cbP()]);
           fetchTile(tileIdx + 1);
         }, delay);
@@ -4536,7 +4309,8 @@ function triggerScenario(type, silent) {
   updateStats();
 }
 
-// arbiter.js
+
+// ── arbiter.js ──────────────────────────────────────────
 // arbiter.js — GPU Cache Coherency Demo
 
 // Atomic arbiter state machine, ROB, spawn helpers, app utils
@@ -4547,19 +4321,10 @@ function toggleAuto() {
 }
 
 function resetAll(silent) {
-  particles=[]; flashEffects=[]; lineFlashes=[]; bubbles=[];
+  particles=[]; flashEffects=[]; bubbles=[];
   stats={hits:0,misses:0,inv:0,wb:0}; updateStats();
-  // initCacheState rebuilds all caches. Then explicitly wipe all L1 lines to Invalid
-  // so Reset gives a clean slate — user can see the cache start empty.
+  for(var ri=0;ri<layout.sms.length;ri++){layout.sms[ri].l1.state='invalid';}
   initCacheState();
-  if (l1Lines) {
-    for (var ri = 0; ri < l1Lines.length; ri++) {
-      for (var li = 0; li < NUM_LINES; li++) {
-        l1Lines[ri][li] = { mesi: 'I', tag: null };
-      }
-    }
-    syncAllL1States();
-  }
   document.getElementById('event-log').innerHTML='';
   stepTimers.forEach(function(t){clearTimeout(t);}); stepTimers=[];
   document.getElementById('explainer-title').innerHTML='<span class="dot" style="background:#6b7094"></span> Click a scenario or wait for auto...';
@@ -4572,8 +4337,6 @@ function resetAll(silent) {
   resetArbiter();
   if(!silent) logEvent('Reset — all caches invalidated','#6b7094');
 }
-
-;
 
 function buildInstrChips() {
   var container = document.getElementById('instr-chips');
@@ -4910,12 +4673,9 @@ function spawnRoutedFromArbiter(smIdx, color, label, speed, onArrival) {
 // Shows a dim pulse and a small label — particles routed through it as a waypoint
 function spawnPassthrough(smIdx, color, label, speed, onArrival) {
   if (currentArch !== 'apex' || !layout.arbiter) {
-    // Non-Apex: travel along the bus to the center column, then drop straight down to L2.
-    // busP(smIdx) is the SM's tap on the bus (at sm.x+w/2, bus.y).
-    // The bus-to-L2 channel runs at W/2 — so we go horizontal then vertical.
-    var busCenter = { x: l2Top().x, y: layout.bus.y };
-    var wp = (Math.abs(busP(smIdx).x - busCenter.x) < 2) ? [] : [busCenter];
-    spawnParticle(busP(smIdx), l2Top(), color, label, speed, onArrival, wp);
+    // Non-Apex: bus column → bus center (horizontal) → L2 top (vertical down)
+    var busCenter0 = { x: l2Top().x, y: layout.bus.y };
+    spawnParticle(busP(smIdx), l2Top(), color, label, speed, onArrival, [busCenter0]);
     return;
   }
   arbiterState.passthroughCount++;
@@ -4947,7 +4707,8 @@ function spawnPassthrough(smIdx, color, label, speed, onArrival) {
 // ATOMIC SCENARIO
 // ════════════════════════════════════════
 
-// atomic.js
+
+// ── atomic.js ──────────────────────────────────────────
 // atomic.js — GPU Cache Coherency Demo
 
 // Atomic scenario, app startup, canvas event listeners
@@ -4961,7 +4722,6 @@ function triggerAtomic() {
   if (isApex) {
     // ── APEX: Arbiter-serialized atomicAdd ──────────────────────────────────────
     if (arbiterState.active) return;
-    var _atomTag = freshTag(0);  // shared address being atomically modified
     logEvent('atomicAdd: ' + smCount2 + ' SMs → Arbiter', '#f59e0b');
     bubble((layout.bus.x1+layout.bus.x2)/2, layout.bus.y-12, 'atomic storm', '#f59e0b', { sub: smCount2+' reqs inbound', life:2.0 });
     resetArbiter();
@@ -5038,8 +4798,9 @@ function triggerAtomic() {
                       logEvent('ROB: SEQ#'+capturedSeq+' retired → DATA→SM'+capturedIdx, '#a78bfa');
                       // Step 5: DATA routes from bus level → SM bus junction → L1
                       // spawnRoutedFromArbiter starts at arbiterBusEntry (bus level), no air-travel
-                      spawnRoutedFromArbiter(capturedIdx, '#ffa94d', 'DATA[SM'+capturedIdx+'·'+_atomTag+']', 2.2, function() {
-                        setL1Dirty(capturedIdx);
+                      spawnRoutedFromArbiter(capturedIdx, '#ffa94d', 'DATA', 2.2, function() {
+                        layout.sms[capturedIdx].l1.state = 'modified';
+                        setL1Dirty(capturedIdx, 'atomic');
                         flash(layout.sms[capturedIdx].l1, '#f59e0b');
                         stats.hits++; updateStats();
                       });
@@ -5062,7 +4823,7 @@ function triggerAtomic() {
           stats.misses++;
           bubble(l1Pos(idx).x, l1Pos(idx).y, 'atomicAdd', '#f59e0b', { sub:'→ arbiter', life:1.2 });
           // ATOM travels: L1 → busP → arbiterBusEntry → arbiterTop (where it waits for grant)
-          spawnRoutedToArbiter(idx, '#f59e0b', 'ATOM[SM'+idx+'·'+_atomTag+']', 2.5, function() {
+          spawnRoutedToArbiter(idx, '#f59e0b', 'ATOM', 2.5, function() {
             // Particle is now physically AT arbiterTop. Enqueue it.
             function tryEnqueue() {
               var seq = arbiterEnqueue(idx, 'ATOM');
@@ -5089,22 +4850,21 @@ function triggerAtomic() {
     }
   } else {
     // Non-Apex: raw bus contention, no arbiter coordination
-    var _atomTag = freshTag(0);  // shared address being atomically modified
-    logEvent('atomicAdd ['+_atomTag+']: raw bus contention (no arbiter)', '#f59e0b');
+    logEvent('atomicAdd: raw bus contention (no arbiter)', '#f59e0b');
     bubble((layout.bus.x1+layout.bus.x2)/2, layout.bus.y, 'no arbiter!', '#ff6b6b', { sub:'serialized at L2 (slow)', life:2.2 });
     for (var ri = 0; ri < smCount2; ri++) {
       (function(idx2) {
         setTimeout(function() {
           stats.misses++;
           bubble(l1Pos(idx2).x, l1Pos(idx2).y, 'atomicAdd', '#f59e0b', { sub:'racing for bus', life:1.4 });
-          particles.push(new Particle(l1Pos(idx2), busP(idx2), '#f59e0b', 'ATOM[SM'+idx+'·'+_atomTag+']', 2.5, function() {
+          particles.push(new Particle(l1Pos(idx2), busP(idx2), '#f59e0b', 'ATOM', 2.5, function() {
             particles.push(new Particle(busP(idx2), l2Top(), '#f59e0b', 'ATOM', 2.5, function() {
               flash(layout.l2, '#f59e0b');
               logEvent('L2: atomic locked (SM'+idx2+')', '#ffa94d');
               setTimeout(function() {
                 // DATA returns: l2Top → busP (horizontal along bus) → l1Pos (down to SM)
-                spawnParticle(l2Top(), l1Pos(idx2), '#ffa94d', 'DATA[SM'+capturedIdx+'·'+_atomTag+']', 2, function() {
-                  setL1Dirty(idx2);
+                spawnParticle(l2Top(), l1Pos(idx2), '#ffa94d', 'DATA', 2, function() {
+                  layout.sms[idx2].l1.state = 'modified'; setL1Dirty(idx2, 'atomic');
                   flash(layout.sms[idx2].l1, '#f59e0b');
                   stats.hits++; updateStats();
                 }, [busP(idx2)]);
@@ -5144,6 +4904,7 @@ explainerEl.addEventListener('mousemove', function(e) {
   }
 });
 explainerEl.addEventListener('mouseleave', function() { hideInstrTooltip(); });
+
 
 
 </script>
