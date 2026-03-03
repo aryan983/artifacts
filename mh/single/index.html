@@ -1,4 +1,3 @@
-/* temp comment */
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1643,12 +1642,12 @@ function renderCacheLineTable(hit) {
 
     // Op info
     var opInfo = op ? (OP_LABELS[op] || { label: op, color: '#aaa' }) : null;
-    var swatchColor = op ? opInfo.color : stateColor;
-
+    // Swatch reflects STATE (blue=clean, green=dirty, dark=empty)
+    // Op column reflects the operation that filled the line
     var tdIdx   = document.createElement('td'); tdIdx.className = 'cl-idx'; tdIdx.textContent = i;
     var tdState = document.createElement('td');
     tdState.innerHTML =
-      '<span class="cl-swatch" style="background:' + swatchColor + ';opacity:' + (s === 0 ? '0.2' : '1') + '"></span>' +
+      '<span class="cl-swatch" style="background:' + stateColor + ';opacity:' + (s === 0 ? '0.2' : '0.85') + '"></span>' +
       '<span class="cl-state" style="color:' + stateColor + '">' + stateLabel + '</span>';
     var tdOp = document.createElement('td');
     tdOp.className = s === 0 ? 'cl-empty' : 'cl-op';
@@ -4151,7 +4150,7 @@ function triggerScenario(type, silent) {
 
         if (!l1Full) {
           // L1 hit — absorb spill into L1
-          fillL1Random(si, false, 'spill'); flash(l1B, '#fb923c');
+          fillL1Random(si, true, 'spill'); flash(l1B, '#fb923c');  // dirty — spill writes new data L2 doesn't have
           bubble(l1P.x, l1P.y, 'spill hit L1', '#fb923c', {sub:'~28 cycle penalty'});
           logEvent('SM'+si+': spill → L1 hit (~28 cycles)', '#fb923c');
 
