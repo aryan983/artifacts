@@ -314,7 +314,7 @@ body {
 }
 
 /* Answer block */
-.answer-block { display: none; margin-top: 10px; border-top: 1px solid #aca899; padding-top: 10px; }
+.answer-block { display: none; }
 .answer-block.visible { display: block; }
 .answer-label {
   font-size: 10px;
@@ -327,9 +327,105 @@ body {
 .answer-label.bug-al { color: #cc0000; }
 .answer-text {
   font-size: 12px;
+  line-height: 1.7;
+  color: #111;
+}
+
+/* Answer formatted elements */
+.ans-section {
+  font-size: 10px;
+  font-weight: bold;
+  color: #fff;
+  background: #316ac5;
+  letter-spacing: 0.08em;
+  padding: 2px 8px;
+  margin: 10px 0 5px 0;
+  display: inline-block;
+  border: 1px solid #1a4a9a;
+  box-shadow: 1px 1px 0 #8ab;
+}
+.ans-para {
+  margin: 0 0 7px 0;
+  line-height: 1.7;
+}
+.ans-para:last-child { margin-bottom: 0; }
+.ans-numbered {
+  display: flex;
+  gap: 8px;
+  margin: 3px 0 3px 0;
+  align-items: flex-start;
+}
+.ans-num {
+  min-width: 20px;
+  height: 18px;
+  background: linear-gradient(180deg,#4a7cc7,#2a5ca7);
+  color: #fff;
+  font-size: 10px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 2px;
+  flex-shrink: 0;
+  margin-top: 2px;
+  box-shadow: 1px 1px 0 rgba(0,0,0,0.3);
+}
+.ans-num-text {
+  flex: 1;
   line-height: 1.6;
-  color: #000;
-  white-space: pre-wrap;
+}
+.ans-bullet {
+  display: flex;
+  gap: 8px;
+  margin: 2px 0;
+  align-items: flex-start;
+}
+.ans-bullet-dot {
+  color: #316ac5;
+  font-size: 14px;
+  line-height: 1.4;
+  flex-shrink: 0;
+}
+.ans-bullet-text { flex: 1; line-height: 1.6; }
+.ans-inline-code {
+  font-family: 'Lucida Console', 'Courier New', monospace;
+  font-size: 10.5px;
+  background: #e8eef8;
+  border: 1px solid #b0c4e8;
+  border-radius: 2px;
+  padding: 0 3px;
+  color: #00008b;
+}
+.ans-code-block {
+  background: #1e1e1e;
+  border: 2px solid;
+  border-color: #888 #fff #fff #888;
+  box-shadow: inset 1px 1px 0 #555;
+  padding: 8px 10px;
+  font-family: 'Lucida Console', 'Courier New', monospace;
+  font-size: 10.5px;
+  line-height: 1.6;
+  color: #d4d4d4;
+  margin: 6px 0;
+  white-space: pre;
+  overflow-x: auto;
+  border-radius: 0;
+}
+.ans-divider {
+  border: none;
+  border-top: 1px solid #c8c0b8;
+  margin: 8px 0;
+}
+.ans-emphasis {
+  font-style: italic;
+  color: #444;
+}
+.answer-block {
+  background: #f5f3ef;
+  border: 2px solid;
+  border-color: #888 #fff #fff #888;
+  padding: 10px 12px;
+  margin-top: 8px;
 }
 
 /* ── ACTION BUTTONS ── */

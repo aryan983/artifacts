@@ -59,6 +59,103 @@ const DIFF_LABELS = {
   'Hybrid':'🔀 Hybrid Flows','CDC':'⚡ CDC Formal','Liveness':'♾ Liveness'
 };
 
+
+// ─────────────────────────────────────────────
+// ANSWER FORMATTER
+// ─────────────────────────────────────────────
+function formatAnswer(text){
+  const el = document.createElement('div');
+  el.className = 'answer-text';
+  const blocks = text.split(/\n{2,}/);
+  blocks.forEach(block => {
+    block = block.trim();
+    if(!block) return;
+    const lines = block.split('\n');
+
+    // ALL-CAPS section header
+    if(block.length < 60 && block === block.toUpperCase() && block.match(/[A-Z]{3}/) && !block.match(/[a-z]/)){
+      const hdr = document.createElement('div');
+      hdr.className = 'ans-section';
+      hdr.textContent = block;
+      el.appendChild(hdr);
+      return;
+    }
+
+    // Code block: multi-line with SVA/SV syntax
+    const codeChars = (block.match(/[{};|@=><]/g)||[]).length;
+    const hasSVA = /\b(assert|property|always|posedge|negedge|disable|iff|##|logic|wire|module)\b/.test(block);
+    if(lines.length > 2 && codeChars > 3 && hasSVA){
+      const pre = document.createElement('div');
+      pre.className = 'ans-code-block';
+      pre.textContent = block;
+      el.appendChild(pre);
+      return;
+    }
+
+    // Numbered items
+    if(lines.some(l => /^\d+[).]\s/.test(l))){
+      lines.forEach(line => {
+        const m = line.match(/^(\d+)[).]\s+(.*)/);
+        if(m){
+          const row = document.createElement('div');
+          row.className = 'ans-numbered';
+          const num = document.createElement('div');
+          num.className = 'ans-num';
+          num.textContent = m[1];
+          const txt = document.createElement('div');
+          txt.className = 'ans-num-text';
+          txt.innerHTML = inlineFormat(m[2]);
+          row.appendChild(num);
+          row.appendChild(txt);
+          el.appendChild(row);
+        } else if(line.trim()){
+          const p = document.createElement('div');
+          p.className = 'ans-para';
+          p.style.marginLeft = '28px';
+          p.innerHTML = inlineFormat(line);
+          el.appendChild(p);
+        }
+      });
+      return;
+    }
+
+    // Bullet list
+    if(lines[0] && /^[-•*]\s/.test(lines[0])){
+      lines.forEach(line => {
+        const m = line.match(/^[-•*]\s+(.*)/);
+        if(m){
+          const row = document.createElement('div');
+          row.className = 'ans-bullet';
+          const dot = document.createElement('div');
+          dot.className = 'ans-bullet-dot';
+          dot.textContent = '\u25b8';
+          const txt = document.createElement('div');
+          txt.className = 'ans-bullet-text';
+          txt.innerHTML = inlineFormat(m[1]);
+          row.appendChild(dot);
+          row.appendChild(txt);
+          el.appendChild(row);
+        }
+      });
+      return;
+    }
+
+    // Plain paragraph
+    const p = document.createElement('div');
+    p.className = 'ans-para';
+    p.innerHTML = inlineFormat(block.replace(/\n/g,' '));
+    el.appendChild(p);
+  });
+  return el;
+}
+
+function inlineFormat(text){
+  text = text.replace(/`([^`]+)`/g,'<span class="ans-inline-code">$1</span>');
+  text = text.replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>');
+  return text;
+}
+
+
 function showCard(){
   // Skip any already-completed slots (null = done)
   while(current < deck.length && deck[current] === null) current++;
@@ -119,10 +216,7 @@ function showCard(){
 
   const ac = document.getElementById('answer-container');
   ac.innerHTML = '';
-  const at = document.createElement('div');
-  at.className = 'answer-text';
-  at.textContent = q.a;
-  ac.appendChild(at);
+  ac.appendChild(formatAnswer(q.a));
 
   document.getElementById('answer-block').classList.remove('visible');
   document.getElementById('action-row-reveal').style.display = '';
