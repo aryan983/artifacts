@@ -1,3 +1,4 @@
+// ── globals.js ──────────────────────────────────────────
 // globals.js — GPU Cache Coherency Demo
 
 // Global state, constants, pause toggle, scenario tooltip data
@@ -8,9 +9,39 @@ var ctx = canvas.getContext('2d');
 var W, H, dpr;
 var initialized = false;
 
+// ── Global error catcher — surfaces crashes visibly on canvas ─────────────
+window.onerror = function(msg, src, line, col, err) {
+  var errDiv = document.getElementById('_errOverlay');
+  if (!errDiv) {
+    errDiv = document.createElement('div');
+    errDiv.id = '_errOverlay';
+    errDiv.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#1a0a0a;color:#ff6b6b;font:12px monospace;padding:10px;z-index:99999;white-space:pre-wrap;word-break:break-all;max-height:40vh;overflow:auto;border-bottom:2px solid #ff6b6b';
+    document.body.appendChild(errDiv);
+  }
+  errDiv.textContent += 'ERROR: ' + msg + '\n  at ' + src + ':' + line + ':' + col + '\n';
+};
+
 // ── Pause state ──────────────────────────────────────────────────────────────
 var paused = false;
 
+
+// Pauseable timeout for program mode
+function sortTimeout(fn, delay) {
+  if (!sortRunning) return;
+  return setTimeout(function() {
+    if (!sortRunning) return;
+    if (paused) {
+      var iv = setInterval(function() {
+        if (!paused || !sortRunning) {
+          clearInterval(iv);
+          if (sortRunning && !paused) fn();
+        }
+      }, 80);
+    } else {
+      fn();
+    }
+  }, delay);
+}
 
 function togglePause() {
   paused = !paused;
@@ -20,15 +51,16 @@ function togglePause() {
     btn.classList.add('active');
     btn.textContent = '▶ Resume';
     if (badge) badge.classList.add('visible');
-    // Also stop auto when pausing
     if (autoMode) { autoMode = false; document.getElementById('btn-auto').classList.remove('active'); }
     logEvent('Paused — animation frozen', '#845ef7');
+    // Panel stays open if already open from a previous op
   } else {
     btn.classList.remove('active');
     btn.textContent = '⏸ Pause';
     if (badge) badge.classList.remove('visible');
-    lastTime = performance.now(); // reset dt so we don't get a big jump
+    lastTime = performance.now();
     logEvent('Resumed', '#845ef7');
+    // Side panel stays open — it's tied to manual mode, not pause state
   }
 }
 
@@ -44,8 +76,8 @@ var SCENARIO_INFO = {
   write: {
     title: 'SM Write  (write-evict + INV)',
     color: '#51cf66',
-    desc: 'Pascal: writes bypass L1 and go straight to L2 (write-through). Volta+: SM writes to L1 (Modified), then evicts to L2 and broadcasts INV to invalidate other SMs\' copies.',
-    watch: 'On Volta+: see the INV packets fan out to all other SMs, turning their L1 lines grey (Invalid). On Pascal: just a direct WR to L2, no INV needed.'
+    desc: 'SM writes to L1 (Modified), then evicts to L2 and broadcasts INV to invalidate other SMs\' copies.',
+    watch: 'See INV packets fan out to actual sharers identified by the Coherency Directory. '
   },
   invalidate: {
     title: 'Broadcast Invalidation',
@@ -60,16 +92,16 @@ var SCENARIO_INFO = {
     watch: 'The full eviction chain: WB particle L1→Bus→L2, then EVICT particle L2→Crossbar→Global Mem→HBM. The HBM block flashes purple at the end — data is now only in DRAM.'
   },
   shared: {
-    title: 'Shared Memory Access (+ DSMEM on Hopper)',
+    title: 'Shared Memory Access ',
     color: '#51cf66',
-    desc: 'Threads access __shared__ SRAM via LDS/STS — no coherency protocol, no bus traffic, no L2 involvement. Pure on-chip speed. Hopper adds DSMEM: cross-SM shared memory within a cluster.',
-    watch: 'Notice: no bus or L2 activity at all. The particles stay entirely inside the SM. On Hopper, a second DSMEM particle crosses to the adjacent SM — still on-chip, ~20 cycle latency.'
+    desc: 'Threads access __shared__ SRAM via LDS/STS — no coherency protocol, no bus traffic, no L2 involvement. Pure on-chip speed. ',
+    watch: 'Notice: no bus or L2 activity at all. The particles stay entirely inside the SM. SMEM is completely SM-private — no coherency needed.'
   },
   atomic: {
     title: '⚛ atomicAdd — Hardware Serialization',
     color: '#f59e0b',
     desc: 'Multiple SMs simultaneously call atomicAdd() to the same address. Without an arbiter, two SMs could both read the value, add to it, and one result gets silently lost. The Apex Arbiter prevents this by serializing all requests with sequence numbers.',
-    watch: 'On Apex: watch ATOM packets queue in the Arbiter panel (hover it to expand). Each gets a SEQ#. GRANTs fire one at a time. On older archs: watch the raw bus contention with no coordination — and imagine the race conditions without hardware atomics.'
+    watch: 'Watch ATOM packets queue in the Arbiter panel (hover it to expand). Each gets a SEQ#. GRANTs fire one at a time. The contention meter shows the serialization cost.'
   },
   reg_spill: {
     title: 'Register Spill — Regs → L1 → L2',
@@ -77,24 +109,12 @@ var SCENARIO_INFO = {
     desc: 'A warp runs out of physical registers. The compiler spills excess live values to L1 cache, stalling the warp. If L1 is full, the spill cascades to L2 (~200 cycles). When the value is needed again, a RELOAD brings it back.',
     watch: 'See the SPILL particle travel from the register file into L1. If L1 is under pressure, watch it cascade all the way to L2. Then the RELOAD particle comes back — that entire round-trip is latency the warp is stalled for.'
   },
-  cp_async: {
-    title: 'cp.async — Global → SMEM (Bypass Regs)',
-    color: '#22d3ee',
-    desc: 'Ampere\'s async copy instruction loads data from global memory directly into shared memory — without touching registers and without stalling the issuing warp. The warp immediately continues computing while data arrives in the background.',
-    watch: 'Notice: the cp.async particle bypasses the register file entirely. Simultaneously, a compute particle pulses inside the SM — the warp keeps working. This is how Ampere achieves full compute-memory overlap without software tricks.'
-  },
   flush: {
-    title: 'Cache Flush  (__threadfence / cudaDeviceSynchronize)',
+    title: '⚡ Flush — Drain All Caches to HBM',
     color: '#f97316',
-    desc: '__threadfence() forces all dirty L1 lines from every SM to write back to L2, then L2 dirty lines drain to DRAM. cudaDeviceSynchronize goes further — it blocks the CPU until all outstanding memory ops complete. Used at kernel boundaries and before CPU reads.',
-    watch: 'Watch all SM dirty lines fire WB packets simultaneously to L2. Then L2 dirty lines cascade down to DRAM via the crossbar and memory controllers. At the end every cache level is clean — L1s go Shared, L2 is clean, HBM holds the authoritative data.'
+    desc: '__threadfence() / cudaDeviceSynchronize() triggers a full cache flush. All dirty L1 lines write back to L2. All dirty L2 lines drain to HBM through the memory controllers. After flush, HBM is authoritative — every SM sees coherent data.',
+    watch: 'Watch the cascade: L1 WBs land in L2 (orange), then L2 dirty lines drain through the crossbar to Global Mem, then STORE to HBM (purple flash). After completion all L1 lines go Invalid and L2 lines go clean (blue).'
   },
-  tma_load: {
-    title: 'TMA Load — Bulk Tensor Tile → SMEM',
-    color: '#22d3ee',
-    desc: 'Hopper\'s Tensor Memory Accelerator transfers entire tensor tiles from global memory to shared memory. One thread issues the TMA descriptor; the hardware DMA engine handles all address computation and data movement autonomously.',
-    watch: 'The TILE particle originates from the TMA block — not from the register file. Multiple tiles can be in flight simultaneously. The SM threads are freed to compute on the previous tile while new data arrives. Pure pipeline overlap.'
-  }
 };
 
 var scenarioTooltipEl = document.getElementById('scenario-tooltip');
@@ -144,5 +164,3 @@ document.querySelectorAll('.scenario-btn').forEach(function(btn) {
     hideScenarioTooltip();
   });
 });
-
-

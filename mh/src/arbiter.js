@@ -1,14 +1,222 @@
+INES; fk++) {
+                    if (cacheState[smI].l1[fk].s === 2) {
+                      (function(slot, delay) {
+                        // Flash orange first
+                        if (typeof flashL1Slot !== 'undefined') flashL1Slot(smI, cacheState[smI].l1[slot].addr, '#f97316');
+                        // Then downgrade to clean after flash peaks
+                        setTimeout(function() {
+                          if (cacheState[smI] && cacheState[smI].l1[slot].s === 2) {
+                            var flushedAddr = cacheState[smI].l1[slot].addr;
+                            if (typeof flashL1Slot !== 'undefined') flashL1Slot(smI, flushedAddr, '#339af0');
+                            cacheState[smI].l1[slot] = makeLine(1, cacheState[smI].l1[slot].op, flushedAddr);
+                            // Mark exactly this address dirty in L2 (not a random slot)
+                            if (flushedAddr >= 0) l2DirtyAddr(flushedAddr);
+                          }
+                        }, delay);
+                      })(fk, flushDelay);
+                      flushDelay += 80; // 80ms stagger between slots
+                    }
+                  }
+                }
+                fsmState.l1.state = 'shared'; // L1 is now clean — L2 is authority
+                flash(fsmState.l1, '#f97316');
+                stats.wb++;
+                logOp('SM'+smI+': all lines written back, L1 → Shared', '#51cf66');
+                bubble(l1Pos(smI).x, l1Pos(smI).y, 'L1 clean', '#51cf66', {sub:'WB complete', life:1.4});
+                wbLanded++;
+                if (wbLanded === dirtySMs.length) {
+                  // All L1 WBs landed — now flush L2 → DRAM
+                  flash(layout.l2, '#f97316');
+                  bubble(l2Top().x, l2Top().y, 'L2 flushing', '#f97316', {sub:'→ DRAM', life:1.6});
+                  logOp('L2: all dirty lines draining to DRAM', '#f97316');
+                  setTimeout(doL2Flush, 400);
+                }
+              }, [busCtr]);
+            }));
+          })(dirtySMs[fj]);
+        }
+      }
+
+      function doL2Flush() {
+        // Count dirty L2 lines to drain
+        var dirtyL2 = 0;
+        for (var dl=0; dl<NUM_L2_LINES; dl++) { var _dl2=l2Lines[dl]?(typeof l2Lines[dl]==='object'?l2Lines[dl].s:l2Lines[dl]):0; if (_dl2 === 2) dirtyL2++; }
+
+        if (dirtyL2 === 0) {
+          logOp('FLUSH complete — no dirty L2 lines, all clean', '#51cf66');
+          // Even with nothing dirty, show a quick scan particle so the bubble
+          // doesn't pop up out of thin air — ping L2 then confirm clean.
+          flash(layout.l2, '#51cf66');
+          particles.push(new Particle(l2Bot(), cbP(), '#51cf66', 'CHK', 1.6, function() {
+            particles.push(new Particle(cbP(), l2Bot(), '#51cf66', 'CLN', 1.4, function() {
+              bubble(l2Top().x, l2Top().y, 'flush done', '#51cf66', {sub:'all caches clean', life:2.0});
+              schedReactive('flush', si, '', 300);
+              updateStats();
+            }));
+          }));
+          return;
+        }
+
+        // Fire one EVICT particle representing the dirty drain
+        logOp('L2: '+dirtyL2+' dirty line(s) draining to DRAM', '#f97316');
+        particles.push(new Particle(l2Bot(), cbP(), '#f97316', 'FLUSH', 2.0, function() {
+          particles.push(new Particle(cbP(), gmTop(), '#f97316', 'WR', 2.0, function() {
+            flash(layout.globalMem, '#f97316');
+            bubble(gmTop().x, gmTop().y, 'MC write', '#f97316', {sub:dirtyL2+' lines → HBM', life:1.4});
+            particles.push(new Particle(gmTop(), gmBot(), '#f97316', 'WR', 1.8, function() {
+              particles.push(new Particle(gmBot(), hbmTop(), '#845ef7', 'STORE', 1.5, function() {
+                flash(layout.hbm, '#845ef7');
+                bubble(hbmTop().x, hbmTop().y, 'persisted', '#845ef7',
+                  {sub:dirtyL2+' lines written', life:2.0});
+                logOp('HBM: '+dirtyL2+' dirty line(s) written — flush complete', '#845ef7');
+                // Stagger L2 slot clean transitions — flash each dirty slot then clear it
+                var cleanDelay = 0;
+                for (var cl=0; cl<NUM_L2_LINES; cl++) {
+                  var _cl2=l2Lines[cl]; if (!_cl2) continue;
+                  var _cl2s = typeof _cl2==='object' ? _cl2.s : _cl2;
+                  if (_cl2s === 2) {
+                    (function(slot) {
+                      var slotAddr = l2Lines[slot] && typeof l2Lines[slot]==='object' ? l2Lines[slot].addr : -1;
+                      if (slotAddr >= 0) flashL2Slot(slotAddr, '#339af0');
+                      setTimeout(function() {
+                        var e = l2Lines[slot];
+                        if (!e) return;
+                        if (typeof e==='object') { if (e.s===2) e.s=1; }
+                        else if (e===2) l2Lines[slot]=1;
+                      }, cleanDelay + 60);
+                    })(cl);
+                    cleanDelay += 60;
+                  }
+                }
+                setTimeout(function() {
+                  // Clear all L1 physical lines and block state
+                  for (var _fsi=0; _fsi<layout.sms.length; _fsi++) {
+                    layout.sms[_fsi].l1.state = 'invalid';
+                    if (cacheState[_fsi]) {
+                      for (var _fli=0; _fli<NUM_LINES; _fli++)
+                        cacheState[_fsi].l1[_fli] = makeLine(0, null, -1);
+                    }
+                  }
+                  flash(layout.l2, '#51cf66');
+                  bubble(l2Top().x, l2Top().y, 'L2 clean', '#51cf66', {sub:'flush complete', life:2.0});
+                  logOp('FLUSH complete — all caches clean, HBM authoritative', '#51cf66');
+                  schedReactive('flush', si, '', 300);
+                  updateStats();
+                }, cleanDelay + 80);
+              }));
+            }));
+          }));
+        }));
+      }
+      break;
+    }
+
+    case 'atomic':
+      triggerAtomic();
+      return;
+
+    case 'reg_spill': {
+      // ── Register Spill: regs → L1 (→ L2 if L1 full) then RELOAD back ──
+      var regsP = regsPos(si);
+      var l1B = layout.sms[si].l1;
+      var l1P = l1Pos(si);
+
+      logOp('SM'+si+': register pressure — spilling to L1', '#fb923c');
+      bubble(regsP.x, regsP.y, 'reg pressure', '#fb923c', {sub:'out of registers'});
+      stats.misses++;
+
+      // Spike pressure visually to overflow
+      setRegPressure(si, 1.10);  // overflow — bars visibly exceed capacity
+      spawnParticle(regsP, l1P, '#fb923c', 'SPILL', 2.2, function() {
+        var l1Full = (function() {
+          var cs = cacheState[si]; if (!cs) return false;
+          var filled = 0; for (var i=0;i<NUM_LINES;i++) if(cs.l1[i].s>0) filled++;
+          return filled >= NUM_LINES - 2;
+        })();
+
+        if (!l1Full) {
+          // L1 hit — absorb spill into L1 as a dirty line
+          var spillAddr = fillL1Random(si, true, 'spill');
+          if (spillAddr >= 0) flashL1Slot(si, spillAddr, '#fb923c');
+          bubble(l1P.x, l1P.y, 'spill hit L1', '#fb923c', {sub:'~28 cycle penalty'});
+          logOp('SM'+si+': spill → L1 hit (~28 cycles)', '#fb923c');
+
+          // RELOAD after short delay
+          setTimeout(function() {
+            logOp('SM'+si+': RELOAD ← L1', '#fb923c');
+            bubble(l1P.x, l1P.y, 'reloading', '#fb923c', {sub:'value back in regs'});
+            spawnParticle(l1P, regsP, '#fb923c', 'RELOAD', 2.2, function() {
+              flash(regsBlock(si) || layout.sms[si], '#fb923c');
+              bubble(regsP.x, regsP.y, 'reg restored', '#51cf66', {sub:'warp resumes', life:1.8});
+              logOp('SM'+si+': register restored — warp resumes', '#51cf66');
+              schedReactive('reg_spill', si, '', 300);
+              setRegPressure(si, 0.72 + Math.random() * 0.08);  // back to loaded baseline
+              stats.hits++; updateStats();
+            });
+          }, 800);
+
+        } else {
+          // L1 full — spill cascades to L2
+          bubble(l1P.x, l1P.y, 'L1 full!', '#ff6b6b', {sub:'spill → L2'});
+          logOp('SM'+si+': L1 full — spill cascades to L2 (~200 cycles)', '#ff6b6b');
+          spawnPassthrough(si, '#fb923c', 'SPILL', 2.2, function() {
+            // Spill to L2: allocate a real L2 line for this spilled data (dirty)
+            var spillL2Addr = fillL1Random(si, false, null); // evict from L1 to make conceptual room
+            // Install the spill data as a fresh dirty line in L2
+            var missingL2 = [];
+            for (var sla=0; sla<NUM_ADDRS; sla++) { if (!l2HasAddr(sla)) missingL2.push(sla); }
+            var spillL2 = missingL2.length > 0 ? missingL2[Math.floor(Math.random()*missingL2.length)] : -1;
+            if (spillL2 >= 0) { l2InstallAddr(spillL2, true); flashL2Slot(spillL2, '#fb923c'); }
+            flash(layout.l2, '#fb923c');
+            bubble(l2Top().x, l2Top().y, 'spill in L2', '#fb923c', {sub:'~200 cycle penalty'});
+            logOp('L2: spill absorbed (dirty — new register data)', '#fb923c');
+
+            setTimeout(function() {
+              logOp('SM'+si+': RELOAD ← L2', '#fb923c');
+              var bcSpill = { x: l2Top().x, y: layout.bus.y };
+              spawnParticle(l2Top(), l1P, '#fb923c', 'RELOAD', 2, function() {
+                spawnParticle(l1P, regsP, '#fb923c', 'RELOAD', 2.2, function() {
+                  flash(regsBlock(si) || layout.sms[si], '#fb923c');
+                  bubble(regsP.x, regsP.y, 'reg restored', '#51cf66', {sub:'~200 cyc stall', life:1.8});
+                  logOp('SM'+si+': register restored from L2', '#51cf66');
+                  schedReactive('reg_spill', si, '', 300);
+                  setRegPressure(si, 0.72 + Math.random() * 0.08);  // back to loaded baseline
+                  stats.hits++; updateStats();
+                });
+              }, [bcSpill, busP(si)]);
+            }, 700);
+          });
+        }
+      });
+      break;
+    }
+
+
+
+
+  }
+  updateStats();
+}
+
+// ── arbiter.js ──────────────────────────────────────────
 // arbiter.js — GPU Cache Coherency Demo
 
 // Atomic arbiter state machine, ROB, spawn helpers, app utils
 
 function toggleAuto() {
-  autoMode=!autoMode;
-  document.getElementById('btn-auto').classList.toggle('active',autoMode);
+  autoMode = !autoMode;
+  document.getElementById('btn-auto').classList.toggle('active', autoMode);
+  if (autoMode) {
+    // Switched back to auto — close side panel, clear manual ops
+    closeSidePanel();
+  }
+  // When turning auto OFF: panel opens on first operation press, not immediately
 }
 
 function resetAll(silent) {
-  particles=[]; flashEffects=[]; bubbles=[];
+  // Stop any running program first, before touching state
+  if (typeof sortRunning !== 'undefined' && (sortRunning || programMode)) stopProgram();
+  particles=[]; flashEffects=[]; bubbles=[]; if(typeof slotFlashEffects!=='undefined') slotFlashEffects=[]; if(typeof slotL2FlashEffects!=='undefined') slotL2FlashEffects=[]; if(typeof closeSidePanel!=='undefined') closeSidePanel();
   stats={hits:0,misses:0,inv:0,wb:0,flush:0}; updateStats();
   for(var ri=0;ri<layout.sms.length;ri++){layout.sms[ri].l1.state='invalid';}
   initCacheState();
@@ -22,7 +230,11 @@ function resetAll(silent) {
   // Also unpause on reset
   if (paused) togglePause();
   resetArbiter();
+  l2ProgressBars = [];
   if(!silent) logEvent('Reset — all caches invalidated','#6b7094');
+  calloutIdleShown = false;
+  calloutIdleDismissed = false; // Reset re-enables idle callouts
+  setTimeout(showIdleCallouts, 400);
 }
 
 function buildInstrChips() {
@@ -146,250 +358,29 @@ function arbiterDequeue(seq) {
 function arbiterAckFromL2(seq, onRetired) {
   if (currentArch !== 'apex') { if (onRetired) onRetired(); return; }
   var robIdx = -1;
+  var isHead = false;
   for (var ri = 0; ri < arbiterState.rob.length; ri++) {
     if (arbiterState.rob[ri].seq === seq) {
       arbiterState.rob[ri].state = 'complete';
       arbiterState.rob[ri].onRetired = onRetired;
       robIdx = ri;
+      isHead = (ri === 0);
       break;
     }
   }
-  // Bubble on the exact ROB slot that just flipped to 'complete'
+  // Bubble directly on the ROB slot that just received DATA
   if (robIdx >= 0) {
     var rPos = robSlotPos(robIdx);
-    var isHead = robIdx === 0;
-    bubble(rPos.x, rPos.y, '#'+seq+' ✦', '#339af0', { sub: isHead ? 'head→retire' : 'waiting…', life:1.1 });
+    if (isHead) {
+      bubble(rPos.x, rPos.y, '#'+seq+' HEAD', '#51cf66', { sub: 'retiring now →', life: 1.6 });
+    } else {
+      // OOO — how many slots ahead of this one are still pending?
+      var waiting = robIdx; // slots 0..robIdx-1 must retire first
+      bubble(rPos.x, rPos.y, '#'+seq+' held', '#f59e0b', { sub: 'waiting for #'+(seq - robIdx), life: 2.5 });
+    }
   }
   for (var ao = 0; ao < arbiterState.activeOps.length; ao++) {
     if (arbiterState.activeOps[ao].seq === seq) {
-      arbiterState.activeOps[ao].phase = 'retiring';
-      arbiterState.activeOps[ao].phaseName = ARB_PHASES.retiring.label;
-      arbiterState.activeOps[ao].phaseStart = Date.now();
-      break;
-    }
-  }
-  updateArbiterDom();
-  arbiterTryRetire();
-}
-
-// Drain ROB head: retire all consecutive 'complete' entries in SEQ order.
-// This is the actual reordering — if #3 finishes before #2, it waits here.
-//
-// Fix Bug #1: replaced `changed = true` + while-loop continuation with an
-//   immediate `return` after marking a head 'done'. The removal setTimeout
-//   calls arbiterTryRetire() itself once the slot is gone, so the chain
-//   continues correctly without racing the while loop.
-//
-// Fix Bug #3: `retireTimerPending` flag prevents accumulating duplicate
-//   ghost timers when arbiterTryRetire() is called while the head is still
-//   in its 600ms removal window (state === 'done').
-function arbiterTryRetire() {
-  if (arbiterState.rob.length === 0) return;
-
-  var head = arbiterState.rob[0];
-
-  // Head is already marked 'done' but not yet removed — removal timer is
-  // running. Guard against scheduling duplicate re-check timers.
-  if (head.state === 'done') {
-    if (!arbiterState.retireTimerPending) {
-      arbiterState.retireTimerPending = true;
-      setTimeout(function() {
-        arbiterState.retireTimerPending = false;
-        arbiterTryRetire();
-      }, 650);
-    }
-    return;
-  }
-
-  // Head not yet complete — nothing to retire right now.
-  if (head.state !== 'complete') return;
-
-  // Retire the head: mark done, fire callback, schedule removal.
-  head.state = 'done';
-  var rPos = robSlotPos(0);
-  bubble(rPos.x, rPos.y, '#'+head.seq+' ✓', '#51cf66', { sub:'retired→DATA', life:1.2 });
-  updateArbiterDom();
-
-  var cb = head.onRetired;
-  if (cb) cb();  // send DATA to SM — fires immediately (correct: retirement is the trigger)
-
-  (function(entry) {
-    setTimeout(function() {
-      arbiterState.rob = arbiterState.rob.filter(function(e){ return e.seq !== entry.seq; });
-      arbiterState.activeOps = arbiterState.activeOps.filter(function(e){ return e.seq !== entry.seq; });
-      if (arbiterState.queue.length === 0 && arbiterState.rob.length === 0) {
-        arbiterState.active = false;
-        arbiterState.contentionLevel = 0;
-      }
-      updateArbiterDom();
-      // Try to retire the next head now that this slot is removed.
-      arbiterTryRetire();
-    }, 600);
-  })(head);
-  // Do NOT continue the loop here — the 600ms setTimeout above will call
-  // arbiterTryRetire() for the next entry once this slot is fully removed.
-}
-
-// Legacy wrapper kept for any remaining call sites
-function arbiterRetire(seq) {
-  // No-op — retirement now handled by arbiterAckFromL2 + arbiterTryRetire
-}
-
-function updateArbiterDom() {
-  // State-only update — rendering is done entirely on canvas
-  // Nothing to update in DOM since we removed the arbiter panel
-}
-
-
-// ════════════════════════════════════════
-// LATENCY ANNOTATION TOASTS
-// ════════════════════════════════════════
-
-
-// ════════════════════════════════════════
-// APEX HELPERS
-// ════════════════════════════════════════
-function arbiterPos() {
-  if (!layout.arbiter) return l2Top();
-  return { x: layout.arbiter.x + layout.arbiter.w/2, y: layout.arbiter.y + layout.arbiter.h/2 };
-}
-function arbiterBot() {
-  if (!layout.arbiter) return l2Top();
-  return { x: layout.arbiter.x + layout.arbiter.w/2, y: layout.arbiter.y + layout.arbiter.h };
-}
-function arbiterTop() {
-  if (!layout.arbiter) return l2Top();
-  return { x: layout.arbiter.x + layout.arbiter.w/2, y: layout.arbiter.y };
-}
-// Point on the coherency bus directly above arbiter centre — waypoint for routed particles
-function arbiterBusEntry() {
-  if (!layout.arbiter || !layout.bus) return arbiterTop();
-  return { x: layout.arbiter.x + layout.arbiter.w/2, y: layout.bus.y };
-}
-// ── Slot pixel-position helpers ──
-// Return {x,y} centre of a queue slot or ROB slot so bubbles appear ON the slot itself.
-// Uses the same layout arithmetic as the canvas draw loop.
-function queueSlotPos(slotIdx) {
-  if (!layout.arbiter) return arbiterPos();
-  var arb = layout.arbiter;
-  var divX    = arb.x + arb.w * 0.48;
-  var qLabelX = arb.x + 12;
-  var innerY  = arb.y + 21;
-  var slotH2  = 15, slotGap2 = 4, qSlotW2 = 24;
-  var qSlotY  = innerY + 11;
-  var sx = qLabelX + slotIdx * (qSlotW2 + slotGap2);
-  return { x: sx + qSlotW2 / 2, y: qSlotY + slotH2 / 2 };
-}
-function robSlotPos(slotIdx) {
-  if (!layout.arbiter) return arbiterPos();
-  var arb = layout.arbiter;
-  var divX     = arb.x + arb.w * 0.48;
-  var robLabelX= divX + 18;
-  var innerY   = arb.y + 21;
-  var slotH2   = 15, slotGap2 = 4;
-  var robSlotW2= Math.max(Math.floor((arb.x + arb.w - robLabelX - 12) / 6) - slotGap2, 18);
-  var robSlotY = innerY + 11;
-  var rx = robLabelX + slotIdx * (robSlotW2 + slotGap2);
-  return { x: rx + robSlotW2 / 2, y: robSlotY + slotH2 / 2 };
-}
-// Route a particle through the bus correctly:
-// from l1 → busP(smIdx) → arbiterBusEntry → arbiterTop (two right-angle turns, no diagonals)
-function spawnRoutedToArbiter(smIdx, color, label, speed, onArrival) {
-  var fromPos  = l1Pos(smIdx);
-  var busJunct = busP(smIdx);
-  var busAbove = arbiterBusEntry();
-  var dest     = arbiterTop();
-  // leg 1: L1 → bus junction (vertical up)
-  particles.push(new Particle(fromPos, busJunct, color, label, speed, function() {
-    // leg 2: bus junction → arbiter bus entry (horizontal along bus)
-    particles.push(new Particle(busJunct, busAbove, color, label, speed * 1.1, function() {
-      // leg 3: bus entry → arbiter top (vertical down)
-      particles.push(new Particle(busAbove, dest, color, label, speed, function() {
-        if (onArrival) onArrival();
-      }));
-    }));
-  }));
-}
-// Route a GRANT signal from arbiter back to SM.
-// GRANT is a control signal received by the warp scheduler — it travels all the
-// way down to the SM's warp scheduler block so it's visually clear which SM got the grant.
-function spawnGrantToSM(smIdx, onArrival) {
-  var busAbove = arbiterBusEntry();
-  var busJunct = busP(smIdx);
-  // Find the warp scheduler block for this SM so GRANT visibly lands there
-  var warpDest = busJunct; // fallback: stop at bus junction
-  var sm = layout.sms[smIdx];
-  if (sm) {
-    for (var bi = 0; bi < sm.sub.length; bi++) {
-      if (sm.sub[bi].type === 'warpScheduler') {
-        warpDest = { x: sm.sub[bi].x + sm.sub[bi].w/2, y: sm.sub[bi].y + sm.sub[bi].h/2 };
-        break;
-      }
-    }
-    // If no warp scheduler block, land at bottom of SM
-    if (warpDest === busJunct) {
-      warpDest = { x: sm.x + sm.w/2, y: sm.y + sm.h - 8 };
-    }
-  }
-  // Route: arbiterBusEntry (bus level) → busP(smIdx) (SM's bus junction) → warpDest (inside SM)
-  // Start from arbiterBusEntry — the GRANT comes from the arbiter upward onto the bus,
-  // then travels horizontally to the SM, then drops into the SM body.
-  particles.push(new Particle(busAbove, busJunct, '#51cf66', 'GRANT', 3.0, function() {
-    particles.push(new Particle(busJunct, warpDest, '#51cf66', 'GRANT', 2.5, function() {
-      if (onArrival) onArrival();
-    }));
-  }));
-}
-// Route DATA from arbiter back to SM's L1 via the bus.
-// Starts from arbiterBusEntry (bus level above arbiter) — NOT from arbiterTop —
-// so the particle never visually passes back through the arbiter block body.
-function spawnRoutedFromArbiter(smIdx, color, label, speed, onArrival) {
-  var busAbove = arbiterBusEntry();
-  var busJunct = busP(smIdx);
-  var dest     = l1Pos(smIdx);
-  // Route: arbiterBusEntry → busP(smIdx) → l1Pos(smIdx)
-  // The particle emerges onto the bus at the arbiter's horizontal position,
-  // then travels horizontally to the SM's bus junction, then drops into L1.
-  particles.push(new Particle(busAbove, busJunct, color, label, speed * 1.1, function() {
-    particles.push(new Particle(busJunct, dest, color, label, speed, function() {
-      if (onArrival) onArrival();
-    }));
-  }));
-}
-// Passthrough: flash arbiter briefly when a non-atomic op crosses it on Apex
-// Shows a dim pulse and a small label — particles routed through it as a waypoint
-function spawnPassthrough(smIdx, color, label, speed, onArrival) {
-  if (currentArch !== 'apex' || !layout.arbiter) {
-    // Non-Apex: bus column → bus center (horizontal) → L2 top (vertical down)
-    var busCenter0 = { x: l2Top().x, y: layout.bus.y };
-    spawnParticle(busP(smIdx), l2Top(), color, label, speed, onArrival, [busCenter0]);
-    return;
-  }
-  arbiterState.passthroughCount++;
-  var busJunct  = busP(smIdx);
-  var busAbove  = arbiterBusEntry();
-  var arbEntry  = arbiterTop();
-  var arbExit   = arbiterBot();
-  var l2dest    = l2Top();
-  // leg 1: bus junction → bus-above-arbiter (horizontal)
-  particles.push(new Particle(busJunct, busAbove, color, label, speed * 1.1, function() {
-    // leg 2: bus above → arbiter top (enter arbiter — vertical down)
-    particles.push(new Particle(busAbove, arbEntry, color, label, speed, function() {
-      // Passthrough pulse on arbiter
-      flashEffects.push({ x:layout.arbiter.x, y:layout.arbiter.y, w:layout.arbiter.w, h:layout.arbiter.h,
-        c: color, t:0, dur:0.35 });
-      // leg 3: arbiter top → arbiter bottom (pass through — very short, vertical)
-      particles.push(new Particle(arbEntry, arbExit, color, 'PASS', speed * 1.5, function() {
-        // leg 4: arbiter bottom → L2 top (exit to L2)
-        particles.push(new Particle(arbExit, l2dest, color, label, speed, function() {
-          arbiterState.passthroughCount = Math.max(0, arbiterState.passthroughCount - 1);
-          if (onArrival) onArrival();
-        }));
-      }));
-    }));
-  }));
-}
-
-// ════════════════════════════════════════
-// ATOMIC SCENARIO
-// ════════════════════════════════════════
+      arbiterState.activeOps[ao].phase = isHead ? 'retiring' : 'complete';
+      arbiterState.activeOps[ao].phaseName = isHead ? ARB_PHASES.retiring.label : 'buffered';
+      arbiterS

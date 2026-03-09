@@ -1,3 +1,4 @@
+// ── cache.js ──────────────────────────────────────────
 // cache.js — GPU Cache Coherency Demo
 
 // Cache line state, L2 state helpers, resize, drawing utilities
@@ -9,50 +10,91 @@ var OP_COLORS = {
   write:    '#51cf66',   // green  — store / write-evict
   atomic:   '#f59e0b',   // amber  — atomicAdd / RMW
   spill:    '#fb923c',   // orange — register spill
-  cp_async: '#22d3ee',   // cyan   — cp.async load
   tma:      '#22d3ee',   // cyan   — TMA tile load
   shared:   '#6ee09a',   // light-green — shared mem / DSMEM
 };
 
 // Return the render color for a single L1 line slot object {s, op}.
-// Unified color scheme: Dirty = orange (#ffa94d), Clean = blue (#339af0).
-// Op type adds a tint overlay but STATE drives the base color.
 // s: 0=empty, 1=clean, 2=dirty
-var STATE_COLORS = {
-  dirty: '#ffa94d',   // orange — needs writeback, L2 stale
-  clean: '#339af0',   // blue   — matches L2, safe to evict
-};
 function lineColor(line, blockState) {
   if (!line || line.s === 0) return '#2a2d3a';
-  var base = line.s === 2 ? STATE_COLORS.dirty : STATE_COLORS.clean;
-  // If op is tagged, blend op hue as a subtle tint on top of state color
-  // Dirty: full state color with slight op-hue shift; Clean: 55% opacity
-  if (line.s === 2) return base;          // dirty — full orange always
-  return base + '80';                     // clean — blue at 50% opacity
+  if (line.op && OP_COLORS[line.op]) {
+    return line.s === 2 ? OP_COLORS[line.op] : OP_COLORS[line.op] + '70';
+  }
+  // no op tag — fall back to state-based color
+  if (line.s === 2) return '#51cf66';
+  return blockState === 'shared' ? '#339af0' : '#51cf6688';
 }
 
 // Make an empty line slot object
 function makeLine(s, op) { return { s: s || 0, op: op || null }; }
 
-function resize() {
+var _canvasBaselineW = 0;  // width measured when panel is closed — never shrinks
+
+function resize(force) {
   dpr = window.devicePixelRatio || 1;
+
+  // ── Compute true available canvas width ─────────────────────────────────
+  // Available = viewport - padding(20) - info-panel(240) - gaps(16) - step-log(0 or 240)
+  // This ensures the diagram scales proportionally at any viewport width.
+  var vw = window.innerWidth || 1280;
+  var infoPanelEl = document.querySelector('.info-panel');
+  var infoPanelW  = infoPanelEl ? (infoPanelEl.offsetWidth || 240) : 240;
+  var containerPad = 20;  // 2 × 10px padding
+  var gapTotal = 16;       // gaps between flex children
+  var panelOpen = (function() {
+    var pw = document.getElementById('pause-panel-wrap');
+    return pw && pw.classList.contains('open');
+  })();
+  var stepLogW = panelOpen ? 248 : 0;  // pause-panel-wrap.open width + gap
+  var availW = vw - containerPad - infoPanelW - gapTotal - stepLogW;
+  availW = Math.max(availW, 400);  // never below 400px
+
+  // Baseline: when panel is closed, record available width for pinning during open
+  if (!panelOpen) {
+    if (availW > 200) _canvasBaselineW = availW;
+  }
+  var newW = (_canvasBaselineW > 200 ? _canvasBaselineW : availW);
+  // When panel is open, keep canvas pinned at baseline so layout doesn't squish
+  // but still respect the true available width ceiling
+  if (panelOpen) newW = Math.min(_canvasBaselineW, vw - containerPad - infoPanelW - gapTotal - stepLogW);
+  newW = Math.max(newW, 400);
+
   var r = canvas.getBoundingClientRect();
-  var newW = (r.width  > 10 ? r.width  : null) ||
-             (canvas.offsetWidth  > 10 ? canvas.offsetWidth  : null) ||
-             (canvas.parentElement ? canvas.parentElement.offsetWidth : 0) ||
-             800;
   var newH = (r.height > 10 ? r.height : null) ||
              (canvas.offsetHeight > 10 ? canvas.offsetHeight : null) ||
-             640;
-  if (newW === W && newH === H) return;
+             (vw < 500 ? 640 : 720);
+
+  if (!force && newW === W && newH === H) return;
   W = newW; H = newH;
   canvas.width  = Math.round(W * dpr);
   canvas.height = Math.round(H * dpr);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  if (initialized) buildLayout();
+  // Sync panel height to canvas height
+  var panel = document.getElementById('pause-panel-wrap');
+  if (panel) panel.style.height = newH + 'px';
+  if (initialized) {
+    buildLayout();
+    // Callouts store canvas pixel coords — refresh after layout changes
+    if (calloutIdleShown) {
+      setTimeout(function() { showIdleCallouts(); }, 30);
+    } else {
+      // Non-idle callouts: just clear them — next scenario will redraw correctly
+      clearReactiveCallouts();
+    }
+  }
 }
 
 window.addEventListener('resize', resize);
+
+// Programs modal input live preview
+window.addEventListener('load', function() {
+  var inp = document.getElementById('pm-numbers');
+  if (inp) inp.addEventListener('input', function(){ if(typeof updatePmPreview==='function') updatePmPreview(); });
+  // Close modal on backdrop click
+  var modal = document.getElementById('programs-modal');
+  if (modal) modal.addEventListener('click', function(e){ if(e.target===modal) closeProgramsModal(); });
+});
 
 function rrect(x, y, w, h, r) {
   r = Math.min(r, w/2, h/2);
@@ -155,23 +197,15 @@ function tickRegPressure(dt) {
 }
 
 // Add exactly ONE cache line from an operation — realistic: each fetch installs one line.
-// op: 'read','write','atomic','spill','cp_async','tma' or null
+// op: 'read','write','atomic','spill' or null
 function fillL1Random(smIdx, dirty, op) {
-  if (!cacheState[smIdx]) return;
-  var lines = cacheState[smIdx].l1;
-  // Find an empty slot; if none, evict the oldest non-op line (LRU approximation)
-  var slot = -1;
-  for (var i = 0; i < NUM_LINES; i++) {
-    if (lines[i].s === 0) { slot = i; break; }
-  }
-  if (slot === -1) {
-    // No empty slot — evict a clean line first, then a dirty line
-    for (var i2 = 0; i2 < NUM_LINES; i2++) {
-      if (lines[i2].s === 1) { slot = i2; break; }
-    }
-    if (slot === -1) slot = 0; // evict first dirty line as last resort
-  }
-  lines[slot] = makeLine(dirty ? 2 : 1, op || null);
+  if (!cacheState[smIdx]) return -1;
+  // Pick a real address not already in this L1
+  var missing = [];
+  for (var a = 0; a < NUM_ADDRS; a++) { if (!l1HasAddr(smIdx, a)) missing.push(a); }
+  var addr = missing.length > 0 ? missing[Math.floor(Math.random() * missing.length)] : Math.floor(Math.random() * NUM_ADDRS);
+  l1InstallAddr(smIdx, addr, dirty, op || null);
+  return addr; // caller can use this to flash the specific slot
 }
 
 // Fill multiple lines at once — used only for initialization / reset seeding
@@ -198,7 +232,7 @@ function setL1Dirty(smIdx, op) {
   // Mark exactly ONE existing clean line dirty — or install a new dirty line
   for (var i2 = 0; i2 < NUM_LINES; i2++) {
     if (lines[i2].s === 1) {
-      lines[i2] = makeLine(2, op || lines[i2].op);
+      lines[i2] = makeLine(2, op || lines[i2].op, lines[i2].addr);
       return;
     }
   }
@@ -246,7 +280,7 @@ function writebackL1(smIdx) {
   if (!cacheState[smIdx]) return;
   var lines = cacheState[smIdx].l1;
   for (var i = 0; i < NUM_LINES; i++) {
-    if (lines[i].s === 2) lines[i] = makeLine(1, lines[i].op);
+    if (lines[i].s === 2) lines[i] = makeLine(1, lines[i].op, lines[i].addr);
   }
 }
 
@@ -269,22 +303,4 @@ function getCacheStats(smIdx, kind) {
     // support both old integer format (smem) and new object format (l1)
     var sv = (arr[i] && typeof arr[i] === 'object') ? arr[i].s : arr[i];
     if (sv === 1) filled++;
-    else if (sv === 2) { filled++; dirty++; }
-  }
-  return { filled: filled, dirty: dirty, empty: NUM_LINES - filled };
-}
-
-var hoveredBlock = null;
-var selectedBlock = null;
-var connLines = [];
-var mouseX = 0, mouseY = 0;
-var lastClientX = 0, lastClientY = 0;
-
-var ARB_PHASES = {
-  queued:    { label: 'QUEUED',    color: '#f59e0b', desc: 'Waiting in request queue for grant' },
-  granted:   { label: 'GRANTED',   color: '#51cf66', desc: 'Grant issued — SM has exclusive access' },
-  rmw:       { label: 'RMW→L2',   color: '#339af0', desc: 'Read-Modify-Write in progress at L2' },
-  ack:       { label: 'ACK←L2',   color: '#ffa94d', desc: 'Acknowledgement returning from L2' },
-  retiring:  { label: 'RETIRING',  color: '#a78bfa', desc: 'ROB retiring — data routing to SM' },
-};
-var hitRects = [];
+    else if (sv === 2) { filled++; dirty++

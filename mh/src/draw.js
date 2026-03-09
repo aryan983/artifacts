@@ -1,5 +1,33 @@
-// draw.js — GPU Cache Coherency Demo
+;
+    stateLbl.textContent = stateLabel;
+  } else if (stateLbl && hit.type === 'smem') {
+    var smFilled = cs.filled;
+    stateLbl.style.color = smFilled > 0 ? '#6ee09a' : '#6b7090';
+    stateLbl.textContent = smFilled > 0 ? '● Active — ' + smFilled + ' slots used' : '● Empty — no data loaded';
+  }
+}
 
+function positionTooltip(clientX, clientY) {
+  var vizRect = canvas.parentElement.getBoundingClientRect();
+  var tx = clientX - vizRect.left + 14;
+  var ty = clientY - vizRect.top - 12;
+  var tw = 250, th = 160;
+  if (tx + tw > vizRect.width - 10)  tx = clientX - vizRect.left - tw - 14;
+  if (ty + th > vizRect.height - 10) ty = clientY - vizRect.top - th - 12;
+  if (ty < 4) ty = 4;
+  tooltipEl.style.left = tx + 'px';
+  tooltipEl.style.top  = ty + 'px';
+}
+
+function hideTooltip() {
+  tooltipEl.classList.remove('visible');
+  _lastTooltipType = null;
+}
+
+
+
+// ── draw.js ──────────────────────────────────────────
+// draw.js — GPU Cache Coherency Demo
 // Layout building, arch switching, all canvas rendering
 
 function bubble(x, y, text, color, opts) {
@@ -7,31 +35,8 @@ function bubble(x, y, text, color, opts) {
   bubbles.push({ x:x, y:y-8, text:text, sub:o.sub||null, color:color, bg:(o.bg||color.slice(0,7))+'18', age:0, life:o.life||2.8, rise:o.rise||18, wobble:Math.random()*6, vx:0, vy:0 });
 }
 
-function updateDiffBanner() {
-  var banner = document.getElementById('diff-banner');
-  if (!prevArch || prevArch === currentArch) { banner.classList.remove('visible'); return; }
-  var prev = ARCHS[prevArch], curr = ARCHS[currentArch];
-  var parts = [];
-  for (var k in curr.blocks) {
-    var v = curr.blocks[k]; if (!v) continue;
-    var prevBlock = prev.blocks[k];
-    if (!prevBlock && v) parts.push('<span class="new-tag">+ ' + v.label + '</span>');
-    else if (prevBlock && v.changed) parts.push('<span class="changed-tag">↑ ' + v.label + '</span>');
-  }
-  for (var k2 in prev.blocks) {
-    var v2 = prev.blocks[k2]; if (!v2) continue;
-    if (!curr.blocks[k2] || curr.blocks[k2] === null) parts.push('<span class="removed-tag">' + v2.label + '</span>');
-  }
-  if (curr.keyChange) parts.push('<br><span style="color:var(--dim)">Key: ' + curr.keyChange + '</span>');
-  if (parts.length) {
-    banner.innerHTML = '<strong style="color:' + curr.color + '">' + prev.name + ' → ' + curr.name + ':</strong> ' + parts.join(' · ');
-    banner.classList.add('visible');
-  } else { banner.classList.remove('visible'); }
-}
-
 function updateKeyCard() {
   var arch = ARCHS[currentArch];
-  var prev = prevArch ? ARCHS[prevArch] : null;
   var html = '<h3>Diagram Key — ' + arch.name + ' <span style="color:' + arch.color + ';font-weight:600">' + arch.example + '</span></h3>';
   var items = [
     { key:'l1', color:'var(--l1)', meta:'per-SM' },
@@ -54,28 +59,11 @@ function updateKeyCard() {
     var block = arch.blocks[item.key];
     if (!block) continue;
     var badge = '';
-    if (block.isNew) badge = '<span class="acc-badge-new">NEW</span>';
-    else if (block.changed && prev) badge = '<span class="acc-badge-changed">CHANGED</span>';
+    if (block.changed && prev) badge = '<span class="acc-badge-changed">CHANGED</span>';
     html += '<div class="acc-item" onclick="this.classList.toggle(\'open\')"><div class="acc-head"><div class="acc-dot" style="background:' + item.color + '"></div><span class="acc-title">' + block.label + badge + '</span><span class="acc-meta">' + item.meta + '</span><span class="acc-chev">▸</span></div><div class="acc-body"><p>' + block.desc + '</p></div></div>';
   }
   html += '<div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--border);font-size:.72rem;color:var(--dim)"><strong style="color:var(--text)">Write policy:</strong> ' + arch.writePolicy + '<br><strong style="color:var(--text)">Coherency:</strong> ' + arch.coherency + '</div>';
   document.getElementById('key-card').innerHTML = html;
-}
-
-function switchArch(arch) {
-  if (arch === currentArch) return;
-  prevArch = currentArch;
-  currentArch = arch;
-  var tabs = document.querySelectorAll('.arch-tab');
-  for (var i = 0; i < tabs.length; i++) { tabs[i].classList.toggle('active', tabs[i].dataset.arch === arch); }
-  clearSelection();
-  resetAll(true);
-  buildLayout();
-  updateDiffBanner();
-  updateKeyCard();
-  updateArchIntro();
-  updateScenarioButtons();
-  logEvent('Switched to ' + ARCHS[arch].name + ' (' + ARCHS[arch].gen + ')', ARCHS[arch].color);
 }
 
 // Show a toast when an operation cannot run in the current state.
@@ -88,7 +76,7 @@ function notifyUser(msg, reason, color) {
     'position:fixed','bottom:24px','left:50%','transform:translateX(-50%)',
     'background:#12141a','border:1px solid '+(color||'#f06595')+'60',
     'color:'+(color||'#f06595'),'padding:10px 18px','border-radius:8px',
-    'font-family:JetBrains Mono,monospace','font-size:.78rem',
+    'font-family:ui-monospace,monospace','font-size:.78rem',
     'z-index:9999','pointer-events:none','text-align:center',
     'box-shadow:0 4px 24px rgba(0,0,0,.5)',
     'animation:notifyFadeIn .18s ease'
@@ -107,62 +95,21 @@ function notifyUser(msg, reason, color) {
 
 // Update button labels and arch-gated button visibility on arch change.
 function updateScenarioButtons() {
-  var isPascal = currentArch === 'pascal';
-  var isHopper = currentArch === 'hopper';
-  var isAmpere = currentArch === 'ampere';
-  var isApex   = currentArch === 'apex';
-
-  // atomicAdd — always visible, behaviour differs per arch
+  // Apex-only: atomicAdd always visible with arbiter title
   var atomicBtn = document.getElementById('btn-atomic');
-  if (atomicBtn) {
-    atomicBtn.classList.remove('apex-only');
-    atomicBtn.title = isApex
-      ? 'Apex: arbiter-serialized atomicAdd with SEQ# + ROB'
-      : 'Raw atomicAdd — serializes inside L2 with no coordination (slower)';
-  }
-
-  // Write button label
-  var writeBtn = document.querySelector('[data-scenario="write"]');
-  if (writeBtn) {
-    writeBtn.textContent = isPascal ? 'SM Write (WT)' : 'SM Write';
-    writeBtn.title = isPascal
-      ? 'Pascal: writes bypass L1, go straight to L2 (write-through)'
-      : 'Volta+: write hits L1 (Modified), INV fires to other SMs';
-  }
-
-  // cp.async — Ampere and Hopper only
-  var cpBtn = document.getElementById('btn-cp-async');
-  if (cpBtn) cpBtn.style.display = (isAmpere || isHopper) ? '' : 'none';
-
-  // TMA Load — Hopper only
-  var tmaBtn = document.getElementById('btn-tma-load');
-  if (tmaBtn) tmaBtn.style.display = isHopper ? '' : 'none';
+  if (atomicBtn) atomicBtn.title = 'Apex: arbiter-serialized atomicAdd with SEQ# + ROB';
 }
-
-function updateArchIntro() {
-  var arch = ARCHS[currentArch];
-  var delta = arch.delta ? '<div class="arch-intro-delta">' + arch.delta + '</div>' : '';
-  document.getElementById('arch-intro').innerHTML =
-    '<div class="arch-intro-badge" style="background:' + arch.color + '20;color:' + arch.color + '">' + arch.name + ' · ' + arch.example + '</div>' +
-    '<div class="arch-intro-text">' + arch.intro + '</div>' +
-    delta;
-}
-
 function buildLayout() {
   if (!W || !H) return;
   var cx = W/2;
   var mob = W < 500;
   var arch = ARCHS[currentArch];
-  var smCount = mob ? 2 : (currentArch === 'hopper' ? 4 : (currentArch === 'pascal' ? 3 : (currentArch === 'apex' ? 4 : 4)));
+  var smCount = mob ? 2 : 4;
   var margin = mob ? 12 : 30;
   var usable = W - margin*2;
   var smGap = mob ? 12 : 20;
   var smW = Math.min(110, (usable - (smCount-1)*smGap)/smCount);
   var smSubBlocks = 2;
-  if (arch.blocks.texCache) smSubBlocks++;
-  if (arch.blocks.tma) smSubBlocks++;
-  if (arch.blocks.dsmem) smSubBlocks++;
-  if (arch.blocks.asyncCopy && arch.blocks.asyncCopy.isNew) smSubBlocks++;
   if (arch.blocks.warpScheduler) smSubBlocks++;
   var smH = mob ? (80+smSubBlocks*18) : (90+smSubBlocks*22);
   var totalSmW = smCount*smW + (smCount-1)*smGap;
@@ -178,27 +125,15 @@ function buildLayout() {
     var sub = [];
     sub.push({ type:'regs', x:x+6, y:subY+8, w:smW-12, h:10 });
     subY += 22;
-    if (arch.blocks.texCache) {
-      sub.push({ type:'texCache', x:x+6, y:subY, w:smW-12, h:subH, label:'TEX$' });
-      subY += subH+subPad;
-    }
+
     sub.push({ type:'l1', x:x+6, y:subY, w:smW-12, h:subH, label:arch.blocks.l1.label.split('(')[0].trim(), state:'invalid' });
     var l1Ref = sub[sub.length-1];
     subY += subH+subPad;
     sub.push({ type:'smem', x:x+6, y:subY, w:smW-12, h:subH, label:'SMEM' });
     subY += subH+subPad;
-    if (arch.blocks.tma) {
-      sub.push({ type:'tma', x:x+6, y:subY, w:smW-12, h:subH, label:'TMA' });
-      subY += subH+subPad;
-    }
-    if (arch.blocks.dsmem) {
-      sub.push({ type:'dsmem', x:x+6, y:subY, w:smW-12, h:subH, label:'DSMEM' });
-      subY += subH+subPad;
-    }
-    if (arch.blocks.asyncCopy && (currentArch === 'ampere' || currentArch === 'hopper')) {
-      sub.push({ type:'async', x:x+6, y:subY, w:smW-12, h:14, label:'cp.async' });
-      subY += 14+subPad;
-    }
+
+
+
     if (arch.blocks.warpScheduler) {
       sub.push({ type:'warpScheduler', x:x+6, y:subY, w:smW-12, h:subH, label:'WARP SCHED' });
       subY += subH+subPad;
@@ -210,22 +145,20 @@ function buildLayout() {
   var maxSmBottom = 0;
   for (var j = 0; j < layout.sms.length; j++) { maxSmBottom = Math.max(maxSmBottom, layout.sms[j].y+layout.sms[j].h); }
 
-  if (currentArch === 'hopper' && smCount > 1) {
-    layout.cluster = { x1:smStartX-6, x2:smStartX+totalSmW+6, y1:smY-8, y2:maxSmBottom+8 };
-  } else { layout.cluster = null; }
+  layout.cluster = null;
 
   var busY = maxSmBottom + (mob ? 30 : 40);
-  layout.bus = { y:busY, x1:smStartX-15, x2:smStartX+totalSmW+15, label:currentArch==='hopper' ? 'CLUSTER BUS + COHERENCY' : (currentArch==='pascal' ? 'CROSSBAR' : 'COHERENCY BUS') };
+  layout.bus = { y:busY, x1:smStartX-15, x2:smStartX+totalSmW+15, label:'COHERENCY BUS' };
 
   var l2W = Math.min(totalSmW*0.85, usable*0.78);
   var l2Y = busY + (mob ? 35 : 45);
   var l2H = mob ? 42 : 52;
   layout.l2 = { x:cx-l2W/2, y:l2Y, w:l2W, h:l2H };
-  layout.l2Persist = (currentArch==='ampere'||currentArch==='hopper') ? { x:cx-l2W/2+6, y:l2Y+l2H-12, w:l2W-12, h:8 } : null;
+  layout.l2Persist = null;
 
   // Shared vars needed by both Apex and non-Apex paths
   var gmH = mob ? 52 : 62;
-  var mcCount = mob ? 2 : (currentArch==='pascal' ? 3 : 4);
+  var mcCount = mob ? 2 : 4;
   var mcW = mob ? 36 : 44;
 
   // Apex-specific: Arbiter is a FULL-WIDTH block between bus and L2
@@ -281,7 +214,7 @@ function buildLayout() {
   }
 
   buildHitRects();
-  initCacheState();
+  if (!initialized) initCacheState();
 }
 
 function bezierPoint(p0, cp1, cp2, p1, t) {
@@ -396,26 +329,20 @@ function drawSelectionHighlight() {
 function drawFrame(time) {
   if (!initialized || !layout.sms) { requestAnimationFrame(drawFrame); return; }
   try {
-    if (paused) {
-      drawStaticFrame();
-      requestAnimationFrame(drawFrame);
-      return;
-    }
+    if (paused) { drawStaticFrame(); requestAnimationFrame(drawFrame); return; }
     var dt = Math.min((time - lastTime)/1000, 0.05);
     lastTime = time;
     drawAnimatedFrame(dt, time);
     requestAnimationFrame(drawFrame);
   } catch(e) {
-    // Surface any silent crash to the canvas so we can see it
-    ctx.fillStyle = '#ff6b6b';
-    ctx.font = '13px monospace';
+    ctx.fillStyle = '#ff6b6b'; ctx.font = '13px monospace';
     ctx.fillText('JS error: ' + e.message, 20, 40);
     ctx.fillText(e.stack ? e.stack.split('\n')[1] : '', 20, 60);
     requestAnimationFrame(drawFrame);
   }
 }
-
 function drawStaticFrame() {
+  if (dpr) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, W, H);
   drawSceneContent(0, performance.now());
   if (hoveredBlock && (hoveredBlock.type === 'l1' || hoveredBlock.type === 'smem')) {
@@ -424,6 +351,7 @@ function drawStaticFrame() {
 }
 
 function drawAnimatedFrame(dt, time) {
+  if (dpr) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, W, H);
   tickRegPressure(dt);
   drawSceneContent(dt, time);
@@ -455,27 +383,13 @@ function drawAnimatedFrame(dt, time) {
       var anyValid    = layout.sms.some(function(s){ return s.l1.state !== 'invalid'; });
       var anyModified = layout.sms.some(function(s){ return s.l1.state === 'modified'; });
       var apex    = currentArch === 'apex';
-      var hopper  = currentArch === 'hopper';
-      var ampere  = currentArch === 'ampere';
       var pool;
       if (!anyValid) {
-        // Nothing in L1 — only ops that work from cold state
-        pool = apex    ? ['read','read','read','atomic','reg_spill'] :
-               hopper  ? ['read','read','reg_spill','tma_load'] :
-               ampere  ? ['read','read','reg_spill','cp_async'] :
-                         ['read','reg_spill'];
+        pool = ['read','read','read','atomic','reg_spill'];
       } else if (anyModified) {
-        // At least one SM has dirty data — write-back and invalidate make sense; write does NOT (needs Shared)
-        pool = apex    ? ['writeback','writeback','invalidate','read','atomic','reg_spill'] :
-               hopper  ? ['writeback','writeback','invalidate','read','reg_spill','tma_load'] :
-               ampere  ? ['writeback','writeback','invalidate','read','reg_spill','cp_async'] :
-                         ['writeback','writeback','invalidate','read','reg_spill'];
+        pool = ['writeback','writeback','invalidate','read','atomic','reg_spill','flush'];
       } else {
-        // Some Shared lines in L1 — write, invalidate, and read all valid; writeback is NOT (nothing dirty)
-        pool = apex    ? ['write','invalidate','read','read','shared','atomic','reg_spill'] :
-               hopper  ? ['write','invalidate','read','read','shared','reg_spill','tma_load','cp_async'] :
-               ampere  ? ['write','invalidate','read','read','shared','reg_spill','cp_async'] :
-                         ['write','invalidate','read','read','shared','reg_spill'];
+        pool = ['write','invalidate','read','read','shared','atomic','reg_spill'];
       }
       triggerScenario(pool[Math.floor(Math.random()*pool.length)], true); // true = silent (no toasts)
     }
@@ -581,39 +495,39 @@ function drawSceneContent(dt, time) {
             ctx.fillStyle = lc;
             ctx.fillRect(gx + li*slotW + 0.5, gy, slotW - 1, 4);
             if (lineObj && lineObj.s > 0 && lineObj.op) opsSeen[lineObj.op] = true;
+            // Draw address label on filled slots when slots are wide enough
+            if (lineObj && lineObj.s > 0 && lineObj.addr >= 0 && slotW >= 14 && typeof ADDR_NAMES !== 'undefined') {
+              ctx.font = '500 6px monospace';
+              ctx.fillStyle = 'rgba(255,255,255,0.50)';
+              ctx.textAlign = 'center';
+              ctx.fillText(ADDR_NAMES[lineObj.addr], gx + li*slotW + slotW/2, gy - 1);
+            }
           }
           // op legend is shown in the bracket label text — no dots needed
+
+          // Slot flash overlay — render active slotFlashEffects for this SM
+          if (typeof slotFlashEffects !== 'undefined') {
+            for (var sfi = slotFlashEffects.length - 1; sfi >= 0; sfi--) {
+              var sf = slotFlashEffects[sfi];
+              if (sf.smIdx !== si) continue;
+              var sfx = gx + sf.slotIdx * slotW;
+              var alpha = Math.max(0, 1 - sf.t / sf.dur);
+              // Glow: tall bar flash (full slot height + halo above)
+              var haloH = Math.round(10 * alpha);
+              ctx.fillStyle = sf.c + Math.round(alpha * 0.85 * 255).toString(16).padStart(2,'0');
+              ctx.fillRect(sfx + 0.5, gy - haloH, slotW - 1, 4 + haloH);
+              // Bright centre line
+              ctx.fillStyle = '#ffffff' + Math.round(alpha * 0.6 * 255).toString(16).padStart(2,'0');
+              ctx.fillRect(sfx + 0.5, gy, slotW - 1, 1);
+            }
+          }
         }
 
         ctx.font='600 '+FONT_BLOCK_LG+'px monospace';
         ctx.fillStyle = b.state === 'invalid' ? '#9095b0' : sc;
         ctx.textAlign='center';
         // Build per-line-count label: e.g. "L1  3R 1W" showing op types present
-        var labelParts = [];
-        var csLbl = cacheState[si];
-        if (csLbl) {
-          var opCounts = {};
-          var totalFilled = 0;
-          for (var lbl=0;lbl<NUM_LINES;lbl++) {
-            var ln = csLbl.l1[lbl];
-            if (ln && ln.s > 0) {
-              totalFilled++;
-              // Use 2-char abbreviations to avoid spill/shared both being 'S'
-              var opTagMap = { read:'R', write:'W', atomic:'A', spill:'Sp', cp_async:'Cp', tma:'T', shared:'Sh' };
-              var tag = ln.op ? (opTagMap[ln.op] || ln.op.charAt(0).toUpperCase()) : (ln.s===2?'W':'?');
-              opCounts[tag] = (opCounts[tag]||0)+1;
-            }
-          }
-          var opKeys2 = Object.keys(opCounts);
-          if (opKeys2.length > 0) {
-            for (var oki=0;oki<opKeys2.length;oki++) {
-              labelParts.push(opCounts[opKeys2[oki]]+opKeys2[oki]);
-            }
-          }
-        }
-        var stateChar = b.state === 'modified' ? 'M' : b.state === 'shared' ? 'S' : 'I';
-        var bracketLabel = labelParts.length > 0 ? '['+labelParts.join(' ')+']' : '['+stateChar+']';
-        ctx.fillText(b.label+' '+bracketLabel, b.x+b.w/2, b.y+b.h/2+1);
+        ctx.fillText(b.label, b.x+b.w/2, b.y+b.h/2+1);
       } else {
         var cBg, cBr, cLbl;
         if (b.type==='texCache')             { cBg='#e599f712'; cBr='#e599f760'; cLbl='#e599f7'; }
@@ -765,10 +679,10 @@ function drawSceneContent(dt, time) {
       var rBg2 = '#141620', rBr2 = '#252840', rTxt2 = '#2a2d45';
       var rIcon = '';
       if (robE2) {
-        if (robE2.state === 'pending')   { rBg2='#f59e0b18'; rBr2='#f59e0b70'; rTxt2='#f59e0b'; rIcon='⏳'; }
-        if (robE2.state === 'complete')  { rBg2='#339af020'; rBr2='#339af090'; rTxt2='#339af0'; rIcon='✦'; } // ACK back, waiting for head
-        if (robE2.state === 'retiring')  { rBg2='#a78bfa20'; rBr2='#a78bfa80'; rTxt2='#a78bfa'; rIcon='↩'; } // head-of-line, being retired
-        if (robE2.state === 'done')      { rBg2='#51cf6620'; rBr2='#51cf6680'; rTxt2='#51cf66'; rIcon='✓'; } // retired, DATA sent
+        if (robE2.state === 'pending')   { rBg2='#f59e0b18'; rBr2='#f59e0b40'; rTxt2='#f59e0b'; rIcon='⏳'; } // waiting for L2
+        if (robE2.state === 'complete')  { rBg2='#22d3ee28'; rBr2='#22d3eea0'; rTxt2='#22d3ee'; rIcon='⏸'; } // OOO buffered — DATA arrived but not head (cyan)
+        if (robE2.state === 'retiring')  { rBg2='#51cf6625'; rBr2='#51cf6690'; rTxt2='#51cf66'; rIcon='↗'; } // head retiring → DATA→SM
+        if (robE2.state === 'done')      { rBg2='#51cf6612'; rBr2='#51cf6640'; rTxt2='#51cf6699'; rIcon='✓'; } // done, slot clearing
       }
       ctx.fillStyle = rBg2; ctx.strokeStyle = rBr2; ctx.lineWidth = robE2 ? 1.1 : 0.7;
       rrect(rx3, robSlotY, robSlotW2, slotH2, 3); ctx.fill(); ctx.stroke();
@@ -890,20 +804,7 @@ function drawSceneContent(dt, time) {
     ctx.strokeStyle='#2a2d3a'; ctx.lineWidth=1; ctx.stroke();
   }
 
-  if (currentArch==='hopper' && layout.sms.length>1) {
-    var dsPulse = Math.sin(Date.now()/500)*0.3+0.5;
-    for (var di = 0; di < layout.sms.length-1; di++) {
-      var dsA=null, dsB=null;
-      for (var ds1=0;ds1<layout.sms[di].sub.length;ds1++) { if(layout.sms[di].sub[ds1].type==='dsmem') dsA=layout.sms[di].sub[ds1]; }
-      for (var ds2=0;ds2<layout.sms[di+1].sub.length;ds2++) { if(layout.sms[di+1].sub[ds2].type==='dsmem') dsB=layout.sms[di+1].sub[ds2]; }
-      if (dsA&&dsB) {
-        ctx.beginPath(); ctx.moveTo(dsA.x+dsA.w, dsA.y+dsA.h/2);
-        ctx.lineTo(dsB.x, dsB.y+dsB.h/2);
-        ctx.strokeStyle='rgba(34,211,238,'+(dsPulse*0.5)+')';
-        ctx.lineWidth=1.5; ctx.setLineDash([3,3]); ctx.stroke(); ctx.setLineDash([]);
-      }
-    }
-  }
+
 
   var bus = layout.bus;
   var busPulse = Math.sin(Date.now()/400)*0.3+0.5;
@@ -932,11 +833,24 @@ function drawSceneContent(dt, time) {
   var l2BarGutter = 10;
   var l2BarW = (l2.w - l2BarGutter*2) / NUM_L2_LINES;
   for (var l2i = 0; l2i < NUM_L2_LINES; l2i++) {
-    var lv2 = l2Lines[l2i];
+    var lv2 = l2Lines[l2i] ? (typeof l2Lines[l2i] === 'object' ? l2Lines[l2i].s : l2Lines[l2i]) : 0;
     if (lv2 === 2)      ctx.fillStyle = '#ffa94d';   // dirty
     else if (lv2 === 1) ctx.fillStyle = '#339af060';  // clean
     else                ctx.fillStyle = '#1e2030';     // empty
     ctx.fillRect(l2.x + l2BarGutter + l2i*l2BarW, l2BarY, l2BarW - 1, l2BarH);
+    // L2 slot flash overlay
+    if (typeof slotL2FlashEffects !== 'undefined') {
+      for (var l2fi = 0; l2fi < slotL2FlashEffects.length; l2fi++) {
+        var l2sf = slotL2FlashEffects[l2fi];
+        if (l2sf.slot !== l2i) continue;
+        var l2alpha = Math.max(0, 1 - l2sf.t / l2sf.dur);
+        var haloH2 = Math.round(l2BarH * l2alpha * 0.6);
+        ctx.fillStyle = l2sf.c + Math.round(l2alpha * 0.9 * 255).toString(16).padStart(2,'0');
+        ctx.fillRect(l2.x + l2BarGutter + l2i*l2BarW, l2BarY - haloH2, l2BarW - 1, l2BarH + haloH2);
+        ctx.fillStyle = '#ffffff' + Math.round(l2alpha * 0.55 * 255).toString(16).padStart(2,'0');
+        ctx.fillRect(l2.x + l2BarGutter + l2i*l2BarW, l2BarY, l2BarW - 1, 2);
+      }
+    }
   }
 
   if (layout.l2Persist) {
@@ -1005,13 +919,37 @@ function drawSceneContent(dt, time) {
 
   // Flash effects (skip advancement if paused)
   flashEffects = flashEffects.filter(function(f) {
-    if (!paused) f.t+=0.02;
-    if (f.t>=f.dur) return false;
-    rrect(f.x-2,f.y-2,f.w+4,f.h+4,5);
-    ctx.strokeStyle=f.c+Math.round((1-f.t/f.dur)*0.3*255).toString(16).padStart(2,'0');
-    ctx.lineWidth=2; ctx.stroke();
+    if (!paused) f.t += 0.02;
+    if (f.t >= f.dur) return false;
+    var alpha = Math.max(0, 1 - f.t / f.dur);
+    rrect(f.x-2, f.y-2, f.w+4, f.h+4, 5);
+    if (f.fill) {
+      // Filled overlay flash — used for misses and strong events
+      ctx.fillStyle = f.c + Math.round(alpha * 0.28 * 255).toString(16).padStart(2,'0');
+      ctx.fill();
+      ctx.strokeStyle = f.c + Math.round(alpha * 0.7 * 255).toString(16).padStart(2,'0');
+      ctx.lineWidth = 2; ctx.stroke();
+    } else {
+      // Border-only flash
+      ctx.strokeStyle = f.c + Math.round(alpha * 0.55 * 255).toString(16).padStart(2,'0');
+      ctx.lineWidth = 2; ctx.stroke();
+    }
     return true;
   });
+
+  // Advance slot flash timers (rendering happens inline in the L1/L2 slot loops above)
+  if (typeof slotFlashEffects !== 'undefined' && !paused) {
+    slotFlashEffects = slotFlashEffects.filter(function(sf) {
+      sf.t += 0.022;
+      return sf.t < sf.dur;
+    });
+  }
+  if (typeof slotL2FlashEffects !== 'undefined' && !paused) {
+    slotL2FlashEffects = slotL2FlashEffects.filter(function(sf) {
+      sf.t += 0.022;
+      return sf.t < sf.dur;
+    });
+  }
 
   // Bubble repulsion: pairs within 52px push each other apart gently
   if (!paused && bubbles.length > 1) {
@@ -1036,6 +974,9 @@ function drawSceneContent(dt, time) {
       bubbles[ri2].y += bubbles[ri2].vy;
     }
   }
+
+  // Callouts
+  if (!paused) tickCallouts(dt);
 
   // Bubbles (skip advancement if paused)
   bubbles = bubbles.filter(function(b) {
@@ -1104,29 +1045,4 @@ function drawSceneContent(dt, time) {
     if (b.sub) {
       ctx.font='500 '+subFs+'px monospace';
       ctx.fillStyle = isHovered ? b.color + 'cc' : b.color + '99';
-      ctx.fillText(b.sub, bx, textY + subFs + 2);
-    }
-    ctx.restore();
-    return true;
-  });
-
-  // Particles (skip advancement if paused)
-  if (!paused) {
-    particles.forEach(function(p) { p.update(dt); p.draw(ctx); });
-    particles = particles.filter(function(p) { return p.alive; });
-  } else {
-    // Still draw particles frozen in place
-    particles.forEach(function(p) { p.draw(ctx); });
-  }
-
-  buildParticleLabelRects();
-
-  // Paused indicator is shown in the HTML badge only — no canvas overlay needed
-}
-
-var lastTime=0;
-
-// Particle — supports waypoint routing so particles travel along logical wire paths
-// Usage: new Particle(from, to, color, label, speed, onDone)
-//   OR:  new Particle(from, to, color, label, speed, onDone, {waypoints:[{x,y}, ...]})
-// Waypoints are intermediate stops; particle chains through them automatically.
+      c

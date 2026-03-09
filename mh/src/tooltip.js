@@ -1,3 +1,27 @@
+dresses shared across multiple SMs
+      for (var ca = 0; ca < NUM_ADDRS; ca++) if (sharersOf(ca).length > 1) return ca;
+      for (var ca2 = 0; ca2 < NUM_ADDRS; ca2++) if (sharersOf(ca2).length > 0) return ca2;
+      return fallback();
+
+    case 'atomic':
+      // Prefer an address that IS in L2 but NOT exclusively in any one L1
+      if (inL2NotL1.length) return pick(inL2NotL1);
+      return fallback();
+
+    default:
+      return fallback();
+  }
+}
+
+// ── Particle label helper ─────────────────────────────────────────────────────
+// addrLabel('RdReq', 7)  →  'RdReq(A07)'
+// addrLabel('DATA', -1)  →  'DATA'
+function addrLabel(op, addr) {
+  if (addr === undefined || addr === null || addr < 0) return op;
+  return op + '(' + ADDR_NAMES[addr] + ')';
+}
+
+// ── tooltip.js ──────────────────────────────────────────
 // tooltip.js — GPU Cache Coherency Demo
 
 // Hit testing, block selection, tooltip rendering
@@ -94,8 +118,9 @@ canvas.addEventListener('mousemove', function(e) {
   lastClientY = e.clientY;
 
   var pHit = hitTestParticleLabels(mouseX, mouseY);
-  if (pHit && INSTRUCTION_INFO[pHit.key]) {
-    showInstrTooltip(pHit.key, pHit.clientX, pHit.clientY - 20);
+  var _pKey = pHit ? (pHit.key.replace(/[(\.][^)]*\)?$/, '').replace(/\(.*$/, '').replace(/#\d+$/, '')) : null;
+  if (pHit && _pKey && INSTRUCTION_INFO[_pKey]) {
+    showInstrTooltip(_pKey, pHit.clientX, pHit.clientY - 20);
     hoveredBlock = null;
     hideTooltip();
     canvas.style.cursor = 'help';
@@ -119,6 +144,8 @@ canvas.addEventListener('click', function(e) {
   var r = canvas.getBoundingClientRect();
   var mx = e.clientX - r.left;
   var my = e.clientY - r.top;
+  // Any click on the canvas dismisses the idle callouts (user has read them)
+  dismissIdleCallouts();
   var hit = hitTest(mx, my);
   if (hit) {
     if (selectedBlock && selectedBlock.type === hit.type && selectedBlock.smIdx === hit.smIdx) {
@@ -176,7 +203,7 @@ function updateSelPanel(hit) {
       connList.appendChild(el);
     }
   }
-  // ── Cache line inspector — L1 and L2 blocks ────────────────────────────────
+  // ── Cache line inspector — only for L1 blocks ──────────────────────────────
   renderCacheLineTable(hit);
 }
 
@@ -186,7 +213,6 @@ var OP_LABELS = {
   write:    { label: 'SM Write',   color: '#51cf66' },
   atomic:   { label: 'atomicAdd',  color: '#f59e0b' },
   spill:    { label: 'Reg Spill',  color: '#fb923c' },
-  cp_async: { label: 'cp.async',   color: '#22d3ee' },
   tma:      { label: 'TMA Load',   color: '#22d3ee' },
   shared:   { label: 'Shared Mem', color: '#6ee09a' },
 };
@@ -196,109 +222,58 @@ function renderCacheLineTable(hit) {
   var tbody   = document.getElementById('cl-tbody');
   if (!section || !tbody) return;
 
-  var isL1 = hit.type === 'l1';
-  var isL2 = hit.type === 'l2';
-  if (!isL1 && !isL2) { section.style.display = 'none'; return; }
+  // Only show for L1 blocks
+  if (hit.type !== 'l1') { section.style.display = 'none'; return; }
+
+  var cs = cacheState[hit.smIdx];
+  if (!cs) { section.style.display = 'none'; return; }
 
   section.style.display = 'block';
   tbody.innerHTML = '';
 
-  // Update section title
-  var titleEl = document.getElementById('cl-section-title');
-  if (titleEl) titleEl.textContent = isL2 ? 'L2 Cache Line State (' + NUM_L2_LINES + ' lines)' : 'L1 Cache Line State';
+  var lines = cs.l1;
+  for (var i = 0; i < lines.length; i++) {
+    var ln = lines[i];
+    var s  = ln ? ln.s : 0;
+    var op = ln ? ln.op : null;
 
-  // ── L1 ────────────────────────────────────────────────────────────────────
-  if (isL1) {
-    var cs = cacheState[hit.smIdx];
-    if (!cs) { section.style.display = 'none'; return; }
-    var lines = cs.l1;
-    for (var i = 0; i < lines.length; i++) {
-      var ln = lines[i];
-      var s  = ln ? ln.s : 0;
-      var op = ln ? ln.op : null;
-      var tr = document.createElement('tr');
-      if (s === 2) tr.className = 'cl-row-dirty';
-      else if (s === 1) tr.className = 'cl-row-clean';
-      var stateLabel, stateColor;
-      if (s === 2)      { stateLabel = 'Dirty'; stateColor = '#ffa94d'; }
-      else if (s === 1) { stateLabel = 'Clean'; stateColor = '#339af0'; }
-      else              { stateLabel = 'Empty'; stateColor = '#3a3d50'; }
-      var opInfo = op ? (OP_LABELS[op] || { label: op, color: '#aaa' }) : null;
-      var tdIdx   = document.createElement('td'); tdIdx.className = 'cl-idx'; tdIdx.textContent = i;
-      var tdState = document.createElement('td');
-      tdState.innerHTML =
-        '<span class="cl-swatch" style="background:' + stateColor + ';opacity:' + (s === 0 ? '0.2' : '0.85') + '"></span>' +
-        '<span class="cl-state" style="color:' + stateColor + '">' + stateLabel + '</span>';
-      var tdOp = document.createElement('td');
-      tdOp.className = s === 0 ? 'cl-empty' : 'cl-op';
-      tdOp.innerHTML = opInfo
-        ? '<span style="color:' + opInfo.color + '">' + opInfo.label + '</span>'
-        : (s === 0 ? '—' : '<span style="color:#6b7090">unknown</span>');
-      tr.appendChild(tdIdx); tr.appendChild(tdState); tr.appendChild(tdOp);
-      tbody.appendChild(tr);
-    }
-    // Update header for L1
-    var hdr = document.getElementById('cl-table-header');
-    if (hdr) hdr.innerHTML = '<tr><th class="cl-idx">#</th><th>State</th><th>Last Op</th></tr>';
-    return;
-  }
+    var tr = document.createElement('tr');
 
-  // ── L2 ────────────────────────────────────────────────────────────────────
-  // Update header for L2 (no op tag — L2 is unified/shared, no per-op tracking)
-  var hdr2 = document.getElementById('cl-table-header');
-  if (hdr2) hdr2.innerHTML = '<tr><th class="cl-idx">#</th><th>State</th><th>Status</th></tr>';
+    // Row class for subtle bg tint
+    if (s === 2) tr.className = 'cl-row-dirty';
+    else if (s === 1) tr.className = 'cl-row-clean';
 
-  // Gather which SMs are currently Modified or Shared (for live status annotation)
-  var modSMs = [], shrSMs = [];
-  for (var smi = 0; smi < layout.sms.length; smi++) {
-    var smst = layout.sms[smi] ? layout.sms[smi].l1.state : 'invalid';
-    if (smst === 'modified') modSMs.push('SM'+smi);
-    else if (smst === 'shared') shrSMs.push('SM'+smi);
-  }
+    // State label + color
+    var stateLabel, stateColor;
+    if (s === 2)      { stateLabel = 'Dirty';  stateColor = '#51cf66'; }
+    else if (s === 1) { stateLabel = 'Clean';  stateColor = '#339af090'; }
+    else              { stateLabel = 'Empty';  stateColor = '#3a3d50'; }
 
-  for (var j = 0; j < NUM_L2_LINES; j++) {
-    var lv = l2Lines[j];
-    var tr2 = document.createElement('tr');
-    var sl2, sc2;
-    if (lv === 2)      { sl2 = 'Dirty'; sc2 = '#ffa94d'; tr2.className = 'cl-row-dirty'; }
-    else if (lv === 1) { sl2 = 'Clean'; sc2 = '#339af090'; tr2.className = 'cl-row-clean'; }
-    else               { sl2 = 'Empty'; sc2 = '#3a3d50'; }
+    // Op info
+    var opInfo = op ? (OP_LABELS[op] || { label: op, color: '#aaa' }) : null;
+    var swatchColor = op ? opInfo.color : stateColor;
 
-    // Status column — what this line is doing / what needs to happen next
-    var statusHtml;
-    if (lv === 0) {
-      statusHtml = '<span class="cl-empty">—</span>';
-    } else if (lv === 2) {
-      // Dirty: L2 has newer data than DRAM. Must be flushed before eviction.
-      // If an SM is Modified it means that SM's L1 has an even newer copy —
-      // L2 is stale relative to that SM but is the truth for everyone else.
-      var note = modSMs.length > 0
-        ? 'stale — ' + modSMs.join('+') + ' L1 newer'
-        : 'pending flush → DRAM';
-      statusHtml = '<span style="color:#ffa94d">' + note + '</span>';
-    } else {
-      // Clean: L2 and DRAM agree. Safe to evict without writeback.
-      var note1 = shrSMs.length > 0
-        ? 'serving ' + shrSMs.join(', ')
-        : 'cached — safe to evict';
-      statusHtml = '<span style="color:#339af0">' + note1 + '</span>';
-    }
+    var tdIdx   = document.createElement('td'); tdIdx.className = 'cl-idx'; tdIdx.textContent = i;
+    var tdState = document.createElement('td');
+    tdState.innerHTML =
+      '<span class="cl-swatch" style="background:' + swatchColor + ';opacity:' + (s === 0 ? '0.2' : '1') + '"></span>' +
+      '<span class="cl-state" style="color:' + stateColor + '">' + stateLabel + '</span>';
+    var tdOp = document.createElement('td');
+    tdOp.className = s === 0 ? 'cl-empty' : 'cl-op';
+    tdOp.innerHTML = opInfo
+      ? '<span style="color:' + opInfo.color + '">' + opInfo.label + '</span>'
+      : (s === 0 ? '—' : '<span style="color:#6b7090">unknown</span>');
 
-    var tdI = document.createElement('td'); tdI.className = 'cl-idx'; tdI.textContent = j;
-    var tdS = document.createElement('td');
-    tdS.innerHTML =
-      '<span class="cl-swatch" style="background:' + sc2 + ';opacity:' + (lv === 0 ? '0.2' : '0.85') + '"></span>' +
-      '<span class="cl-state" style="color:' + sc2 + '">' + sl2 + '</span>';
-    var tdH = document.createElement('td'); tdH.innerHTML = statusHtml;
-
-    tr2.appendChild(tdI); tr2.appendChild(tdS); tr2.appendChild(tdH);
-    tbody.appendChild(tr2);
+    tr.appendChild(tdIdx);
+    tr.appendChild(tdState);
+    tr.appendChild(tdOp);
+    tbody.appendChild(tr);
   }
 }
 
 // Keep the table live while a block is selected
 function refreshCacheLineTableIfOpen() {
-  if (selectedBlock && (selectedBlock.type === 'l1' || selectedBlock.type === 'l2')) {
+  if (selectedBlock && selectedBlock.type === 'l1') {
     renderCacheLineTable(selectedBlock);
   }
 }
@@ -367,7 +342,8 @@ function buildParticleLabelRects() {
     var cx2 = ppos.x, cy2 = ppos.y;
     var clientX = cr.left + cx2;
     var clientY = cr.top  + cy2;
-    particleLabelRects.push({ key: p.label, cx: cx2, cy: cy2, clientX: clientX, clientY: clientY });
+    var _pk = p.label ? p.label.replace(/\(.*$/, '').replace(/#\d+$/, '') : p.label;
+    particleLabelRects.push({ key: _pk, cx: cx2, cy: cy2, clientX: clientX, clientY: clientY });
   }
 }
 
@@ -416,10 +392,10 @@ function updateTooltip(hit, clientX, clientY) {
       for (var ssi = 0; ssi < layout.sms.length; ssi++) {
         smStateRows +=
           '<div id="tt-l2-sm-' + ssi + '" style="display:flex;align-items:center;gap:4px;padding:2px 0">' +
-            '<span style="font-family:JetBrains Mono,monospace;font-size:.58rem;color:#6b7090;min-width:28px">SM' + ssi + '</span>' +
+            '<span style="font-family:ui-monospace,monospace;font-size:.58rem;color:#6b7090;min-width:28px">SM' + ssi + '</span>' +
             '<span id="tt-l2-sm-dot-' + ssi + '" style="display:inline-block;width:8px;height:8px;border-radius:50%"></span>' +
-            '<span id="tt-l2-sm-state-' + ssi + '" style="font-family:JetBrains Mono,monospace;font-size:.6rem"></span>' +
-            '<span id="tt-l2-sm-tag-' + ssi + '" style="font-family:JetBrains Mono,monospace;font-size:.56rem;color:#3a3d55;margin-left:auto"></span>' +
+            '<span id="tt-l2-sm-state-' + ssi + '" style="font-family:ui-monospace,monospace;font-size:.6rem"></span>' +
+            '<span id="tt-l2-sm-tag-' + ssi + '" style="font-family:ui-monospace,monospace;font-size:.56rem;color:#3a3d55;margin-left:auto"></span>' +
           '</div>';
       }
       // Build N line cells for the grid
@@ -431,14 +407,14 @@ function updateTooltip(hit, clientX, clientY) {
         // ── Line grid header ──
         '<div style="margin-bottom:6px">' +
           '<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">' +
-            '<span style="font-family:JetBrains Mono,monospace;font-size:.6rem;color:#9095b0;text-transform:uppercase;letter-spacing:1px">L2 Lines (' + arch.blocks.l2.size + ')</span>' +
-            '<span id="tt-l2-fill-label" style="font-family:JetBrains Mono,monospace;font-size:.68rem;font-weight:700;color:#ffa94d"></span>' +
-            '<span id="tt-l2-dirty-label" style="font-family:JetBrains Mono,monospace;font-size:.62rem;color:#ffa94d;margin-left:2px"></span>' +
+            '<span style="font-family:ui-monospace,monospace;font-size:.6rem;color:#9095b0;text-transform:uppercase;letter-spacing:1px">L2 Lines (' + arch.blocks.l2.size + ')</span>' +
+            '<span id="tt-l2-fill-label" style="font-family:ui-monospace,monospace;font-size:.68rem;font-weight:700;color:#ffa94d"></span>' +
+            '<span id="tt-l2-dirty-label" style="font-family:ui-monospace,monospace;font-size:.62rem;color:#ffa94d;margin-left:2px"></span>' +
           '</div>' +
           // Live line grid
           '<div style="display:flex;gap:2px;height:10px;margin-bottom:4px">' + gridCells + '</div>' +
           // Legend
-          '<div style="display:flex;gap:10px;font-family:JetBrains Mono,monospace;font-size:.56rem;margin-bottom:5px">' +
+          '<div style="display:flex;gap:10px;font-family:ui-monospace,monospace;font-size:.56rem;margin-bottom:5px">' +
             '<span style="color:#339af0">■ clean</span>' +
             '<span style="color:#ffa94d">■ dirty</span>' +
             '<span style="color:#4a5080">■ empty</span>' +
@@ -450,31 +426,31 @@ function updateTooltip(hit, clientX, clientY) {
 
           // ── Lifecycle section ──
           '<div style="border-top:1px solid #1e2030;padding-top:7px;margin-bottom:6px">' +
-            '<div style="font-family:JetBrains Mono,monospace;font-size:.56rem;color:#9095b0;text-transform:uppercase;letter-spacing:1px;margin-bottom:5px">Cache Line Lifecycle</div>' +
+            '<div style="font-family:ui-monospace,monospace;font-size:.56rem;color:#9095b0;text-transform:uppercase;letter-spacing:1px;margin-bottom:5px">Cache Line Lifecycle</div>' +
             // How lines go clean
             '<div style="margin-bottom:4px">' +
-              '<div style="font-family:JetBrains Mono,monospace;font-size:.58rem;font-weight:700;color:#339af0;margin-bottom:1px">Clean (blue)</div>' +
-              '<div style="font-family:JetBrains Mono,monospace;font-size:.56rem;color:#6b7090;line-height:1.5">Filled on SM read miss (RdReq → L2 → DATA). Shared read-only across SMs — any number of SMs can hold a Shared copy simultaneously.</div>' +
+              '<div style="font-family:ui-monospace,monospace;font-size:.58rem;font-weight:700;color:#339af0;margin-bottom:1px">Clean (blue)</div>' +
+              '<div style="font-family:ui-monospace,monospace;font-size:.56rem;color:#6b7090;line-height:1.5">Filled on SM read miss (RdReq → L2 → DATA). Shared read-only across SMs — any number of SMs can hold a Shared copy simultaneously.</div>' +
             '</div>' +
             // How lines go dirty
             '<div style="margin-bottom:4px">' +
-              '<div style="font-family:JetBrains Mono,monospace;font-size:.58rem;font-weight:700;color:#ffa94d;margin-bottom:1px">Dirty (orange)</div>' +
-              '<div style="font-family:JetBrains Mono,monospace;font-size:.56rem;color:#6b7090;line-height:1.5">Marked dirty on SM write (write-evict policy on Volta+) or write-back from L1. Dirty means L2 has the most recent value — DRAM is stale. Must be flushed before eviction.</div>' +
+              '<div style="font-family:ui-monospace,monospace;font-size:.58rem;font-weight:700;color:#ffa94d;margin-bottom:1px">Dirty (orange)</div>' +
+              '<div style="font-family:ui-monospace,monospace;font-size:.56rem;color:#6b7090;line-height:1.5">Marked dirty on SM write (write-evict) or write-back from L1. Dirty means L2 has the most recent value — DRAM is stale. Must be flushed before eviction.</div>' +
             '</div>' +
             // Eviction
             '<div style="margin-bottom:4px">' +
-              '<div style="font-family:JetBrains Mono,monospace;font-size:.58rem;font-weight:700;color:#845ef7;margin-bottom:1px">Eviction → DRAM</div>' +
-              '<div style="font-family:JetBrains Mono,monospace;font-size:.56rem;color:#6b7090;line-height:1.5">When L2 is &gt;75% full, the LRU victim is evicted. Clean lines are simply discarded. Dirty lines must be written to DRAM first (EVICT → NoC → MC → HBM) — adds ~400 cycles.</div>' +
+              '<div style="font-family:ui-monospace,monospace;font-size:.58rem;font-weight:700;color:#845ef7;margin-bottom:1px">Eviction → DRAM</div>' +
+              '<div style="font-family:ui-monospace,monospace;font-size:.56rem;color:#6b7090;line-height:1.5">When L2 is &gt;75% full, the LRU victim is evicted. Clean lines are simply discarded. Dirty lines must be written to DRAM first (EVICT → NoC → MC → HBM) — adds ~400 cycles.</div>' +
             '</div>' +
             // Write policy
             '<div style="margin-bottom:6px">' +
-              '<div style="font-family:JetBrains Mono,monospace;font-size:.58rem;font-weight:700;color:#6b7090;margin-bottom:1px">Write policy: <span id="tt-l2-writepolicy" style="color:#aaa"></span></div>' +
-              '<div style="font-family:JetBrains Mono,monospace;font-size:.56rem;color:#6b7090;line-height:1.5"><span id="tt-l2-writepolicy-desc"></span></div>' +
+              '<div style="font-family:ui-monospace,monospace;font-size:.58rem;font-weight:700;color:#6b7090;margin-bottom:1px">Write policy: <span id="tt-l2-writepolicy" style="color:#aaa"></span></div>' +
+              '<div style="font-family:ui-monospace,monospace;font-size:.56rem;color:#6b7090;line-height:1.5"><span id="tt-l2-writepolicy-desc"></span></div>' +
             '</div>' +
           '</div>' +
 
           // ── Latency row ──
-          '<div style="display:flex;gap:8px;margin-bottom:8px;font-family:JetBrains Mono,monospace;font-size:.56rem">' +
+          '<div style="display:flex;gap:8px;margin-bottom:8px;font-family:ui-monospace,monospace;font-size:.56rem">' +
             '<span style="color:#6b7090">Hit latency:</span>' +
             '<span id="tt-l2-latency" style="color:#aaa"></span>' +
             '<span style="color:#6b7090;margin-left:auto">Miss → DRAM:</span>' +
@@ -482,7 +458,7 @@ function updateTooltip(hit, clientX, clientY) {
           '</div>' +
 
           // ── Per-SM coherency state ──
-          '<div style="font-family:JetBrains Mono,monospace;font-size:.58rem;color:#9095b0;letter-spacing:.5px;margin-bottom:3px;text-transform:uppercase">Coherency state (L1 per SM)</div>' +
+          '<div style="font-family:ui-monospace,monospace;font-size:.58rem;color:#9095b0;letter-spacing:.5px;margin-bottom:3px;text-transform:uppercase">Coherency state (L1 per SM)</div>' +
           smStateRows +
         '</div>';
 
@@ -490,11 +466,9 @@ function updateTooltip(hit, clientX, clientY) {
       var wpEl = document.getElementById('tt-l2-writepolicy');
       var wpdEl = document.getElementById('tt-l2-writepolicy-desc');
       var latEl = document.getElementById('tt-l2-latency');
-      if (wpEl) wpEl.textContent = currentArch === 'pascal' ? 'write-through' : 'write-evict / write-back';
-      if (wpdEl) wpdEl.textContent = currentArch === 'pascal'
-        ? 'Pascal L1 is read-only — stores bypass it and go straight to L2. L2 always has the authoritative copy, so L1 never needs to be invalidated on a write.'
-        : 'Volta+: stores hit L1, which becomes Modified. L2 gets the data only when L1 evicts the dirty line (write-back) or on capacity pressure. Other SMs\' L1 copies are invalidated via INV.';
-      if (latEl) latEl.textContent = '~' + (currentArch === 'pascal' ? '80' : currentArch === 'ampere' || currentArch === 'hopper' ? '50' : '60') + ' cycles';
+      if (wpEl) wpEl.textContent = 'write-evict / write-back';
+      if (wpdEl) wpdEl.textContent = 'Stores hit L1 (Modified). L2 gets the data when L1 evicts the dirty line (write-back) or on capacity pressure. Other SMs\' copies are invalidated via targeted INV.';
+      if (latEl) latEl.textContent = '~160 cycles';
     }
     refreshTooltipL2Data();
     ttHint.style.display = (selectedBlock && selectedBlock.type === 'l2') ? 'none' : 'flex';
@@ -542,11 +516,11 @@ function updateTooltip(hit, clientX, clientY) {
         }
         liveOpsHtml +=
           '<div style="display:flex;align-items:center;gap:6px;padding:3px 0;border-bottom:1px solid #1e2030">' +
-            '<span style="font-family:JetBrains Mono,monospace;font-size:.58rem;color:#f59e0b;min-width:28px">#'+aop.seq+'</span>' +
-            '<span style="font-family:JetBrains Mono,monospace;font-size:.58rem;color:#e0e2ec;min-width:22px">SM'+aop.smIdx+'</span>' +
-            '<span style="font-family:JetBrains Mono,monospace;font-size:.58rem;font-weight:700;color:'+ph.color+';min-width:64px">'+ph.label+'</span>' +
+            '<span style="font-family:ui-monospace,monospace;font-size:.58rem;color:#f59e0b;min-width:28px">#'+aop.seq+'</span>' +
+            '<span style="font-family:ui-monospace,monospace;font-size:.58rem;color:#e0e2ec;min-width:22px">SM'+aop.smIdx+'</span>' +
+            '<span style="font-family:ui-monospace,monospace;font-size:.58rem;font-weight:700;color:'+ph.color+';min-width:64px">'+ph.label+'</span>' +
             '<span style="flex:1">'+phaseBar+'</span>' +
-            '<span style="font-family:JetBrains Mono,monospace;font-size:.54rem;color:#6b7090">'+elapsed+'τ</span>' +
+            '<span style="font-family:ui-monospace,monospace;font-size:.54rem;color:#6b7090">'+elapsed+'τ</span>' +
           '</div>';
       }
     }
@@ -586,8 +560,8 @@ function updateTooltip(hit, clientX, clientY) {
     ttMeta.innerHTML =
       // Status header
       '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">' +
-        '<span style="font-family:JetBrains Mono,monospace;font-size:.58rem;color:#6b7090">STATUS</span>' +
-        '<span style="font-family:JetBrains Mono,monospace;font-size:.64rem;font-weight:700;letter-spacing:.5px;color:'+statusColor+'">● '+statusTT+'</span>' +
+        '<span style="font-family:ui-monospace,monospace;font-size:.58rem;color:#6b7090">STATUS</span>' +
+        '<span style="font-family:ui-monospace,monospace;font-size:.64rem;font-weight:700;letter-spacing:.5px;color:'+statusColor+'">● '+statusTT+'</span>' +
       '</div>' +
       // Live ops — the star of the show
       '<div class="tt-arb-section">' +
@@ -609,7 +583,7 @@ function updateTooltip(hit, clientX, clientY) {
       '<div class="tt-arb-section">' +
         '<div class="tt-arb-label">Bus Contention <span style="float:right;color:'+latColor+'">~'+cycTT+' cyc/grant</span></div>' +
         '<div class="tt-arb-bar-bg"><div class="tt-arb-bar-fill" style="width:'+latBarPct+'%"></div></div>' +
-        '<div style="font-family:JetBrains Mono,monospace;font-size:.54rem;color:#4a5080;margin-top:2px">'+
+        '<div style="font-family:ui-monospace,monospace;font-size:.54rem;color:#4a5080;margin-top:2px">'+
           'Idle: 2 cyc · Contended: up to 32 cyc' +
         '</div>' +
       '</div>' +
@@ -633,8 +607,8 @@ function updateTooltip(hit, clientX, clientY) {
       ttMeta.innerHTML =
         '<div>' +
           '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">' +
-            '<span style="font-family:JetBrains Mono,monospace;font-size:.6rem;color:#9095b0;text-transform:uppercase;letter-spacing:1px">Register Occupancy</span>' +
-            '<span id="tt-regs-pct" style="font-family:JetBrains Mono,monospace;font-size:.68rem;font-weight:700"></span>' +
+            '<span style="font-family:ui-monospace,monospace;font-size:.6rem;color:#9095b0;text-transform:uppercase;letter-spacing:1px">Register Occupancy</span>' +
+            '<span id="tt-regs-pct" style="font-family:ui-monospace,monospace;font-size:.68rem;font-weight:700"></span>' +
           '</div>' +
           // Occupancy bar
           '<div style="height:8px;background:#141620;border-radius:3px;margin-bottom:5px;position:relative;overflow:hidden">' +
@@ -642,22 +616,22 @@ function updateTooltip(hit, clientX, clientY) {
             // Danger line at 100%
             '<div style="position:absolute;right:0;top:0;bottom:0;width:1.5px;background:#fb923c44"></div>' +
           '</div>' +
-          '<div id="tt-regs-state" style="font-family:JetBrains Mono,monospace;font-size:.62rem;margin-bottom:8px"></div>' +
+          '<div id="tt-regs-state" style="font-family:ui-monospace,monospace;font-size:.62rem;margin-bottom:8px"></div>' +
           // Explanation
           '<div style="border-top:1px solid #1e2030;padding-top:7px">' +
-            '<div style="font-family:JetBrains Mono,monospace;font-size:.56rem;color:#9095b0;text-transform:uppercase;letter-spacing:1px;margin-bottom:5px">How registers work</div>' +
-            '<div style="margin-bottom:4px;font-family:JetBrains Mono,monospace;font-size:.56rem;color:#6b7090;line-height:1.5">' +
+            '<div style="font-family:ui-monospace,monospace;font-size:.56rem;color:#9095b0;text-transform:uppercase;letter-spacing:1px;margin-bottom:5px">How registers work</div>' +
+            '<div style="margin-bottom:4px;font-family:ui-monospace,monospace;font-size:.56rem;color:#6b7090;line-height:1.5">' +
               'Each resident warp has a fixed register allocation decided at compile time. The register file is never empty — all resident warps\' registers are live simultaneously. Bars show current occupancy across all warps.' +
             '</div>' +
-            '<div style="margin-bottom:4px;font-family:JetBrains Mono,monospace;font-size:.56rem">' +
+            '<div style="margin-bottom:4px;font-family:ui-monospace,monospace;font-size:.56rem">' +
               '<span style="color:#5a7ad0;font-weight:700">Normal (≤85%)</span>' +
               '<span style="color:#6b7090"> — all warp registers fit in the physical file. No spilling.</span>' +
             '</div>' +
-            '<div style="margin-bottom:4px;font-family:JetBrains Mono,monospace;font-size:.56rem">' +
+            '<div style="margin-bottom:4px;font-family:ui-monospace,monospace;font-size:.56rem">' +
               '<span style="color:#fb923c;font-weight:700">Overflow (>100%)</span>' +
               '<span style="color:#6b7090"> — compiler inserted SPILL/RELOAD instructions. The warp stalls while values are written/read from L1 cache.</span>' +
             '</div>' +
-            '<div style="font-family:JetBrains Mono,monospace;font-size:.56rem;color:#6b7090">Reducing registers per thread (–maxrregcount) lets more warps fit simultaneously, improving occupancy and latency hiding.</div>' +
+            '<div style="font-family:ui-monospace,monospace;font-size:.56rem;color:#6b7090">Reducing registers per thread (–maxrregcount) lets more warps fit simultaneously, improving occupancy and latency hiding.</div>' +
           '</div>' +
         '</div>';
     }
@@ -675,30 +649,30 @@ function updateTooltip(hit, clientX, clientY) {
       ttMeta.innerHTML =
         '<div style="margin-bottom:2px">' +
           '<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">' +
-            '<span style="font-family:JetBrains Mono,monospace;font-size:.6rem;color:#9095b0;text-transform:uppercase;letter-spacing:1px">Cache Lines</span>' +
-            '<span id="tt-fill-label" style="font-family:JetBrains Mono,monospace;font-size:.68rem;font-weight:700;color:'+info.color+'"></span>' +
-            '<span id="tt-dirty-label" style="font-family:JetBrains Mono,monospace;font-size:.62rem;color:#51cf66"></span>' +
+            '<span style="font-family:ui-monospace,monospace;font-size:.6rem;color:#9095b0;text-transform:uppercase;letter-spacing:1px">Cache Lines</span>' +
+            '<span id="tt-fill-label" style="font-family:ui-monospace,monospace;font-size:.68rem;font-weight:700;color:'+info.color+'"></span>' +
+            '<span id="tt-dirty-label" style="font-family:ui-monospace,monospace;font-size:.62rem;color:#51cf66"></span>' +
           '</div>' +
           '<div id="tt-line-grid" style="display:flex;gap:2px;height:10px;margin-bottom:5px"></div>' +
-          '<div id="tt-state-label" style="font-size:.66rem;font-family:JetBrains Mono,monospace;margin-bottom:8px"></div>' +
+          '<div id="tt-state-label" style="font-size:.66rem;font-family:ui-monospace,monospace;margin-bottom:8px"></div>' +
           (isL1 ? (
             '<div style="border-top:1px solid #1e2030;padding-top:7px">' +
-              '<div style="font-family:JetBrains Mono,monospace;font-size:.56rem;color:#9095b0;text-transform:uppercase;letter-spacing:1px;margin-bottom:5px">L1 Cache Line States</div>' +
-              '<div style="margin-bottom:3px;font-family:JetBrains Mono,monospace;font-size:.56rem">' +
+              '<div style="font-family:ui-monospace,monospace;font-size:.56rem;color:#9095b0;text-transform:uppercase;letter-spacing:1px;margin-bottom:5px">L1 Cache Line States</div>' +
+              '<div style="margin-bottom:3px;font-family:ui-monospace,monospace;font-size:.56rem">' +
                 '<span style="color:#339af0;font-weight:700">Shared</span>' +
                 '<span style="color:#6b7090"> — clean copy. Filled on read miss (RdReq → L2 → DATA). Multiple SMs can hold Shared simultaneously. Instantly invalidated if another SM writes to the same address.</span>' +
               '</div>' +
-              '<div style="margin-bottom:3px;font-family:JetBrains Mono,monospace;font-size:.56rem">' +
+              '<div style="margin-bottom:3px;font-family:ui-monospace,monospace;font-size:.56rem">' +
                 '<span style="color:#51cf66;font-weight:700">Modified</span>' +
                 '<span style="color:#6b7090"> — dirty. Set when SM writes to this line (write-evict). This SM has the only valid copy — all other SMs\' copies are invalidated. Line must be written back to L2 before eviction.</span>' +
               '</div>' +
-              '<div style="font-family:JetBrains Mono,monospace;font-size:.56rem">' +
+              '<div style="font-family:ui-monospace,monospace;font-size:.56rem">' +
                 '<span style="color:#6b7090;font-weight:700">Invalid</span>' +
                 '<span style="color:#6b7090"> — empty. Either never loaded, or dropped by an INV message. Next access causes a miss — RdReq goes to L2 to refill.</span>' +
               '</div>' +
             '</div>'
           ) : (
-            '<div style="border-top:1px solid #1e2030;padding-top:7px;font-family:JetBrains Mono,monospace;font-size:.56rem;color:#6b7090;line-height:1.5">' +
+            '<div style="border-top:1px solid #1e2030;padding-top:7px;font-family:ui-monospace,monospace;font-size:.56rem;color:#6b7090;line-height:1.5">' +
               'SMEM is software-managed scratchpad. No coherency protocol — the programmer controls all reads and writes. Access via LDS (load) and STS (store). 32 memory banks; simultaneous access to different banks costs 0 extra cycles.' +
             '</div>'
           )) +
@@ -758,8 +732,9 @@ function refreshTooltipRegsData(smIdx) {
 function refreshTooltipL2Data() {
   var l2Filled = 0, l2Dirty = 0;
   for (var i = 0; i < NUM_L2_LINES; i++) {
-    if (l2Lines[i] === 1) l2Filled++;
-    else if (l2Lines[i] === 2) { l2Filled++; l2Dirty++; }
+    var _ttl2s = l2Lines[i] ? (typeof l2Lines[i]==='object' ? l2Lines[i].s : l2Lines[i]) : 0;
+    if (_ttl2s === 1) l2Filled++;
+    else if (_ttl2s === 2) { l2Filled++; l2Dirty++; }
   }
   var l2Empty = NUM_L2_LINES - l2Filled;
   var l2OccPct = Math.round(l2Filled / NUM_L2_LINES * 100);
@@ -774,7 +749,7 @@ function refreshTooltipL2Data() {
   for (var gi = 0; gi < NUM_L2_LINES; gi++) {
     var cell = document.getElementById('tt-l2-cell-' + gi);
     if (!cell) continue;
-    var lv = l2Lines[gi];
+    var lv = l2Lines[gi] ? (typeof l2Lines[gi]==='object' ? l2Lines[gi].s : l2Lines[gi]) : 0;
     cell.style.background = lv === 2 ? '#ffa94d' : lv === 1 ? '#339af060' : '#1e2030';
   }
 
@@ -788,7 +763,7 @@ function refreshTooltipL2Data() {
   // Per-SM coherency state rows
   for (var ssi = 0; ssi < layout.sms.length; ssi++) {
     var st = layout.sms[ssi].l1.state;
-    var sc = st === 'modified' ? '#51cf66' : st === 'shared' ? '#339af0' : '#4a5080';
+    var sc = st === 'modified' ? '#51cf66' : st === 'shared' ? '#339af0' : '#5a5e78';
     var sl = st === 'modified' ? '[M]' : st === 'shared' ? '[S]' : '[I]';
     var dotEl = document.getElementById('tt-l2-sm-dot-' + ssi);
     var stEl  = document.getElementById('tt-l2-sm-state-' + ssi);
@@ -855,7 +830,7 @@ function refreshTooltipCacheData(hit, info) {
       if (!opLegend) {
         opLegend = document.createElement('div');
         opLegend.id = 'tt-op-legend';
-        opLegend.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;margin-bottom:4px;font-family:JetBrains Mono,monospace;font-size:.58rem;';
+        opLegend.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;margin-bottom:4px;font-family:ui-monospace,monospace;font-size:.58rem;';
         grid.parentNode.insertBefore(opLegend, grid.nextSibling);
       }
       var opsSeen = {};
@@ -887,29 +862,4 @@ function refreshTooltipCacheData(hit, info) {
     if (st === 'modified')      { stateLabel = '● Modified — has dirty data';  stateColor = '#51cf66'; }
     else if (st === 'shared')   { stateLabel = '● Shared — clean copy';        stateColor = '#5ab0f8'; }
     else                        { stateLabel = '● Invalid — empty';            stateColor = '#6b7090'; }
-    stateLbl.style.color = stateColor;
-    stateLbl.textContent = stateLabel;
-  } else if (stateLbl && hit.type === 'smem') {
-    var smFilled = cs.filled;
-    stateLbl.style.color = smFilled > 0 ? '#6ee09a' : '#6b7090';
-    stateLbl.textContent = smFilled > 0 ? '● Active — ' + smFilled + ' slots used' : '● Empty — no data loaded';
-  }
-}
-
-function positionTooltip(clientX, clientY) {
-  var vizRect = canvas.parentElement.getBoundingClientRect();
-  var tx = clientX - vizRect.left + 14;
-  var ty = clientY - vizRect.top - 12;
-  var tw = 250, th = 160;
-  if (tx + tw > vizRect.width - 10)  tx = clientX - vizRect.left - tw - 14;
-  if (ty + th > vizRect.height - 10) ty = clientY - vizRect.top - th - 12;
-  if (ty < 4) ty = 4;
-  tooltipEl.style.left = tx + 'px';
-  tooltipEl.style.top  = ty + 'px';
-}
-
-function hideTooltip() {
-  tooltipEl.classList.remove('visible');
-  _lastTooltipType = null;
-}
-
+    stateLbl.style.color = stateColor
