@@ -224,7 +224,7 @@ position:relative;
 }
 #scenario-tooltip .st-detail-text { color:#90c8f0; font-size:.72rem; line-height:1.5; }
 
-.main-container { display:flex; gap:24px; padding:12px 20px; max-width:1400px; margin:0 auto; align-items:flex-start; }
+.main-container { display:flex; gap:8px; padding:8px 10px; width:100%; box-sizing:border-box; align-items:flex-start; overflow-x:hidden; }
 .viz-area { flex:1; min-width:0; position:relative; }
 canvas { width:100%; height:720px; background:var(--surface); border-radius:12px; border:1px solid var(--border); display:block; cursor:default; }
 @media(max-width:500px){ canvas { height:640px; } .viz-area { max-width:none; } }
@@ -433,8 +433,9 @@ canvas { width:100%; height:720px; background:var(--surface); border-radius:12px
   display: flex;
   align-items: flex-start;
   gap: 16px;
-  width: 100%;
-  transition: gap 0.35s cubic-bezier(.4,0,.2,1);
+  flex: 1;
+  min-width: 0;
+  overflow: visible;
 }
 #pause-panel-wrap {
   position: relative;
@@ -450,17 +451,25 @@ canvas { width:100%; height:720px; background:var(--surface); border-radius:12px
   min-width: 0;
   opacity: 0;
   flex-shrink: 0;
-  transition: width 0.3s cubic-bezier(.4,0,.2,1), opacity 0.3s, min-width 0.3s;
+  transition: width 0.35s cubic-bezier(.4,0,.2,1),
+              opacity 0.3s ease,
+              min-width 0.35s cubic-bezier(.4,0,.2,1);
 }
 #pause-panel-wrap.open {
-  width: 260px;
-  min-width: 260px;
+  width: 240px;
+  min-width: 240px;
   opacity: 1;
   border-color: var(--border);
 }
+@media(max-width:1300px) {
+  /* info-panel shrinks to make room for canvas */
+  }
 @media(max-width:1100px) {
   #sim-row { flex-direction: column; }
   #pause-panel-wrap.open { width: 100%; min-width: 0; min-height: auto; }
+  .main-container { flex-wrap: wrap; }
+  .info-panel { width: 100% !important; min-width: 0 !important; flex-direction: row; flex-wrap: wrap; gap: 10px; }
+  .info-card { flex: 1; min-width: 220px; }
 }
 
 /* ── Tooltip ── */
@@ -543,7 +552,7 @@ canvas { width:100%; height:720px; background:var(--surface); border-radius:12px
 #sel-panel .close-btn { float:right; font-size:.7rem; color:var(--dim); cursor:pointer; font-family:ui-monospace,'SF Mono','Courier New',monospace; padding:2px 6px; border:1px solid var(--border); border-radius:4px; }
 #sel-panel .close-btn:hover { color:var(--text); }
 
-.info-panel { width:360px; flex-shrink:0; display:flex; flex-direction:column; gap:12px; }
+.info-panel { width:240px; min-width:200px; flex-shrink:0; display:flex; flex-direction:column; gap:12px; }
 .info-card { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:14px; }
 .info-card h3 { font-size:.65rem; font-family:ui-monospace,'SF Mono','Courier New',monospace; text-transform:uppercase; letter-spacing:2px; color:var(--dim); margin-bottom:10px; }
 
@@ -741,6 +750,7 @@ position:absolute; top:-12px; width:100%; text-align:center; white-space:nowrap;
         <div class="pp-empty" id="pp-empty">Press any operation button to see a plain&#8209;English walkthrough of each step here.</div>
       </div>
     </div>
+
     <!-- Canvas / viz -->
     <div class="viz-area" style="flex:1;min-width:0;">
     <canvas id="canvas"></canvas>
@@ -782,7 +792,7 @@ position:absolute; top:-12px; width:100%; text-align:center; white-space:nowrap;
       <h3>Cache States (MSI)</h3>
       <div class="state-row"><div class="state-dot" style="background:#51cf66"></div><span class="state-label">Modified</span><span class="state-desc">Dirty, exclusive</span></div>
       <div class="state-row"><div class="state-dot" style="background:#339af0"></div><span class="state-label">Shared</span><span class="state-desc">Clean, multi-reader</span></div>
-      <div class="state-row"><div class="state-dot" style="background:#555"></div><span class="state-label">Invalid</span><span class="state-desc">Stale / absent</span></div>
+      <div class="state-row"><div class="state-dot" style="background:#5a5e78"></div><span class="state-label">Invalid</span><span class="state-desc">Stale / absent</span></div>
     </div>
     <div class="info-card">
       <h3>Live Stats</h3>
@@ -791,6 +801,7 @@ position:absolute; top:-12px; width:100%; text-align:center; white-space:nowrap;
         <div class="stat-item"><div class="stat-value" id="stat-misses" style="color:var(--l1)">0</div><div class="stat-label">Misses</div></div>
         <div class="stat-item"><div class="stat-value" id="stat-inv" style="color:var(--coherency)">0</div><div class="stat-label">Invalidations</div></div>
         <div class="stat-item"><div class="stat-value" id="stat-wb" style="color:var(--l2)">0</div><div class="stat-label">Write-Backs</div></div>
+        <div class="stat-item"><div class="stat-value" id="stat-flush" style="color:#f97316">0</div><div class="stat-label">Flushes</div></div>
       </div>
     </div>
     <div class="info-card explainer" id="explainer-card">
@@ -1221,12 +1232,15 @@ var INSTRUCTION_INFO = {
   'WB':     { name:'WB  (write-back)', color:'#ffa94d',
     what:'Write-Back — a dirty L1 line is being evicted and its contents written back to L2. Different from a regular write in that it\'s triggered by cache capacity pressure, not the thread actively storing. Carries Modified → Shared state transition.',
     why:'Happens automatically when the L1 is full and a new line must enter. Frequent write-backs indicate working sets larger than L1 — a sign you should either reduce data reuse distances or tune the SMEM/L1 split.' },
-  'EVICT':  { name:'EVICT  (L2 victim eviction)', color:'#339af0',
+  'EVICT':  { name:'EVICT  (L2 victim eviction)', color:'#ffa94d',
     what:'An L2 cache line is being evicted to DRAM because L2 is full. The victim line (chosen by LRU policy) travels through the NoC to the memory controller. The L2 persistence window lets you protect chosen lines from eviction.',
     why:'L2 evictions to DRAM are slow (~400+ cycles). If your kernel constantly evicts from L2 it\'s DRAM-bandwidth-bound. cudaAccessPolicyWindow lets you pin hot data (e.g., a weight matrix) to resist eviction.' },
   'STORE':  { name:'STORE  (DRAM write)', color:'#845ef7',
     what:'The final write command issued from a memory controller to an HBM/GDDR bank. At this point data leaves the on-chip world entirely. Row-activation (tRCD), column write (tCL), and precharge (tRP) timing all apply.',
     why:'DRAM writes are the slowest path in the hierarchy. Maximize L2 residency and overlap DRAM reads with compute to avoid blocking on them.' },
+  'WR→DIR': { name:'WR→DIR  (write to Coherency Directory)', color:'#f06595',
+    what:'A write operation notifying the Coherency Directory that a new owner is taking exclusive access. The directory looks up which SMs hold a copy of this address and issues targeted INVs only to them — avoiding a full broadcast.',
+    why:'Directory-based invalidation scales with number of actual sharers, not total SM count. On Apex with 256+ SMs this avoids N×invalidation traffic.' },
   'DSMEM':  { name:'DSMEM  (distributed shared memory)', color:'#22d3ee',
     what:'An SM reads from another SM\'s shared memory within the same Thread Block Cluster. The request travels the cluster bus — but stays entirely on-chip, never touching L2 or DRAM. ~20 cycle latency.',
     why:'Enables sub-L2 communication between cooperating SMs: e.g., overlapping tiles in FlashAttention-style kernels, or producer-consumer pipelines where one SM generates data another immediately consumes.' },
@@ -1331,19 +1345,42 @@ function lineColor(line, blockState) {
 // Make an empty line slot object
 function makeLine(s, op) { return { s: s || 0, op: op || null }; }
 
+var _canvasBaselineW = 0;  // width measured when panel is closed — never shrinks
+
 function resize(force) {
   dpr = window.devicePixelRatio || 1;
+
+  // ── Compute true available canvas width ─────────────────────────────────
+  // Available = viewport - padding(20) - info-panel(240) - gaps(16) - step-log(0 or 240)
+  // This ensures the diagram scales proportionally at any viewport width.
+  var vw = window.innerWidth || 1280;
+  var infoPanelEl = document.querySelector('.info-panel');
+  var infoPanelW  = infoPanelEl ? (infoPanelEl.offsetWidth || 240) : 240;
+  var containerPad = 20;  // 2 × 10px padding
+  var gapTotal = 16;       // gaps between flex children
+  var panelOpen = (function() {
+    var pw = document.getElementById('pause-panel-wrap');
+    return pw && pw.classList.contains('open');
+  })();
+  var stepLogW = panelOpen ? 248 : 0;  // pause-panel-wrap.open width + gap
+  var availW = vw - containerPad - infoPanelW - gapTotal - stepLogW;
+  availW = Math.max(availW, 400);  // never below 400px
+
+  // Baseline: when panel is closed, record available width for pinning during open
+  if (!panelOpen) {
+    if (availW > 200) _canvasBaselineW = availW;
+  }
+  var newW = (_canvasBaselineW > 200 ? _canvasBaselineW : availW);
+  // When panel is open, keep canvas pinned at baseline so layout doesn't squish
+  // but still respect the true available width ceiling
+  if (panelOpen) newW = Math.min(_canvasBaselineW, vw - containerPad - infoPanelW - gapTotal - stepLogW);
+  newW = Math.max(newW, 400);
+
   var r = canvas.getBoundingClientRect();
-  // For file:// on iOS, getBoundingClientRect may return 0 — fall back to window dimensions
-  var parentW = canvas.parentElement ? canvas.parentElement.offsetWidth : 0;
-  var newW = (r.width  > 10 ? r.width  : null) ||
-             (canvas.offsetWidth  > 10 ? canvas.offsetWidth  : null) ||
-             (parentW > 10 ? parentW : null) ||
-             (window.innerWidth > 10 ? Math.round(window.innerWidth * 0.96) : 0) ||
-             800;
   var newH = (r.height > 10 ? r.height : null) ||
              (canvas.offsetHeight > 10 ? canvas.offsetHeight : null) ||
-             (window.innerWidth < 500 ? 640 : 720);
+             (vw < 500 ? 640 : 720);
+
   if (!force && newW === W && newH === H) return;
   W = newW; H = newH;
   canvas.width  = Math.round(W * dpr);
@@ -1352,7 +1389,16 @@ function resize(force) {
   // Sync panel height to canvas height
   var panel = document.getElementById('pause-panel-wrap');
   if (panel) panel.style.height = newH + 'px';
-  if (initialized) buildLayout();
+  if (initialized) {
+    buildLayout();
+    // Callouts store canvas pixel coords — refresh after layout changes
+    if (calloutIdleShown) {
+      setTimeout(function() { showIdleCallouts(); }, 30);
+    } else {
+      // Non-idle callouts: just clear them — next scenario will redraw correctly
+      clearReactiveCallouts();
+    }
+  }
 }
 
 window.addEventListener('resize', resize);
@@ -1502,7 +1548,7 @@ function setL1Dirty(smIdx, op) {
   // Mark exactly ONE existing clean line dirty — or install a new dirty line
   for (var i2 = 0; i2 < NUM_LINES; i2++) {
     if (lines[i2].s === 1) {
-      lines[i2] = makeLine(2, op || lines[i2].op);
+      lines[i2] = makeLine(2, op || lines[i2].op, lines[i2].addr);
       return;
     }
   }
@@ -1550,7 +1596,7 @@ function writebackL1(smIdx) {
   if (!cacheState[smIdx]) return;
   var lines = cacheState[smIdx].l1;
   for (var i = 0; i < NUM_LINES; i++) {
-    if (lines[i].s === 2) lines[i] = makeLine(1, lines[i].op);
+    if (lines[i].s === 2) lines[i] = makeLine(1, lines[i].op, lines[i].addr);
   }
 }
 
@@ -2148,6 +2194,8 @@ canvas.addEventListener('click', function(e) {
   var r = canvas.getBoundingClientRect();
   var mx = e.clientX - r.left;
   var my = e.clientY - r.top;
+  // Any click on the canvas dismisses the idle callouts (user has read them)
+  dismissIdleCallouts();
   var hit = hitTest(mx, my);
   if (hit) {
     if (selectedBlock && selectedBlock.type === hit.type && selectedBlock.smIdx === hit.smIdx) {
@@ -2765,7 +2813,7 @@ function refreshTooltipL2Data() {
   // Per-SM coherency state rows
   for (var ssi = 0; ssi < layout.sms.length; ssi++) {
     var st = layout.sms[ssi].l1.state;
-    var sc = st === 'modified' ? '#51cf66' : st === 'shared' ? '#339af0' : '#4a5080';
+    var sc = st === 'modified' ? '#51cf66' : st === 'shared' ? '#339af0' : '#5a5e78';
     var sl = st === 'modified' ? '[M]' : st === 'shared' ? '[S]' : '[I]';
     var dotEl = document.getElementById('tt-l2-sm-dot-' + ssi);
     var stEl  = document.getElementById('tt-l2-sm-state-' + ssi);
@@ -3253,7 +3301,7 @@ function drawAnimatedFrame(dt, time) {
       if (!anyValid) {
         pool = ['read','read','read','atomic','reg_spill'];
       } else if (anyModified) {
-        pool = ['writeback','writeback','invalidate','read','atomic','reg_spill'];
+        pool = ['writeback','writeback','invalidate','read','atomic','reg_spill','flush'];
       } else {
         pool = ['write','invalidate','read','read','shared','atomic','reg_spill'];
       }
@@ -3545,10 +3593,10 @@ function drawSceneContent(dt, time) {
       var rBg2 = '#141620', rBr2 = '#252840', rTxt2 = '#2a2d45';
       var rIcon = '';
       if (robE2) {
-        if (robE2.state === 'pending')   { rBg2='#f59e0b18'; rBr2='#f59e0b70'; rTxt2='#f59e0b'; rIcon='⏳'; }
-        if (robE2.state === 'complete')  { rBg2='#339af020'; rBr2='#339af090'; rTxt2='#339af0'; rIcon='✦'; } // ACK back, waiting for head
-        if (robE2.state === 'retiring')  { rBg2='#a78bfa20'; rBr2='#a78bfa80'; rTxt2='#a78bfa'; rIcon='↩'; } // head-of-line, being retired
-        if (robE2.state === 'done')      { rBg2='#51cf6620'; rBr2='#51cf6680'; rTxt2='#51cf66'; rIcon='✓'; } // retired, DATA sent
+        if (robE2.state === 'pending')   { rBg2='#f59e0b18'; rBr2='#f59e0b40'; rTxt2='#f59e0b'; rIcon='⏳'; } // waiting for L2
+        if (robE2.state === 'complete')  { rBg2='#22d3ee28'; rBr2='#22d3eea0'; rTxt2='#22d3ee'; rIcon='⏸'; } // OOO buffered — DATA arrived but not head (cyan)
+        if (robE2.state === 'retiring')  { rBg2='#51cf6625'; rBr2='#51cf6690'; rTxt2='#51cf66'; rIcon='↗'; } // head retiring → DATA→SM
+        if (robE2.state === 'done')      { rBg2='#51cf6612'; rBr2='#51cf6640'; rTxt2='#51cf6699'; rIcon='✓'; } // done, slot clearing
       }
       ctx.fillStyle = rBg2; ctx.strokeStyle = rBr2; ctx.lineWidth = robE2 ? 1.1 : 0.7;
       rrect(rx3, robSlotY, robSlotW2, slotH2, 3); ctx.fill(); ctx.stroke();
@@ -3841,6 +3889,9 @@ function drawSceneContent(dt, time) {
     }
   }
 
+  // Callouts
+  if (!paused) tickCallouts(dt);
+
   // Bubbles (skip advancement if paused)
   bubbles = bubbles.filter(function(b) {
     if (!paused) b.age+=dt;
@@ -3926,6 +3977,8 @@ function drawSceneContent(dt, time) {
   buildParticleLabelRects();
 
   // Paused indicator is shown in the HTML badge only — no canvas overlay needed
+  drawCallouts(ctx);
+  drawL2ProgressBars();
 }
 
 var lastTime=0;
@@ -4052,6 +4105,652 @@ function flashFill(b,c,dur) { flash(b,c,{fill:true,dur:dur||0.45}); }
 // Per-slot flash — lights up the specific cache line slot bar when a line is installed/evicted/dirtied.
 // smIdx: SM index, addr: address index (-1 = flash last occupied slot), color: hex color
 var slotFlashEffects = [];
+
+// ── Callout / annotation system ───────────────────────────────────────────
+// Each callout: { id, ax, ay, text, sub, color, alpha, targetAlpha, side,
+//                 offsetX, offsetY, permanent, age, fadeDelay, life }
+// ax/ay = arrow tip on the block, box positioned by side + offsets
+var callouts = [];
+var calloutIdleShown = false;
+// L2 processing progress bars for atomic ops — array of {seq, startTime, duration, done}
+var l2ProgressBars = [];
+var calloutIdleDismissed = false; // persists until explicit Reset — prevents auto-restore
+
+function clearCallouts(filterFn) {
+  if (!filterFn) { callouts = []; return; }
+  callouts = callouts.filter(function(c) { return !filterFn(c); });
+}
+
+// Smoothly fade out all idle callouts (called on canvas click anywhere)
+function dismissIdleCallouts() {
+  if (!calloutIdleShown) return;
+  callouts.forEach(function(c) {
+    if (c.id && c.id.indexOf('-idle') !== -1) {
+      c.targetAlpha = 0;   // draw loop fades it out
+      c.life = 0.6;        // die after 0.6s
+    }
+  });
+  calloutIdleShown = false;
+  calloutIdleDismissed = true; // block any auto-restore until next Reset
+}
+
+function clearReactiveCallouts() {
+  clearCallouts(function(c) { return !c.permanent; });
+}
+
+function addCallout(id, ax, ay, text, sub, color, opts) {
+  var o = opts || {};
+  callouts = callouts.filter(function(c) { return c.id !== id; });
+  callouts.push({
+    id: id, ax: ax, ay: ay,
+    text: text, sub: sub || '',
+    color: color || '#aaa',
+    alpha: 0, targetAlpha: o.alpha !== undefined ? o.alpha : 0.9,
+    side: o.side || 'right',
+    offsetX: o.offsetX || 0, offsetY: o.offsetY || 0,
+    permanent: !!o.permanent,
+    age: 0, fadeDelay: o.fadeDelay || 0,
+    life: o.life || 9999,
+    smIdx: o.smIdx !== undefined ? o.smIdx : -1  // -1 = global (no SM routing)
+  });
+}
+
+function tickCallouts(dt) {
+  var hadCallouts = callouts.length > 0;
+  callouts = callouts.filter(function(c) {
+    c.age += dt;
+    var active = c.age - c.fadeDelay;
+    if (active < 0) return true;
+    // Fade in
+    c.alpha += (c.targetAlpha - c.alpha) * Math.min(dt * 5, 1);
+    // Fade out in last 1.2s of life
+    if (!c.permanent && c.life < 9000) {
+      var remaining = c.life - active;
+      if (remaining < 1.2) c.targetAlpha = 0;
+      if (c.alpha < 0.015 && c.targetAlpha === 0) return false;
+    }
+    return true;
+  });
+  // If all callouts just disappeared and no scenario is running, restore idle
+  var nowEmpty = callouts.length === 0;
+  if (hadCallouts && nowEmpty && !autoMode && !programMode && !calloutIdleDismissed) {
+    setTimeout(showIdleCallouts, 800);
+  }
+}
+
+
+// ── L2 atomic progress bars — PCB-style on right side of L2 ─────────────────
+// One bar per SEQ#, stacked vertically, filling left-to-right over processing time.
+// Done bars stay filled (green); active bars animate; all fade after atomic completes.
+function drawL2ProgressBars() {
+  if (!l2ProgressBars.length || !layout.l2 || !ctx) return;
+
+  var l2 = layout.l2;
+  var BAR_W   = 68;   // width of the progress track
+  var BAR_H   = 8;    // height of each bar
+  var BAR_GAP = 5;    // vertical gap between bars
+  var PAD_X   = 8;    // gap between L2 right edge and trace start
+  var TRACE   = 18;   // length of PCB L-trace before box
+  var BOX_PAD = 6;    // padding inside label box
+  var LABEL_W = 24;   // width of "SEQ#N" label
+  var now     = Date.now();
+
+  // Total height of all bars
+  var totalH = l2ProgressBars.length * (BAR_H + BAR_GAP) - BAR_GAP;
+  // Center the stack vertically on L2
+  var startY  = l2.y + l2.h/2 - totalH/2;
+  // Anchor X: right edge of L2
+  var anchorX = l2.x + l2.w;
+  // Trace goes right then box starts
+  var traceEndX = anchorX + PAD_X + TRACE;
+
+  ctx.save();
+
+  l2ProgressBars.forEach(function(bar, i) {
+    var barY = startY + i * (BAR_H + BAR_GAP);
+    var barCenterY = barY + BAR_H / 2;
+
+    // Alpha — fade out if all bars done
+    var allDone = l2ProgressBars.every(function(b){ return b.done; });
+    var alpha = 1.0;
+    if (allDone) {
+      // Start fading 1s after last bar completes
+      // Use bar 0 done time as proxy (already marked)
+      alpha = Math.max(0, 1.0 - (now - bar._doneAt) / 2000);
+    }
+    if (alpha <= 0.01) return;
+    ctx.globalAlpha = alpha;
+
+    // Track done time for fade
+    if (bar.done && !bar._doneAt) bar._doneAt = now;
+
+    // Progress fraction
+    var frac;
+    if (bar.done) {
+      frac = 1.0;
+    } else {
+      frac = Math.min(1.0, (now - bar.startTime) / bar.duration);
+      // Ease in: slow start, accelerate toward end
+      frac = frac * frac * (3 - 2 * frac); // smoothstep
+    }
+
+    // Color: done=green, active=amber→cyan gradient
+    var trackColor  = bar.done ? '#51cf6640' : '#f59e0b20';
+    var fillColor   = bar.done ? '#51cf66'   : (frac > 0.7 ? '#22d3ee' : '#f59e0b');
+    var borderColor = bar.done ? '#51cf6699' : '#f59e0b60';
+    var textColor   = bar.done ? '#51cf66'   : '#f59e0bcc';
+
+    // ── PCB trace: L-shaped from L2 right edge to box ──────────────────────
+    ctx.strokeStyle = textColor;
+    ctx.lineWidth = 0.8;
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath();
+    ctx.moveTo(anchorX, barCenterY);
+    ctx.lineTo(anchorX + PAD_X, barCenterY);
+    ctx.lineTo(anchorX + PAD_X, barCenterY - 0.5); // tiny vertical nub
+    ctx.lineTo(traceEndX, barCenterY - 0.5);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // ── Label: "SEQ#N" ──────────────────────────────────────────────────────
+    var labelX = traceEndX;
+    var labelBoxW = LABEL_W + BOX_PAD;
+    ctx.fillStyle = '#0d0f1a';
+    ctx.strokeStyle = borderColor;
+    ctx.lineWidth = 0.8;
+    _calloutRRect(labelX, barY - 1, labelBoxW, BAR_H + 2, 2);
+    ctx.fill(); ctx.stroke();
+    ctx.font = '600 6px ui-monospace,monospace';
+    ctx.fillStyle = textColor;
+    ctx.textAlign = 'center';
+    ctx.fillText('#'+bar.seq, labelX + labelBoxW/2, barY + BAR_H - 2);
+
+    // ── Progress track ─────────────────────────────────────────────────────
+    var trackX = labelX + labelBoxW + 3;
+    // Track background
+    ctx.fillStyle = trackColor;
+    ctx.strokeStyle = borderColor;
+    ctx.lineWidth = 0.8;
+    _calloutRRect(trackX, barY, BAR_W, BAR_H, 2);
+    ctx.fill(); ctx.stroke();
+
+    // Fill bar
+    if (frac > 0.005) {
+      ctx.fillStyle = fillColor;
+      ctx.save();
+      ctx.beginPath();
+      // Clip to track bounds then draw fill
+      ctx.rect(trackX + 1, barY + 1, (BAR_W - 2) * frac, BAR_H - 2);
+      ctx.clip();
+      _calloutRRect(trackX + 1, barY + 1, BAR_W - 2, BAR_H - 2, 1.5);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // Pulse dot at fill tip if active
+    if (!bar.done && frac > 0.02 && frac < 0.99) {
+      var tipX = trackX + 1 + (BAR_W - 2) * frac;
+      var pulse = 0.5 + 0.5 * Math.sin(now / 200 + i);
+      ctx.fillStyle = fillColor;
+      ctx.globalAlpha = alpha * pulse;
+      ctx.beginPath();
+      ctx.arc(tipX, barY + BAR_H/2, 2, 0, Math.PI*2);
+      ctx.fill();
+      ctx.globalAlpha = alpha;
+    }
+
+    // Pct text inside track
+    ctx.font = '500 5.5px ui-monospace,monospace';
+    ctx.fillStyle = bar.done ? '#51cf66cc' : '#f59e0b99';
+    ctx.textAlign = 'left';
+    var pctStr = bar.done ? '✓ done' : Math.round(frac * 100) + '%';
+    ctx.fillText(pctStr, trackX + 4, barY + BAR_H - 2);
+
+    // Dot on L2 edge anchor
+    ctx.fillStyle = textColor;
+    ctx.globalAlpha = alpha * 0.7;
+    ctx.beginPath();
+    ctx.arc(anchorX, barCenterY, 2, 0, Math.PI*2);
+    ctx.fill();
+    ctx.globalAlpha = alpha;
+  });
+
+  // Clean up once all faded
+  if (l2ProgressBars.length && l2ProgressBars.every(function(b){ return b._doneAt && (now - b._doneAt) > 2500; })) {
+    l2ProgressBars = [];
+  }
+
+  ctx.restore();
+}
+
+function drawCallouts() {
+  if (!callouts.length || !ctx) return;
+  var TRACE_LEN = 24;
+  var BOX_PAD_X = 9, BOX_PAD_Y = 5, MAX_W = 130;
+  var SM_TOP_MARGIN = 8; // px above SM block for detour routing
+  var BOX_GAP = 4; // minimum vertical gap between adjacent callout boxes
+
+  // ── Pre-pass: compute natural box heights and push apart boxes that overlap ──
+  // We compute each callout's boxH, natural by, then sort by side+anchor-y and
+  // push boxes apart so they never overlap. The result is stored as c._by offset.
+  (function pushApart() {
+    ctx.font = '700 8.5px ui-monospace,monospace';
+    // Group by (side, smIdx) — callouts on the same side & SM share a column
+    var groups = {};
+    callouts.forEach(function(c) {
+      if (c.alpha < 0.01) return;
+      var tw = Math.min(ctx.measureText(c.text).width, MAX_W);
+      ctx.font = '500 7px ui-monospace,monospace';
+      var sw = c.sub ? Math.min(ctx.measureText(c.sub).width, MAX_W) : 0;
+      ctx.font = '700 8.5px ui-monospace,monospace';
+      c._boxH = c.sub ? BOX_PAD_Y*2 + 8.5 + 3 + 7 : BOX_PAD_Y*2 + 8.5;
+      c._naturalBy = c.ay - c._boxH/2 + (c.offsetY || 0);
+      c._by = c._naturalBy; // will be adjusted below
+      var key = c.side + '|' + (c.smIdx !== undefined ? c.smIdx : -1);
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(c);
+    });
+    // For each group, sort by natural Y and push down any that overlap
+    Object.keys(groups).forEach(function(key) {
+      var grp = groups[key].slice().sort(function(a,b){ return a._naturalBy - b._naturalBy; });
+      for (var gi = 1; gi < grp.length; gi++) {
+        var prev = grp[gi-1], cur = grp[gi];
+        var minBy = prev._by + prev._boxH + BOX_GAP;
+        if (cur._by < minBy) cur._by = minBy;
+      }
+    });
+  })();
+
+  callouts.forEach(function(c) {
+    if (c.alpha < 0.01) return;
+    ctx.save();
+    ctx.globalAlpha = c.alpha;
+
+    ctx.font = '700 8.5px ui-monospace,monospace';
+    var tw = Math.min(ctx.measureText(c.text).width, MAX_W);
+    ctx.font = '500 7px ui-monospace,monospace';
+    var sw = c.sub ? Math.min(ctx.measureText(c.sub).width, MAX_W) : 0;
+    var boxW = Math.max(tw, sw) + BOX_PAD_X * 2;
+    var boxH = c.sub ? BOX_PAD_Y*2 + 8.5 + 3 + 7 : BOX_PAD_Y*2 + 8.5;
+
+    var bx, by;
+    var tracePoints = [];
+
+    // ── PCB detour routing ──────────────────────────────────────────────────
+    // For SM-anchored callouts (smIdx >= 0) going to the left margin:
+    //   SM0: straight left   anchor → left → box
+    //   SM1: detour around SM0: anchor → up above SMs → left past SM0 → down → box
+    // For right margin:
+    //   SM3: straight right  anchor → right → box
+    //   SM2: detour around SM3: anchor → up above SMs → right past SM3 → down → box
+    // For global callouts (smIdx === -1): simple L-trace as before
+
+    var smIdx = c.smIdx !== undefined ? c.smIdx : -1;
+    var smCount = layout.sms ? layout.sms.length : 4;
+    var needsDetour = false;
+    var detourSM = null; // the SM we're routing around
+
+    if (smIdx === 1 && c.side === 'left') {
+      needsDetour = true;
+      detourSM = layout.sms ? layout.sms[0] : null;
+    } else if (smIdx === smCount - 2 && c.side === 'right') {
+      needsDetour = true;
+      detourSM = layout.sms ? layout.sms[smCount - 1] : null;
+    }
+
+    if (needsDetour && detourSM) {
+      // Route: anchor → up to above-SM level → across past detourSM → down to box level → box
+      var smTop = layout.sms[0].y - SM_TOP_MARGIN; // above all SMs
+      var MARGIN = 8; // gap from SM edge to trace
+
+      if (c.side === 'left') {
+        // SM1 detours left around SM0
+        var exitX = detourSM.x - MARGIN; // left of SM0
+        bx = Math.max(4, exitX - TRACE_LEN - boxW);
+        // Use pushApart-adjusted _by; clamp only to canvas top (not smTop)
+        by = (c._by !== undefined ? c._by : c.ay - boxH/2 + (c.offsetY||0));
+        by = Math.max(4, by);
+        var boxMidY = by + boxH/2;
+        // Route: anchor → up to smTop → left to exitX → down to this box's midY → into box
+        tracePoints = [
+          {x: c.ax,   y: c.ay},       // anchor on SM left edge
+          {x: c.ax,   y: smTop},       // go up above SM row
+          {x: exitX,  y: smTop},       // across leftward past SM0
+          {x: exitX,  y: boxMidY},     // drop to THIS box's centre (varies per callout)
+          {x: bx + boxW, y: boxMidY}   // horizontal into box right edge
+        ];
+      } else {
+        // SM2 detours right around SM3
+        var exitX2 = detourSM.x + detourSM.w + MARGIN; // right of SM3
+        bx = Math.min(W - boxW - 4, exitX2 + TRACE_LEN);
+        by = (c._by !== undefined ? c._by : c.ay - boxH/2 + (c.offsetY||0));
+        by = Math.max(4, by);
+        var boxMidY2 = by + boxH/2;
+        tracePoints = [
+          {x: c.ax,          y: c.ay},
+          {x: c.ax,          y: smTop},
+          {x: exitX2,        y: smTop},
+          {x: exitX2,        y: boxMidY2},
+          {x: bx,            y: boxMidY2}
+        ];
+      }
+    } else if (c.side === 'right') {
+      bx = Math.min(W - boxW - 4, c.ax + TRACE_LEN + c.offsetX);
+      by = (c._by !== undefined ? c._by : c.ay - boxH/2 + (c.offsetY||0));
+      bx = Math.max(4, bx);
+      by = Math.max(4, Math.min(H - boxH - 4, by));
+      var bmY = by + boxH/2;
+      tracePoints = [
+        {x: c.ax, y: c.ay},
+        {x: bx,   y: c.ay},
+        {x: bx,   y: bmY}
+      ];
+    } else if (c.side === 'left') {
+      bx = Math.max(4, c.ax - TRACE_LEN - boxW + c.offsetX);
+      by = (c._by !== undefined ? c._by : c.ay - boxH/2 + (c.offsetY||0));
+      by = Math.max(4, Math.min(H - boxH - 4, by));
+      var bmY2 = by + boxH/2;
+      tracePoints = [
+        {x: c.ax,       y: c.ay},
+        {x: bx + boxW,  y: c.ay},
+        {x: bx + boxW,  y: bmY2}
+      ];
+    } else if (c.side === 'up') {
+      bx = c.ax - boxW/2 + c.offsetX;
+      bx = Math.max(4, Math.min(W - boxW - 4, bx));
+      by = Math.max(4, c.ay - TRACE_LEN - boxH + c.offsetY);
+      var bmX = bx + boxW/2;
+      tracePoints = [
+        {x: c.ax, y: c.ay},
+        {x: c.ax, y: by + boxH},
+        {x: bmX,  y: by + boxH}
+      ];
+    } else { // down
+      bx = c.ax - boxW/2 + c.offsetX;
+      bx = Math.max(4, Math.min(W - boxW - 4, bx));
+      by = Math.min(H - boxH - 4, c.ay + TRACE_LEN + c.offsetY);
+      var bmX2 = bx + boxW/2;
+      tracePoints = [
+        {x: c.ax,  y: c.ay},
+        {x: c.ax,  y: by},
+        {x: bmX2,  y: by}
+      ];
+    }
+
+    // ── Draw PCB trace ──────────────────────────────────────────────────────
+    ctx.strokeStyle = c.color + 'aa';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([2, 3]);
+    ctx.beginPath();
+    ctx.moveTo(tracePoints[0].x, tracePoints[0].y);
+    for (var ti = 1; ti < tracePoints.length; ti++) {
+      ctx.lineTo(tracePoints[ti].x, tracePoints[ti].y);
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Anchor via pad
+    ctx.fillStyle = c.color;
+    ctx.fillRect(c.ax - 1.5, c.ay - 1.5, 3, 3);
+
+    // Corner junction dots at each bend (skip first and last point)
+    for (var bi2 = 1; bi2 < tracePoints.length - 1; bi2++) {
+      ctx.beginPath();
+      ctx.arc(tracePoints[bi2].x, tracePoints[bi2].y, 1.5, 0, Math.PI*2);
+      ctx.fillStyle = c.color + 'bb';
+      ctx.fill();
+    }
+
+    // ── Box ─────────────────────────────────────────────────────────────────
+    ctx.fillStyle = '#0b0d1af2';
+    ctx.fillRect(bx, by, boxW, boxH);
+    ctx.strokeStyle = c.color + '60';
+    ctx.lineWidth = 0.75;
+    ctx.strokeRect(bx + 0.375, by + 0.375, boxW - 0.75, boxH - 0.75);
+
+    // Accent bar
+    ctx.fillStyle = c.color + 'cc';
+    if (c.side === 'right' || c.side === 'left' || needsDetour) {
+      var accentOnRight = (c.side === 'left' || needsDetour);
+      ctx.fillRect(accentOnRight ? bx + boxW - 2 : bx, by + 2, 2, boxH - 4);
+    } else {
+      ctx.fillRect(bx + 2, c.side === 'up' ? by + boxH - 2 : by, boxW - 4, 2);
+    }
+
+    // ── Text ────────────────────────────────────────────────────────────────
+    var tx = bx + BOX_PAD_X;
+    var mainY = c.sub ? by + BOX_PAD_Y + 8 : by + boxH/2 + 3;
+    ctx.font = '700 8.5px ui-monospace,monospace';
+    ctx.fillStyle = c.color; ctx.textAlign = 'left';
+    ctx.fillText(c.text, tx, mainY);
+    if (c.sub) {
+      ctx.font = '500 7px ui-monospace,monospace';
+      ctx.fillStyle = c.color + '99';
+      ctx.fillText(c.sub, tx, mainY + 11);
+    }
+    ctx.restore();
+  });
+}
+
+function _calloutRRect(x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y);
+  ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+  ctx.lineTo(x+w,y+h-r); ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+  ctx.lineTo(x+r,y+h); ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+  ctx.lineTo(x,y+r); ctx.quadraticCurveTo(x,y,x+r,y);
+  ctx.closePath();
+}
+
+// ── Idle callouts: annotate the hierarchy in rest state ────────────────────
+function showIdleCallouts() {
+  if (!layout.sms || !layout.sms.length || !initialized) return;
+  if (calloutIdleDismissed) return; // user dismissed — don't restore until Reset
+  clearCallouts();
+  calloutIdleShown = true;
+  var mob = W < 500;
+  var sm0   = layout.sms[0];
+  var lastSM = layout.sms[layout.sms.length - 1];
+
+  // Regs — LEFT side of SM0 (leftmost SM, opens left into margin)
+  var regs0 = null;
+  for (var i=0;i<sm0.sub.length;i++) if(sm0.sub[i].type==='regs') regs0=sm0.sub[i];
+  if (regs0 && !mob) addCallout('regs-idle', regs0.x, regs0.y + regs0.h/2,
+    'Register file', 'spills to L1 when full',
+    '#fb923c', { side:'left', life:18, fadeDelay:0.15 });
+
+  // L1 — LEFT side of SM0
+  var l10 = sm0.l1;
+  addCallout('l1-idle', l10.x, l10.y + l10.h/2,
+    '16-line L1', '~28 cycle hit',
+    '#ff6b6b', { side:'left', life:18, fadeDelay:0.4, offsetY: 14 });
+
+  // SMEM — RIGHT side of last SM
+  var smemLast = null;
+  for (var i=0;i<lastSM.sub.length;i++) if(lastSM.sub[i].type==='smem') smemLast=lastSM.sub[i];
+  if (smemLast) addCallout('smem-idle', smemLast.x + smemLast.w, smemLast.y + smemLast.h/2,
+    'SMEM', 'no coherency · SM-private',
+    '#51cf66', { side:'right', life:18, fadeDelay:0.7 });
+
+  // Bus — LEFT anchor, box goes further left
+  var bus = layout.bus;
+  addCallout('bus-idle', bus.x1 + 6, bus.y,
+    'Coherency Bus', 'INVs broadcast here',
+    '#f06595', { side:'left', life:18, fadeDelay:1.0 });
+
+  // Arbiter (Apex only) — RIGHT edge
+  if (layout.arbiter) {
+    var arb = layout.arbiter;
+    addCallout('arb-idle', arb.x, arb.y + arb.h/2,
+      'Apex Arbiter', 'serializes all atomics',
+      '#f59e0b', { side:'left', life:18, fadeDelay:1.2 });
+  }
+
+  // L2 — RIGHT edge
+  var l2 = layout.l2;
+  addCallout('l2-idle', l2.x, l2.y + l2.h/2,
+    '64MB unified L2', 'write-back · ~200cyc',
+    '#ffa94d', { side:'left', life:18, fadeDelay:1.5 });
+
+  // Global Memory Interface — bottom left
+  if (layout.globalMem) {
+    var gm = layout.globalMem;
+    addCallout('gm-idle', gm.x, gm.y + gm.h/2,
+      'Global Mem I/F', '4 memory controllers · routes to HBM',
+      '#339af0', { side:'left', life:18, fadeDelay:1.8 });
+  }
+
+  // HBM4 — bottom left
+  if (layout.hbm) {
+    var hbm = layout.hbm;
+    addCallout('hbm-idle', hbm.x, hbm.y + hbm.h/2,
+      'HBM4', '~400cyc off-chip · high-bandwidth DRAM',
+      '#845ef7', { side:'left', life:18, fadeDelay:2.1 });
+  }
+}
+
+// ── Reactive callouts: shown after a scenario completes ───────────────────
+// smIdx = the SM that actually did the operation (corrected after write reassigns si)
+// addrN = address name string e.g. "A05", or "" if not address-specific
+// isL1Hit = for read, distinguishes hit vs miss path
+function showReactiveCallouts(type, smIdx, addrN, opts) {
+  // Fade out existing rather than hard-clear — let tickCallouts clean them
+  var hasVisible = callouts.some(function(c){ return c.alpha > 0.05; });
+  if (hasVisible) {
+    callouts.forEach(function(c){
+      c.targetAlpha = 0;
+      c.permanent = false;
+      // Idle callouts get a graceful fade; reactive get a quick exit
+      c.life = c.id && c.id.indexOf('-idle') >= 0 ? 1.2 : 0.3;
+    });
+  } else {
+    callouts = [];
+  }
+
+  var o = opts || {};
+  var sm = layout.sms[smIdx];
+  if (!sm) return;
+  var l1  = sm.l1;
+  var l2  = layout.l2;
+  var hbm = layout.hbm;
+  var bus = layout.bus;
+  var LIFE = 9;
+  var addrSub = addrN ? addrN + ' ' : '';
+  var smCount = layout.sms.length;
+
+  // PCB routing: SM0 and SM1 → box on the LEFT margin
+  //              SM2 and SM3 → box on the RIGHT margin
+  // SM1 trace must route AROUND SM0 (go up, across, down into left margin)
+  // SM2 trace must route AROUND SM3 (go up, across, down into right margin)
+  var smOnLeft = smIdx < smCount / 2;  // SM0,1 → left; SM2,3 → right
+  var l1Ax = smOnLeft ? l1.x : l1.x + l1.w;
+  var l1Side = smOnLeft ? 'left' : 'right';
+  var l1FadeDelay = hasVisible ? 0.5 : 0.1;
+  // routeAround: for SM1 going left, it needs to detour around SM0
+  // for SM2 going right, detour around SM3
+  // Encode as smIdx so drawCallouts can compute the correct waypoints
+
+  if (type === 'read') {
+    var isHit = !!o.l1Hit;
+    addCallout('r-l1', l1Ax, l1.y + l1.h/2,
+      isHit ? 'L1 Hit ✓' : 'Now Shared',
+      addrSub + (isHit ? '~28 cycles, no bus' : 'clean copy from L2'),
+      '#339af0', { side:l1Side, smIdx:smIdx, life:LIFE, fadeDelay:l1FadeDelay  });
+    if (!isHit) {
+      addCallout('r-l2', l2.x, l2.y + l2.h/2,
+        o.l2Hit ? 'L2 served it' : 'L2 miss → DRAM',
+        o.l2Hit ? '~200cyc, no DRAM' : '~400cyc round-trip',
+        '#ffa94d', { side:'left', life:LIFE, fadeDelay: 0.05 });
+      if (!o.l2Hit) {
+        // DRAM miss — show GlobalMem interface and HBM
+        var gm = layout.globalMem;
+        if (gm) addCallout('r-gm', gm.x + gm.w, gm.y + gm.h/2,
+          'Global Mem I/F',
+          'routes miss to HBM',
+          '#339af0', { side:'right', life:LIFE, fadeDelay:0.4 });
+        if (hbm) addCallout('r-hbm', hbm.x + hbm.w/2, hbm.y,
+          'HBM4',
+          '~400cyc · off-chip DRAM',
+          '#845ef7', { side:'up', life:LIFE, fadeDelay:0.8 });
+      }
+    }
+  }
+
+  if (type === 'write') {
+    addCallout('w-l1', l1Ax, l1.y + l1.h/2,
+      'Modified',
+      addrSub + 'dirty — write-evict to L2',
+      '#51cf66', { side:l1Side, smIdx:smIdx, life:LIFE, fadeDelay:l1FadeDelay  });
+    addCallout('w-bus', bus.x1 + 10, bus.y,
+      'INV fired',
+      'stale copies dropped',
+      '#f06595', { side:'left', life:LIFE, fadeDelay:l1FadeDelay + 0.5, offsetX:-8 });
+  }
+
+  if (type === 'invalidate') {
+    var invCount = (o.invCount !== undefined) ? o.invCount : layout.sms.length;
+    addCallout('inv-bus', bus.x1 + 6, bus.y,
+      'INV broadcast',
+      invCount + ' SM' + (invCount !== 1 ? 's' : '') + ' invalidated',
+      '#f06595', { side:'left', life:LIFE, fadeDelay:0.2 });
+  }
+
+  if (type === 'writeback') {
+    addCallout('wb-l1', l1Ax, l1.y + l1.h/2,
+      'Line evicted',
+      'dirty → L2',
+      '#ffa94d', { side:l1Side, smIdx:smIdx, life:LIFE, fadeDelay:l1FadeDelay  });
+    addCallout('wb-l2', l2.x, l2.y + l2.h/2,
+      'L2 absorbed',
+      'dirty retained in L2',
+      '#ffa94d', { side:'left', life:LIFE, fadeDelay:l1FadeDelay + 0.6 });
+  }
+
+  if (type === 'flush') {
+    addCallout('fl-l2', l2.x, l2.y + l2.h/2,
+      'L2 clean',
+      'all dirty lines drained',
+      '#51cf66', { side:'left', life:LIFE, fadeDelay:0.3 });
+    addCallout('fl-hbm', hbm.x + hbm.w/2, hbm.y + hbm.h,
+      'HBM authoritative',
+      'ground truth is here',
+      '#845ef7', { side:'down', life:LIFE, fadeDelay:1.0, offsetY:4 });
+  }
+
+  if (type === 'atomic') {
+    // No summary callouts — progress bars shown during processing instead
+  }
+
+  if (type === 'reg_spill') {
+    var regs = null;
+    for (var i=0;i<sm.sub.length;i++) if(sm.sub[i].type==='regs') regs=sm.sub[i];
+    var regAx = smOnLeft ? (regs ? regs.x : l1Ax) : (regs ? regs.x + regs.w : l1Ax);
+    if (regs) addCallout('rs-regs', regAx, regs.y + regs.h/2,
+      'Reg file full',
+      'compiler spills to L1',
+      '#fb923c', { side:l1Side, smIdx:smIdx, life:LIFE, fadeDelay:l1FadeDelay  });
+    addCallout('rs-l1', l1Ax, l1.y + l1.h/2,
+      'Spill target',
+      '~28cyc if L1 hit',
+      '#fb923c', { side:l1Side, smIdx:smIdx, life:LIFE, fadeDelay:l1FadeDelay + 0.5  });
+  }
+
+  if (type === 'shared') {
+    var smem = null;
+    for (var i=0;i<sm.sub.length;i++) if(sm.sub[i].type==='smem') smem=sm.sub[i];
+    var smemAx = smem ? (smOnLeft ? smem.x : smem.x + smem.w) : l1Ax;
+    if (smem) addCallout('sh-smem', smemAx, smem.y + smem.h/2,
+      'SMEM hit',
+      'no bus, no coherency',
+      '#51cf66', { side:l1Side, smIdx:smIdx, life:LIFE, fadeDelay:l1FadeDelay  });
+    addCallout('sh-bus', bus.x1 + 10, bus.y,
+      'Bus idle',
+      'SMEM bypasses coherency',
+      '#6b7094', { side:'left', life:LIFE, fadeDelay:l1FadeDelay + 0.5, offsetX:-8 });
+  }
+}
+
+
 
 function flashL1Slot(smIdx, addr, color) {
   if (!cacheState[smIdx] || !layout.sms || !layout.sms[smIdx]) return;
@@ -4353,8 +5052,15 @@ function sideLog(msg, color) {
 function openSidePanel(opType) {
   sidePanelOpen = true;
   sideStepCount = 0;
+  // Open the panel — resize() will compute correct canvas width accounting for
+  // info-panel + step-log so diagram scales proportionally, not squishes.
   var wrap = document.getElementById('pause-panel-wrap');
   if (wrap) wrap.classList.add('open');
+  // Let the DOM settle then recompute layout at correct reduced width
+  setTimeout(function() { 
+    if (canvas) { canvas.style.width = ''; canvas.style.flexShrink = ''; }
+    if (typeof resize === 'function') resize(true); 
+  }, 20);
 
   var opColors = {
     read:'#339af0', write:'#51cf66', invalidate:'#f06595',
@@ -4402,7 +5108,11 @@ function closeSidePanel() {
   var wrap = document.getElementById('pause-panel-wrap');
   if (wrap) {
     wrap.classList.remove('open');
-    setTimeout(function() { if (typeof resize === 'function') resize(true); }, 370);
+    // Restore fluid canvas width after panel has animated closed
+    setTimeout(function() {
+      if (canvas) { canvas.style.width = ''; canvas.style.flexShrink = ''; }
+      if (typeof resize === 'function') resize(true);
+    }, 370);
   }
   // Reset log for next manual session
   var log = document.getElementById('pp-log');
@@ -4486,6 +5196,7 @@ function startBubbleSort(nums) {
   if (autoMode) { autoMode = false; autoTimer = 0; var b = document.getElementById('btn-auto'); if(b) b.classList.remove('active'); }
   programMode = true;
   sortRunning = true;
+  clearCallouts();
   sortValues  = nums.slice();
   sortAddrs   = [0,1,2];  // A00-A02
   sortSortedMask = [false,false,false];
@@ -4552,7 +5263,7 @@ function runSortPhase(phaseNum) {
   var isEven = (phaseNum % 2 === 0);
   var startIdx = isEven ? 0 : 1;
   var pairs = [];
-  for (var i = startIdx; i < 2; i += 2) pairs.push([i, i+1]);
+  for (var i = startIdx; i < sortValues.length - 1; i += 2) pairs.push([i, i+1]);
 
   var phaseLabel = 'Phase ' + (phaseNum+1) + ' — ' + (isEven ? 'Even' : 'Odd') + ' pass';
   var phaseLabelEl = document.getElementById('sort-phase-label');
@@ -4571,7 +5282,7 @@ function runSortPhase(phaseNum) {
 
   pairs.forEach(function(pair, pi) {
     var li = pair[0], ri = pair[1];
-    var smIdx = pi % layout.sms.length;
+    var smIdx = (phaseNum % 2 === 0 ? 0 : 1) < layout.sms.length ? (phaseNum % 2 === 0 ? 0 : 1) : 0;  // SM0 for even, SM1 for odd
 
     sortTimeout(function() {
       if (!sortRunning) return;
@@ -4602,7 +5313,7 @@ function runSortPhase(phaseNum) {
           // Compare
           if (lv > rv) {
             // Swap
-            sortSideLog('SM'+smIdx+' compares '+lv+' > '+rv+' — swapping '+addrLN+' and '+addrRN, '#f06595');
+            sortSideLog('SM'+smIdx+' compares '+lv+' > '+rv+' — swapping '+addrLN+' and '+addrRN, '#f59e0b');
             sortValues[li] = rv; sortValues[ri] = lv;
             swappedAny = true;
 
@@ -4614,7 +5325,7 @@ function runSortPhase(phaseNum) {
             flashL1Slot(smIdx, addrL, '#f06595');
             flashL1Slot(smIdx, addrR, '#f06595');
 
-            spawnParticle(smPos, l2t, '#f06595', 'WB', 2.2, function() {
+            spawnParticle(smPos, l2t, '#f06595', addrLN+'↔'+addrRN, 2.2, function() {
               l2DirtyAddr(addrL);
               l2DirtyAddr(addrR);
               flashL2Slot(addrL, '#f06595');
@@ -4640,13 +5351,13 @@ function runSortPhase(phaseNum) {
 
     // Check if fully sorted
     var isSorted = true;
-    for (var s=0; s<2; s++) { if (sortValues[s] > sortValues[s+1]) { isSorted = false; break; } }
+    for (var s=0; s<sortValues.length-1; s++) { if (sortValues[s] > sortValues[s+1]) { isSorted = false; break; } }
 
     // Find confirmed sorted positions from the ends
     var newSorted = sortSortedMask.slice();
     if (isEven && !swappedAny) {
       // Full pass with no swaps = sorted
-      for (var k=0; k<5; k++) newSorted[k] = true;
+      for (var k=0; k<sortValues.length; k++) newSorted[k] = true;
     }
     sortSortedMask = newSorted;
 
@@ -4753,6 +5464,17 @@ function updateStats() {
   if (fe) fe.textContent=stats.flush||0;
 }
 
+
+// Schedule a reactive callout — called from within each scenario case
+// so smIdx is the ACTUAL sm used, and delay matches animation length.
+function schedReactive(type, smIdx, addrN, delay, opts) {
+  // Show in auto mode too — callouts are educational regardless of trigger
+  setTimeout(function() {
+    if (typeof showReactiveCallouts === 'function') {
+      showReactiveCallouts(type, smIdx, addrN, opts);
+    }
+  }, delay);
+}
 function triggerScenario(type, silent) {
   // Manual press: kill auto mode so it doesn't interfere mid-animation
   if (!silent) {
@@ -4771,7 +5493,6 @@ function triggerScenario(type, silent) {
   var si = Math.floor(Math.random()*layout.sms.length);
   showExplanation(type);
   var sm = layout.sms[si];
-
   // ── Address-space: pick a real address for this operation ──────────────────
   var addr = -1;
   if (type !== 'shared' &&
@@ -4780,7 +5501,7 @@ function triggerScenario(type, silent) {
     currentAddr = addr;
   }
 
-  // For write on non-Pascal, prefer an SM that actually holds `addr` ──────────
+  // For write, prefer an SM that actually holds `addr` ──────────
   if (type === 'write' && addr >= 0) {
     var wsh = sharersOf(addr);
     if (wsh.length > 0) { si = wsh[Math.floor(Math.random()*wsh.length)]; sm = layout.sms[si]; }
@@ -4880,6 +5601,9 @@ function triggerScenario(type, silent) {
     return;
   }
 
+  // Callouts: clearCallouts() called inside showReactiveCallouts — no pre-clear needed here
+  // Each case schedules its own reactive callout at the right delay
+
   switch(type) {
     case 'read': {
       // ── Address-aware L1 hit/miss logic ───────────────────────────────────────
@@ -4904,6 +5628,7 @@ function triggerScenario(type, silent) {
             flash(layout.sms[captSI], '#339af0');
             bubble(regsTarget.x, regsTarget.y, 'reg filled', '#339af0', {sub:'~28 cycles', life:1.4});
             logOp('SM'+captSI+': '+captAddrN+' delivered from L1 (~28 cycles)', '#339af0');
+              schedReactive('read', captSI, captAddrN, 100, {l1Hit:true});
           });
         })(si, addr, addrN);
         updateStats();
@@ -4923,9 +5648,10 @@ function triggerScenario(type, silent) {
           particles.push(new Particle(l1Pos(captSI), busP(captSI), '#ff6b6b', addrLabel('RdReq', captAddr), 2, function(){
             spawnPassthrough(captSI, '#ff6b6b', addrLabel('RdReq', captAddr), 2.5, function(){
               logOp('L2: HIT '+captAddrN+' — serving to SM'+captSI, '#ffa94d');
-              bubble(l2Top().x, l2Top().y, 'L2 HIT', '#51cf66', {life:1.5, sub:captAddrN+' ready'});
+              bubble(l2Top().x, l2Top().y, 'L2 HIT', '#ffa94d', {life:1.5, sub:captAddrN+' ready'});
               flashL2Slot(captAddr, '#339af0');
               flash(layout.l2, '#339af0');
+              schedReactive('read', captSI, captAddrN, 100, {l1Hit:false, l2Hit:true});
               var busAtL2 = { x: l2Top().x, y: layout.bus.y };
               spawnParticle(l2Top(), l1Pos(captSI), '#ffa94d', addrLabel('DATA', captAddr), 2, function(){
                 captSM.l1.state = 'shared';
@@ -4950,6 +5676,7 @@ function triggerScenario(type, silent) {
               bubble(l2Top().x, l2Top().y, 'L2 MISS', '#ff6b6b', {life:1.4, sub:captAddrN+' → DRAM'});
               flashL2Slot(captAddr, '#ff6b6b');
               logOp('L2: MISS '+captAddrN+' — fetching from HBM', '#ff6b6b');
+              schedReactive('read', captSI, captAddrN, 200, {l1Hit:false, l2Hit:false});
               spawnParticle(l2Top(), gmTop(), '#ff6b6b', addrLabel('RdReq', captAddr), 2.2, function(){
                 flash(layout.globalMem, '#339af0');
                 bubble(gmTop().x, gmTop().y, 'DRAM fetch', '#339af0', {life:1.4, sub:'~400 cycles'});
@@ -5084,6 +5811,7 @@ function triggerScenario(type, silent) {
               }
             }));
           })(si, sm, addr, addrNW2, staleSMs);
+          schedReactive('write', si, addrNW2, 300);
           updateStats();
         }
       }
@@ -5108,7 +5836,7 @@ function triggerScenario(type, silent) {
       }
       stats.inv++;
       logOp('INV('+addrNI+') → '+invTargets.length+' SM(s)', '#f06595');
-      bubble((layout.bus.x1+layout.bus.x2)/2, layout.bus.y, 'INV('+addrNI+')', '#f06595', {sub:invTargets.length+' target(s)'});
+      // Bus bubble fires when the INV broadcast physically reaches the bus (inside doINV particle cb)
 
       (function(captAddr, captAddrN, captTargets){
         var doINV = function(targets) {
@@ -5118,16 +5846,21 @@ function triggerScenario(type, silent) {
                 var from = (currentArch === 'apex' && layout.cohDir)
                   ? { x: layout.cohDir.x+layout.cohDir.w/2, y: layout.cohDir.y }
                   : { x: (layout.bus.x1+layout.bus.x2)/2, y: layout.bus.y };
-                spawnParticle(l2Top(), l1Pos(idx), '#f06595', addrLabel('INV', captAddr), 2.8, function(){
-                  flashL1Slot(idx, captAddr, '#f06595');
-                  if (captAddr >= 0) l1EvictAddr(idx, captAddr);
-                  else invalidateL1Lines(idx, 1 + Math.floor(Math.random()*2));
-                  var remI = 0; if (cacheState[idx]) for (var ri=0;ri<NUM_LINES;ri++) if(cacheState[idx].l1[ri].s>0) remI++;
-                  layout.sms[idx].l1.state = remI > 0 ? 'shared' : 'invalid';
-                  flash(layout.sms[idx].l1, '#f06595');
-                  bubble(l1Pos(idx).x, l1Pos(idx).y, 'INV hit', '#f06595', {life:1.2, sub:captAddrN+' dropped'});
-                  logOp('SM'+idx+': '+captAddrN+' evicted', '#f06595');
-                }, [{ x: l2Top().x, y: layout.bus.y }, busP(idx)]);
+                var busMid = { x: (layout.bus.x1+layout.bus.x2)/2, y: layout.bus.y };
+                spawnParticle(l2Top(), busMid, '#f06595', addrLabel('INV', captAddr), 1.8, function(){
+                  // Particle has reached the coherency bus — now broadcast
+                  bubble(busMid.x, busMid.y, 'INV('+captAddrN+')', '#f06595', {sub:targets.length+' target(s)'});
+                  spawnParticle(busMid, l1Pos(idx), '#f06595', addrLabel('INV', captAddr), 1.6, function(){
+                    flashL1Slot(idx, captAddr, '#f06595');
+                    if (captAddr >= 0) l1EvictAddr(idx, captAddr);
+                    else invalidateL1Lines(idx, 1 + Math.floor(Math.random()*2));
+                    var remI = 0; if (cacheState[idx]) for (var ri=0;ri<NUM_LINES;ri++) if(cacheState[idx].l1[ri].s>0) remI++;
+                    layout.sms[idx].l1.state = remI > 0 ? 'shared' : 'invalid';
+                    flash(layout.sms[idx].l1, '#f06595');
+                    bubble(l1Pos(idx).x, l1Pos(idx).y, 'INV hit', '#f06595', {life:1.2, sub:captAddrN+' dropped'});
+                    logOp('SM'+idx+': '+captAddrN+' evicted', '#f06595');
+                  }, [{ x: l2Top().x, y: layout.bus.y }, busP(idx)]);
+                }); // outer spawnParticle: l2Top → busMid
               }, vi*130 + Math.round(Math.random()*60));
             })(targets[vi]);
           }
@@ -5145,6 +5878,7 @@ function triggerScenario(type, silent) {
           doINV(captTargets);
         }
       })(addr, addrNI, invTargets);
+      schedReactive('invalidate', si, addrNI, 200, {invCount: invTargets.length});
       break;
     case 'writeback':
       // Precondition ensures physical dirty lines exist — no coercion needed
@@ -5184,12 +5918,13 @@ function triggerScenario(type, silent) {
             setTimeout(function(){
               // Evict dirty victim from L2 → crossbar → globalMem → HBM
               l2Evict();
-              bubble(l2Bot().x,l2Bot().y,'L2 evicting','#339af0',{life:1.3,sub:'victim to DRAM'});
-              particles.push(new Particle(l2Bot(),cbP(),'#339af0','EVICT',2,function(){
-                particles.push(new Particle(cbP(),gmTop(),'#339af0','WR',2,function(){
+              bubble(l2Bot().x,l2Bot().y,'L2 evicting','#ffa94d',{life:1.3,sub:'dirty victim → DRAM'});
+              schedReactive('writeback', si, '', 300);
+              particles.push(new Particle(l2Bot(),cbP(),'#ffa94d','EVICT',2,function(){
+                particles.push(new Particle(cbP(),gmTop(),'#ffa94d','WR',2,function(){
                   flash(layout.globalMem,'#339af0');
                   bubble(gmTop().x,gmTop().y,'queued MC','#339af0',{life:1.2,sub:'scheduling write'});
-                  particles.push(new Particle(gmTop(),gmBot(),'#339af0','WR',2,function(){
+                  particles.push(new Particle(gmTop(),gmBot(),'#ffa94d','WR',2,function(){
                     particles.push(new Particle(gmBot(),hbmTop(),'#845ef7','STORE',1.5,function(){
                       flash(layout.hbm,'#845ef7');
                       bubble(hbmTop().x,hbmTop().y,'persisted','#845ef7',{life:1.5,sub:'written to DRAM'});
@@ -5200,10 +5935,12 @@ function triggerScenario(type, silent) {
               }));
             },500);
           } else {
-            logOp('L2: Dirty line retained — no eviction needed','#ffa94d');
+            schedReactive('writeback', si, '', 300);
+      logOp('L2: Dirty line retained — no eviction needed','#ffa94d');
           }
         });
       }));
+
       break;
     case 'shared':
       var smemBlock=null;
@@ -5240,6 +5977,7 @@ function triggerScenario(type, silent) {
               bubble(sfrom.x, sfrom.y,'reg filled','#51cf66',{sub:'~20 cycle SMEM hit',life:1.4});
               logOp('SM'+si+': LDS hit — data in registers, no bus traffic','#51cf66');
               bubble(sm.x+sm.w/2, sm.y+14, 'no coherency','#51cf66',{sub:'SM-private scratchpad',life:1.8});
+              schedReactive('shared', si, '', 300);
             });
           }, 900);
         }, 600);
@@ -5333,8 +6071,16 @@ function triggerScenario(type, silent) {
 
         if (dirtyL2 === 0) {
           logOp('FLUSH complete — no dirty L2 lines, all clean', '#51cf66');
-          bubble(l2Top().x, l2Top().y, 'flush done', '#51cf66', {sub:'all caches clean', life:2.0});
-          updateStats();
+          // Even with nothing dirty, show a quick scan particle so the bubble
+          // doesn't pop up out of thin air — ping L2 then confirm clean.
+          flash(layout.l2, '#51cf66');
+          particles.push(new Particle(l2Bot(), cbP(), '#51cf66', 'CHK', 1.6, function() {
+            particles.push(new Particle(cbP(), l2Bot(), '#51cf66', 'CLN', 1.4, function() {
+              bubble(l2Top().x, l2Top().y, 'flush done', '#51cf66', {sub:'all caches clean', life:2.0});
+              schedReactive('flush', si, '', 300);
+              updateStats();
+            }));
+          }));
           return;
         }
 
@@ -5381,6 +6127,7 @@ function triggerScenario(type, silent) {
                   flash(layout.l2, '#51cf66');
                   bubble(l2Top().x, l2Top().y, 'L2 clean', '#51cf66', {sub:'flush complete', life:2.0});
                   logOp('FLUSH complete — all caches clean, HBM authoritative', '#51cf66');
+                  schedReactive('flush', si, '', 300);
                   updateStats();
                 }, cleanDelay + 80);
               }));
@@ -5429,6 +6176,7 @@ function triggerScenario(type, silent) {
               flash(regsBlock(si) || layout.sms[si], '#fb923c');
               bubble(regsP.x, regsP.y, 'reg restored', '#51cf66', {sub:'warp resumes', life:1.8});
               logOp('SM'+si+': register restored — warp resumes', '#51cf66');
+              schedReactive('reg_spill', si, '', 300);
               setRegPressure(si, 0.72 + Math.random() * 0.08);  // back to loaded baseline
               stats.hits++; updateStats();
             });
@@ -5458,6 +6206,7 @@ function triggerScenario(type, silent) {
                   flash(regsBlock(si) || layout.sms[si], '#fb923c');
                   bubble(regsP.x, regsP.y, 'reg restored', '#51cf66', {sub:'~200 cyc stall', life:1.8});
                   logOp('SM'+si+': register restored from L2', '#51cf66');
+                  schedReactive('reg_spill', si, '', 300);
                   setRegPressure(si, 0.72 + Math.random() * 0.08);  // back to loaded baseline
                   stats.hits++; updateStats();
                 });
@@ -5492,6 +6241,8 @@ function toggleAuto() {
 }
 
 function resetAll(silent) {
+  // Stop any running program first, before touching state
+  if (typeof sortRunning !== 'undefined' && (sortRunning || programMode)) stopProgram();
   particles=[]; flashEffects=[]; bubbles=[]; if(typeof slotFlashEffects!=='undefined') slotFlashEffects=[]; if(typeof slotL2FlashEffects!=='undefined') slotL2FlashEffects=[]; if(typeof closeSidePanel!=='undefined') closeSidePanel();
   stats={hits:0,misses:0,inv:0,wb:0,flush:0}; updateStats();
   for(var ri=0;ri<layout.sms.length;ri++){layout.sms[ri].l1.state='invalid';}
@@ -5506,7 +6257,11 @@ function resetAll(silent) {
   // Also unpause on reset
   if (paused) togglePause();
   resetArbiter();
-  if(!silent) logOp('Reset — all caches invalidated','#6b7094');
+  l2ProgressBars = [];
+  if(!silent) logEvent('Reset — all caches invalidated','#6b7094');
+  calloutIdleShown = false;
+  calloutIdleDismissed = false; // Reset re-enables idle callouts
+  setTimeout(showIdleCallouts, 400);
 }
 
 function buildInstrChips() {
@@ -5630,24 +6385,31 @@ function arbiterDequeue(seq) {
 function arbiterAckFromL2(seq, onRetired) {
   if (currentArch !== 'apex') { if (onRetired) onRetired(); return; }
   var robIdx = -1;
+  var isHead = false;
   for (var ri = 0; ri < arbiterState.rob.length; ri++) {
     if (arbiterState.rob[ri].seq === seq) {
       arbiterState.rob[ri].state = 'complete';
       arbiterState.rob[ri].onRetired = onRetired;
       robIdx = ri;
+      isHead = (ri === 0);
       break;
     }
   }
-  // Bubble on the exact ROB slot that just flipped to 'complete'
+  // Bubble directly on the ROB slot that just received DATA
   if (robIdx >= 0) {
     var rPos = robSlotPos(robIdx);
-    var isHead = robIdx === 0;
-    bubble(rPos.x, rPos.y, '#'+seq+' ✦', '#339af0', { sub: isHead ? 'head→retire' : 'waiting…', life:1.1 });
+    if (isHead) {
+      bubble(rPos.x, rPos.y, '#'+seq+' HEAD', '#51cf66', { sub: 'retiring now →', life: 1.6 });
+    } else {
+      // OOO — how many slots ahead of this one are still pending?
+      var waiting = robIdx; // slots 0..robIdx-1 must retire first
+      bubble(rPos.x, rPos.y, '#'+seq+' held', '#f59e0b', { sub: 'waiting for #'+(seq - robIdx), life: 2.5 });
+    }
   }
   for (var ao = 0; ao < arbiterState.activeOps.length; ao++) {
     if (arbiterState.activeOps[ao].seq === seq) {
-      arbiterState.activeOps[ao].phase = 'retiring';
-      arbiterState.activeOps[ao].phaseName = ARB_PHASES.retiring.label;
+      arbiterState.activeOps[ao].phase = isHead ? 'retiring' : 'complete';
+      arbiterState.activeOps[ao].phaseName = isHead ? ARB_PHASES.retiring.label : 'buffered';
       arbiterState.activeOps[ao].phaseStart = Date.now();
       break;
     }
@@ -5672,8 +6434,7 @@ function arbiterTryRetire() {
 
   var head = arbiterState.rob[0];
 
-  // Head is already marked 'done' but not yet removed — removal timer is
-  // running. Guard against scheduling duplicate re-check timers.
+  // Head already retiring — removal timer running, guard duplicate timers
   if (head.state === 'done') {
     if (!arbiterState.retireTimerPending) {
       arbiterState.retireTimerPending = true;
@@ -5685,33 +6446,47 @@ function arbiterTryRetire() {
     return;
   }
 
-  // Head not yet complete — nothing to retire right now.
+  // Head not yet complete — waiting for its DATA from L2
   if (head.state !== 'complete') return;
 
-  // Retire the head: mark done, fire callback, schedule removal.
-  head.state = 'done';
-  var rPos = robSlotPos(0);
-  bubble(rPos.x, rPos.y, '#'+head.seq+' ✓', '#51cf66', { sub:'retired→DATA', life:1.2 });
+  // ── Retire the head ────────────────────────────────────────────────────
+  head.state = 'retiring';
   updateArbiterDom();
+  var rPos = robSlotPos(0);
+  bubble(rPos.x, rPos.y, '#'+head.seq+' ↗', '#51cf66', { sub:'retire → DATA to SM', life:1.2 });
 
-  var cb = head.onRetired;
-  if (cb) cb();  // send DATA to SM — fires immediately (correct: retirement is the trigger)
+  // Small pause so slot flips visible before DATA departs
+  setTimeout(function() {
+    head.state = 'done';
+    updateArbiterDom();
+    var cb = head.onRetired;
+    if (cb) cb();  // DATA particle departs from ROB slot → SM (defined in triggerAtomic)
 
-  (function(entry) {
-    setTimeout(function() {
-      arbiterState.rob = arbiterState.rob.filter(function(e){ return e.seq !== entry.seq; });
-      arbiterState.activeOps = arbiterState.activeOps.filter(function(e){ return e.seq !== entry.seq; });
-      if (arbiterState.queue.length === 0 && arbiterState.rob.length === 0) {
-        arbiterState.active = false;
-        arbiterState.contentionLevel = 0;
-      }
-      updateArbiterDom();
-      // Try to retire the next head now that this slot is removed.
-      arbiterTryRetire();
-    }, 600);
-  })(head);
-  // Do NOT continue the loop here — the 600ms setTimeout above will call
-  // arbiterTryRetire() for the next entry once this slot is fully removed.
+    (function(entry) {
+      setTimeout(function() {
+        arbiterState.rob = arbiterState.rob.filter(function(e){ return e.seq !== entry.seq; });
+        arbiterState.activeOps = arbiterState.activeOps.filter(function(e){ return e.seq !== entry.seq; });
+        if (arbiterState.queue.length === 0 && arbiterState.rob.length === 0) {
+          arbiterState.active = false;
+          arbiterState.contentionLevel = 0;
+        }
+        updateArbiterDom();
+        // New head: if it's already complete (was buffered OOO), auto-retire it
+        if (arbiterState.rob.length > 0 && arbiterState.rob[0].state === 'complete') {
+          setTimeout(function() {
+            var nextPos = robSlotPos(0);
+            if (layout.arbiter) addCallout('rob-unblocked',
+              layout.arbiter.x + layout.arbiter.w, layout.arbiter.y + layout.arbiter.h * 0.3,
+              '🔓 #'+arbiterState.rob[0].seq+' unblocked', 'buffered DATA → retiring now',
+              '#22d3ee', { side:'right', smIdx:-1, life:4, fadeDelay:0 });
+            setTimeout(arbiterTryRetire, 350);
+          }, 150);
+        } else {
+          arbiterTryRetire();
+        }
+      }, 500);
+    })(head);
+  }, 120);
 }
 
 // Legacy wrapper kept for any remaining call sites
@@ -5891,7 +6666,7 @@ function triggerAtomic() {
   showExplanation('atomic');
   if (!autoMode) openSidePanel('atomic');
   var _myOpId = _currentOpId;
-  function logOp(msg, color) { logOp(msg, color, _myOpId); }
+  function logOp(msg, color) { logEvent(msg, color, _myOpId); }
 
   // Pick a single hotspot address - all SMs fight over this one
   var atomAddr = (typeof pickAddr !== 'undefined') ? pickAddr('atomic', 0) : -1;
@@ -5909,8 +6684,10 @@ function triggerAtomic() {
     // Grant serialization: only one grant is outstanding at a time.
     // The ATOM is already physically inside the arbiter when granted —
     // we just need to route it arbEntry→arbExit→L2, not re-traverse the bus.
-    var pendingGrants = [];   // {seq, smIdx} — fifo, head gets issued next
-    var grantInFlight = false; // only one grant+RMW in flight through arbiter at once
+    var pendingGrants = [];      // {seq, smIdx} — fifo, head gets issued next
+    var grantInFlight = false;   // only one grant+RMW traversing arbiter body at once
+    var l2ArrivalCount = 0;      // how many RMWs have physically arrived at L2
+    var l2PendingCallbacks = []; // {seq, smIdx} for each arrived RMW
 
     function tryNextGrant() {
       if (grantInFlight || pendingGrants.length === 0) return;
@@ -5922,11 +6699,12 @@ function triggerAtomic() {
     function issueGrant(seq, smIdx) {
       arbiterGrant(seq);
       logOp('ARBITER: GRANT SEQ#'+seq+' → SM'+smIdx, '#51cf66');
+      if (layout.arbiter) addCallout('arb-grant-'+seq,
+        layout.arbiter.x + layout.arbiter.w, layout.arbiter.y + layout.arbiter.h/2,
+        '⚡ GRANT #'+seq, 'RMW → L2 serialized',
+        '#51cf66', { side:'right', smIdx:-1, life:5, fadeDelay:0 });
 
-      // Step 1: Send GRANT signal down to SM (control signal only, no data)
       spawnGrantToSM(smIdx, function() {
-        // GRANT arrived at SM's bus junction — warp scheduler ACKs.
-        // The ATOM is already at arbiterTop waiting — now route it through arbiter → L2.
         (function(capturedSeq, capturedIdx) {
           for (var pa = 0; pa < arbiterState.activeOps.length; pa++) {
             if (arbiterState.activeOps[pa].seq === capturedSeq) {
@@ -5936,24 +6714,26 @@ function triggerAtomic() {
               break;
             }
           }
-
-          // Dequeue now — slot frees as the ATOM proceeds
           arbiterDequeue(capturedSeq);
 
           var arbEntry = arbiterTop();
           var arbExit  = arbiterBot();
           var l2dest   = l2Top();
 
-          // Step 2: RMW travels through arbiter body (arbEntry → arbExit)
+          // RMW traverses arbiter body (serialized — one at a time)
           particles.push(new Particle(arbEntry, arbExit, '#f59e0b', 'RMW', 2.0, function() {
-            // Arbiter body exited — next grant can now issue (queue slot freed above)
+            // Release lock → next grant can now traverse arbiter body
             grantInFlight = false;
-            tryNextGrant();  // issue next grant now that arbiter body is clear
+            tryNextGrant();
 
-            // Step 3: RMW exits arbiter → L2
+            // RMW continues to L2
             particles.push(new Particle(arbExit, l2dest, '#f59e0b', 'RMW', 2.0, function() {
               flash(layout.l2, '#f59e0b');
-              logOp('L2: RMW SEQ#'+capturedSeq+' complete', '#ffa94d');
+              logOp('L2: SEQ#'+capturedSeq+' RMW arrived', '#ffa94d');
+              if (layout.l2) addCallout('rmw-exec-'+capturedSeq,
+                layout.l2.x + layout.l2.w, layout.l2.y + layout.l2.h/2,
+                'RMW exec', 'SEQ#'+capturedSeq+' · atomicAdd in-place',
+                '#ffa94d', { side:'right', smIdx:-1, life:5, fadeDelay:0 });
               for (var pb = 0; pb < arbiterState.activeOps.length; pb++) {
                 if (arbiterState.activeOps[pb].seq === capturedSeq) {
                   arbiterState.activeOps[pb].phase = 'ack';
@@ -5962,33 +6742,131 @@ function triggerAtomic() {
                   break;
                 }
               }
-              // L2 jitter: bimodal — 60% fast bank (50-180ms), 40% busy bank (320-600ms)
-              var l2Jitter = Math.random() < 0.6
-                ? 50  + Math.random() * 130
-                : 320 + Math.random() * 280;
-              setTimeout(function() {
-                // Step 4: ACK returns from L2 → up through arbiter → bus level
-                // l2Top → arbExit (bottom of arbiter) → arbiterTop → arbiterBusEntry
-                // This makes the ACK visibly traverse the arbiter body upward
-                particles.push(new Particle(l2Top(), arbExit, '#ffa94d', 'ACK#'+capturedSeq, 2.0, function() {
-                  // ACK enters arbiter bottom — travel up through arbiter body to bus level
-                  particles.push(new Particle(arbExit, arbiterBusEntry(), '#ffa94d', 'ACK#'+capturedSeq, 2.0, function() {
-                    flash(layout.arbiter, '#ffa94d');
-                    arbiterAckFromL2(capturedSeq, function() {
-                      logOp('ROB: SEQ#'+capturedSeq+' retired → DATA→SM'+capturedIdx, '#a78bfa');
-                      // Step 5: DATA routes from bus level → SM bus junction → L1
-                      // spawnRoutedFromArbiter starts at arbiterBusEntry (bus level), no air-travel
-                      spawnRoutedFromArbiter(capturedIdx, '#ffa94d', 'DATA', 2.2, function() {
-                        layout.sms[capturedIdx].l1.state = 'modified';
-                        flashL1Slot(capturedIdx, atomAddr, '#f59e0b');
-                        setL1Dirty(capturedIdx, 'atomic');
-                        flash(layout.sms[capturedIdx].l1, '#f59e0b');
-                        stats.hits++; updateStats();
-                      });
-                    });
+
+              // Track arrivals — only start L2 processing once ALL RMWs have arrived
+              l2ArrivalCount++;
+              l2PendingCallbacks.push({ seq: capturedSeq, smIdx: capturedIdx });
+
+              if (l2ArrivalCount === smCount2) {
+                // All RMWs at L2 — now assign random latencies and fire concurrently
+                // Shuffle the callbacks so we log them in a random order too
+                logOp('L2: all ' + smCount2 + ' RMWs received — processing concurrently', '#ffa94d');
+                bubble(l2Top().x, l2Top().y, 'L2 processing', '#ffa94d',
+                  { sub: smCount2 + ' ops · random latency', life: 1.8 });
+
+                // ── L2 progress bars: one per SEQ, shown on right side of L2 ──
+                // Bars fill left→right over their processing time.
+                // They are registered BEFORE the shuffle so we know which slot fires first.
+                // CHAINED dispatch: each DATA only fires after the previous one's
+                // particle chain has fully ARRIVED at the ROB — then we wait an
+                // additional 5–7s gap before firing the next one.
+                // This is the ONLY way to guarantee X seconds BETWEEN arrivals,
+                // since particle travel time (~8s) would otherwise eat into any
+                // fixed setTimeout offset approach.
+                var shuffled = l2PendingCallbacks.slice().sort(function(){ return Math.random()-0.5; });
+                logOp('L2 processing ' + shuffled.length + ' RMWs — returning one by one', '#ffa94d');
+                var returnOrder = shuffled.map(function(x){ return '#'+x.seq; }).join(' → ');
+                logOp('Return order: ' + returnOrder, '#ffa94d');
+
+                // Register progress bars in return order (shuffled order)
+                // Bar 0 = first to return, fills fastest; bar 1 = second, etc.
+                // Each bar's duration = cumulative time until that bar's DATA departs:
+                //   bar 0: initialDelay (3-5s)
+                //   bar 1: initialDelay + travel(~8s) + nextGap(5-7s) + travel...
+                // We use wall-clock startTime + estimated total duration per slot.
+                // Since exact times aren't known yet, we use a running estimate.
+                l2ProgressBars = [];
+                var _barNow = Date.now();
+                var _initialEstimate = 4000; // midpoint of 3-5s initial delay
+                var _travelEstimate  = 8500; // ~3 particles × 2.7s avg
+                var _gapEstimate     = 6000; // midpoint of 5-7s chain gap
+                shuffled.forEach(function(cb, slotIdx) {
+                  // Cumulative time until this slot's DATA starts traveling
+                  var cumDelay = _initialEstimate + slotIdx * (_travelEstimate + _gapEstimate);
+                  l2ProgressBars.push({
+                    seq: cb.seq,
+                    slotIdx: slotIdx,
+                    startTime: _barNow,
+                    duration: cumDelay,  // bar fills over this many ms
+                    done: false
+                  });
+                });
+
+                // Kick off the chain: first response fires after 3–5s initial delay
+                var _robArrivalCallbacks = [];
+                var _chainIdx = 0;
+
+                function fireNextDataResponse() {
+                  if (_chainIdx >= shuffled.length) return;
+                  var item = shuffled[_chainIdx];
+                  _chainIdx++;
+                  var captSeq = item.seq;
+                  var captIdx = item.smIdx;
+                  logOp('L2→ROB: DATA(' + (atomAddrN||'?') + ')#' + captSeq + ' departing', '#ffa94d');
+                  // Mark this seq's progress bar as done (filled)
+                  for (var _pbi = 0; _pbi < l2ProgressBars.length; _pbi++) {
+                    if (l2ProgressBars[_pbi].seq === captSeq) {
+                      l2ProgressBars[_pbi].done = true;
+                      break;
+                    }
+                  }
+                  if (layout.l2) addCallout('data-depart-'+captSeq,
+                    layout.l2.x, layout.l2.y + layout.l2.h/2,
+                    'DATA#'+captSeq+' →ROB', 'result ready · OOO return',
+                    '#22d3ee', { side:'left', smIdx:-1, life:5, fadeDelay:0 });
+                  // Find ROB slot for this SEQ#
+                  var robSlotIdx = 0;
+                  for (var rsi = 0; rsi < arbiterState.rob.length; rsi++) {
+                    if (arbiterState.rob[rsi].seq === captSeq) { robSlotIdx = rsi; break; }
+                  }
+                  var robTarget = robSlotPos(robSlotIdx);
+                  var dataLabel = 'DATA(' + (atomAddrN||'?') + ')#' + captSeq;
+
+                  // DATA travels: L2 top → arbiter bottom → below ROB slot → into ROB slot
+                  var arbBotCentre = arbExit;
+                  var belowSlot = { x: robTarget.x, y: arbBotCentre.y };
+                  particles.push(new Particle(l2Top(), arbBotCentre, '#ffa94d', dataLabel, 2.5, function() {
+                    particles.push(new Particle(arbBotCentre, belowSlot, '#ffa94d', dataLabel, 2.8, function() {
+                      particles.push(new Particle(belowSlot, robTarget, '#ffa94d', dataLabel, 2.8, function() {
+                        // DATA arrived at ROB — CHAIN: schedule next response 5–7s from NOW
+                        var nextGap = 5000 + Math.random() * 2000;
+                        setTimeout(fireNextDataResponse, nextGap);
+
+                        flash(layout.arbiter, '#ffa94d');
+                        var isHead = (arbiterState.rob.length > 0 &&
+                                      arbiterState.rob[0].seq === captSeq);
+                        if (isHead) {
+                          logOp('ROB: SEQ#'+captSeq+' is HEAD → retire now', '#51cf66');
+                        } else {
+                          logOp('ROB: SEQ#'+captSeq+' OOO → buffered in hold buffer', '#f59e0b');
+                        }
+                        arbiterAckFromL2(captSeq, function() {
+                          var retirePos = robSlotPos(0);
+                          var busEntry = arbiterBusEntry();
+                          logOp('ROB: SEQ#'+captSeq+' retired → DATA via bus → SM'+captIdx, '#a78bfa');
+                          // Orthogonal route: ROB slot → straight up to bus.y → left along bus to arbiter center → then to SM
+                          var upToBus = { x: retirePos.x, y: busEntry.y }; // same x as slot, at bus height
+                          particles.push(new Particle(retirePos, upToBus, '#51cf66', 'DATA', 2.8, function() {
+                            particles.push(new Particle(upToBus, busEntry, '#51cf66', 'DATA', 2.5, function() {
+                              spawnRoutedFromArbiter(captIdx, '#51cf66', 'DATA', 2.2, function() {
+                                layout.sms[captIdx].l1.state = 'modified';
+                                flashL1Slot(captIdx, atomAddr, '#f59e0b');
+                                setL1Dirty(captIdx, 'atomic');
+                                flash(layout.sms[captIdx].l1, '#f59e0b');
+                                stats.hits++; updateStats();
+                              });
+                            }));
+                          }));
+                        });
+                      }));
+                    }));
                   }));
-                }));
-              }, l2Jitter);
+                }
+
+                // Fire the first response after a 3–5s initial delay
+                var initialDelay = 3000 + Math.random() * 2000;
+                setTimeout(fireNextDataResponse, initialDelay);
+              }
             }));
           }));
         })(seq, smIdx);
@@ -6016,6 +6894,10 @@ function triggerAtomic() {
               }
               logOp('SM'+idx+': ATOM arrived → SEQ#'+seq, '#f59e0b');
               flash(layout.arbiter, '#f59e0b');
+              if (layout.arbiter) addCallout('atom-queued-'+seq,
+                layout.arbiter.x, layout.arbiter.y + layout.arbiter.h/2,
+                'ATOM queued', 'SEQ#'+seq+' · waiting grant',
+                '#f59e0b', { side:'left', smIdx:-1, life:4, fadeDelay:0 });
               pendingGrants.push({ seq: seq, smIdx: idx });
               // Sort by SEQ# so grants always issue in strict sequence order,
               // regardless of which SM's particle arrived at arbiterTop first.
@@ -6072,6 +6954,7 @@ function startApp() {
     buildInstrChips();
     lastTime = performance.now();
     requestAnimationFrame(drawFrame);
+    setTimeout(showIdleCallouts, 700);
   } catch(e) {
     var msg = 'startApp ERROR: ' + e.message + '\n' + (e.stack||'');
     console.error(msg);
@@ -6096,6 +6979,58 @@ if (document.readyState === 'loading') {
 } else {
   _launchApp();
 }
+
+// ── Background L2 writeback drain ────────────────────────────────────────
+// Real GPU hardware has a background eviction engine that continuously drains
+// dirty lines to DRAM. Fires every 3–6s: full particle animation
+// L2 → Memory Crossbar → Global Memory Interface → HBM, just like a real WB.
+var _l2EvictTimer = null;
+function _scheduleL2Drain() {
+  if (_l2EvictTimer) clearTimeout(_l2EvictTimer);
+  var delay = 3000 + Math.random() * 3000; // 3–6s between background evictions
+  _l2EvictTimer = setTimeout(function() {
+    if (!paused && initialized && layout.l2 && layout.globalMem && layout.hbm) {
+      // Find one dirty line to evict
+      var dirtyIdx = -1;
+      for (var _i = 0; _i < l2Lines.length; _i++) {
+        var _ln = l2Lines[_i];
+        var _isDirty = (typeof _ln === 'object' && _ln !== null)
+                       ? _ln.s === 2
+                       : _ln === 2;
+        if (_isDirty) { dirtyIdx = _i; break; }
+      }
+      if (dirtyIdx >= 0) {
+        // Mark clean immediately (hardware commits WB intent at eviction)
+        if (typeof l2Lines[dirtyIdx] === 'object') {
+          l2Lines[dirtyIdx].s = 1;
+        } else {
+          l2Lines[dirtyIdx] = 1;
+        }
+        // Full write-back animation: L2 → crossbar → GlobalMem → HBM
+        bubble(l2Bot().x, l2Bot().y, 'BG writeback', '#ffa94d',
+               { life: 1.4, sub: 'dirty victim → DRAM' });
+        flash(layout.l2, '#ffa94d');
+        particles.push(new Particle(l2Bot(), cbP(), '#ffa94d', 'WB', 1.8, function() {
+          particles.push(new Particle(cbP(), gmTop(), '#ffa94d', 'WB', 1.8, function() {
+            flash(layout.globalMem, '#339af0');
+            bubble(gmTop().x, gmTop().y, 'MC write', '#339af0',
+                   { life: 1.2, sub: 'scheduling store' });
+            particles.push(new Particle(gmTop(), gmBot(), '#ffa94d', 'WB', 1.8, function() {
+              particles.push(new Particle(gmBot(), hbmTop(), '#845ef7', 'STORE', 1.5, function() {
+                flash(layout.hbm, '#845ef7');
+                bubble(hbmTop().x, hbmTop().y, 'persisted', '#845ef7',
+                       { life: 1.5, sub: 'BG drain → DRAM' });
+              }));
+            }));
+          }));
+        }));
+      }
+    }
+    _scheduleL2Drain(); // always reschedule
+  }, delay);
+}
+// Start drain after initial settle — 4s gives the first scenario time to run
+setTimeout(_scheduleL2Drain, 4000);
 
 var explainerEl = document.getElementById('step-list');
 explainerEl.addEventListener('mousemove', function(e) {
