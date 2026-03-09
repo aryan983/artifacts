@@ -2,11 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>FV Interview Prep - Windows XP Edition</title>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0">
+<title>FV Interview Prep — Windows XP Edition</title>
 <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
 
 <div class="xp-window" id="mainWin">
@@ -15,126 +14,201 @@
     <div class="title-bar-icon">🔬</div>
     <div class="title-bar-text">FV Interview Prep — Formal Verification Flashcard Drill</div>
     <div class="title-bar-btns">
-      <div class="tb-btn minimize">─</div>
-      <div class="tb-btn maximize">□</div>
-      <div class="tb-btn close">✕</div>
+      <div class="tb-btn minimize" onclick="minimizeWindow()" title="Minimize">─</div>
+      <div class="tb-btn maximise" id="maximize-btn" onclick="maximizeWindow()" title="Maximize">□</div>
+      <div class="tb-btn close"    onclick="closeWindow()"    title="Close">✕</div>
     </div>
   </div>
-
   <!-- Menu Bar -->
   <div class="menu-bar">
-    <div class="menu-item">File</div>
-    <div class="menu-item">Edit</div>
-    <div class="menu-item" onclick="restartDeck()">Deck</div>
-    <div class="menu-item" onclick="toggleShuffle()">Shuffle</div>
-    <div class="menu-item">Help</div>
+    <span class="menu-item">File</span>
+    <span class="menu-item">Edit</span>
+    <span class="menu-item">Deck</span>
+    <span class="menu-item">Help</span>
   </div>
 
-  <!-- Toolbar / Filters -->
-  <div class="toolbar">
-    <span class="filter-label-xp">Filter:</span>
-    <div class="filter-group" id="filter-group">
-      <button class="xp-btn active-btn" onclick="setFilter('All',this)">All</button>
-      <button class="xp-btn" onclick="setFilter('Beginner',this)">🟢 Beginner</button>
-      <button class="xp-btn" onclick="setFilter('Intermediate',this)">🔵 Intermediate</button>
-      <button class="xp-btn" onclick="setFilter('Advanced',this)">🟡 Advanced</button>
-      <button class="xp-btn" onclick="setFilter('Jasper',this)">🟣 Jasper</button>
-      <button class="xp-btn" onclick="setFilter('Coverage',this)">🔵 Coverage</button>
-      <button class="xp-btn" onclick="setFilter('Mutation',this)">🟠 Mutation</button>
-      <button class="xp-btn" onclick="setFilter('Bug',this)">🐛 Spot Bug</button>
-      <button class="xp-btn" onclick="setFilter('SVA_Deep',this)">🔬 SVA Deep</button>
-      <button class="xp-btn" onclick="setFilter('Debug',this)">🔧 Debug FPV</button>
-      <button class="xp-btn" onclick="setFilter('Interview',this)">🎤 Interview</button>
-      <button class="xp-btn" onclick="setFilter('Methodology_Adv',this)">📋 Sign-off</button>
-      <button class="xp-btn" onclick="setFilter('CDC',this)">⚡ CDC</button>
-      <button class="xp-btn" onclick="setFilter('Liveness',this)">♾ Liveness</button>
-      <button class="xp-btn" onclick="setFilter('Bug2',this)">🐛🐛 Spot Bug II</button>
-    </div>
-    <div class="tb-sep"></div>
-    <button class="xp-btn" onclick="toggleShuffle()"><span id="shuffle-label">🔀 Shuffle: ON</span></button>
-    <button class="xp-btn" onclick="restartDeck()">↺ Restart</button>
+  <!-- Tab Bar -->
+  <div class="tab-bar">
+    <button class="tab-btn tab-active" id="tab-cards" onclick="switchTab('cards')">🃏 Flashcards</button>
+    <button class="tab-btn" id="tab-learn" onclick="switchTab('learn')">📚 Learn</button>
+    <button class="tab-btn" id="tab-tcl" onclick="switchTab('tcl')">💻 TCL Scripting</button>
   </div>
 
-  <!-- Window Body -->
-  <div class="window-body">
-
-    <!-- Stats -->
-    <div class="stats-panel">
-      <div class="stat-item"><span class="stat-val green" id="s-correct">0</span><span class="stat-label">Got It</span></div>
-      <div class="stat-item"><span class="stat-val red"   id="s-wrong">0</span><span class="stat-label">Missed</span></div>
-      <div class="stat-item"><span class="stat-val amber" id="s-skip">0</span><span class="stat-label">Skipped</span></div>
-      <div class="stat-item"><span class="stat-val"       id="s-remain">0</span><span class="stat-label">Left</span></div>
-      <div class="stat-item"><span class="stat-val"       id="s-total">0</span><span class="stat-label">Total</span></div>
-    </div>
-
-    <!-- Progress -->
-    <div class="progress-section">
-      <div class="xp-progress-wrap">
-        <div class="xp-progress-fill" id="progress-fill" style="width:0%"></div>
+  <!-- ═══════════════════ FLASHCARDS TAB ═══════════════════ -->
+  <div id="page-cards" class="tab-page">
+    <div class="toolbar">
+      <span class="toolbar-label">Filter:</span>
+      <div class="filter-group" id="filter-group">
+        <button class="xp-btn active-btn" onclick="setFilter('All',this)">All (213)</button>
+        <button class="xp-btn" onclick="setFilter('Beginner',this)">🟢 Beginner (25)</button>
+        <button class="xp-btn" onclick="setFilter('Intermediate',this)">🔵 Intermediate (25)</button>
+        <button class="xp-btn" onclick="setFilter('Advanced',this)">🟡 Advanced (10)</button>
+        <button class="xp-btn" onclick="setFilter('Jasper',this)">🟣 Jasper Apps (15)</button>
+        <button class="xp-btn" onclick="setFilter('Coverage',this)">📊 Coverage (10)</button>
+        <button class="xp-btn" onclick="setFilter('CovApp',this)">📈 Coverage App (10)</button>
+        <button class="xp-btn" onclick="setFilter('Mutation',this)">🧬 Mutation (10)</button>
+        <button class="xp-btn" onclick="setFilter('Bug',this)">🐛 Spot Bug (13)</button>
+        <button class="xp-btn" onclick="setFilter('Bug2',this)">🐛🐛 Spot Bug II (8)</button>
+        <button class="xp-btn" onclick="setFilter('SVA_Deep',this)">🔬 SVA Deep (10)</button>
+        <button class="xp-btn" onclick="setFilter('SVA_Int',this)">⚙️ SVA Internals (7)</button>
+        <button class="xp-btn" onclick="setFilter('Debug',this)">🔧 Debug FPV (10)</button>
+        <button class="xp-btn" onclick="setFilter('Abstraction',this)">🧩 Abstraction (10)</button>
+        <button class="xp-btn" onclick="setFilter('Interview',this)">🎤 Interview (22)</button>
+        <button class="xp-btn" onclick="setFilter('Methodology_Adv',this)">📋 Sign-off (8)</button>
+        <button class="xp-btn" onclick="setFilter('Hybrid',this)">🔀 Hybrid Flows (8)</button>
+        <button class="xp-btn" onclick="setFilter('CDC',this)">⚡ CDC (6)</button>
+        <button class="xp-btn" onclick="setFilter('Liveness',this)">♾ Liveness (6)</button>
       </div>
+    </div>
+    <div class="toolbar toolbar-controls">
+      <button class="xp-btn" onclick="toggleShuffle()" id="shuffle-label">🔀 Shuffle: ON</button>
+      <button class="xp-btn" onclick="restartDeck()">↺ Restart</button>
+      <div class="stats-bar">
+        <span class="stat-chip correct-chip"><span id="s-correct">0</span> Got It</span>
+        <span class="stat-chip wrong-chip"><span id="s-wrong">0</span> Missed</span>
+        <span class="stat-chip skip-chip"><span id="s-skip">0</span> Skip</span>
+        <span class="stat-chip remain-chip"><span id="s-remain">0</span> Left</span>
+        <span class="stat-chip total-chip"><span id="s-total">0</span> Total</span>
+      </div>
+    </div>
+    <div class="progress-bar-wrap">
+      <div class="progress-fill" id="progress-fill"></div>
       <div class="progress-text" id="progress-text">0 / 0</div>
     </div>
 
-    <!-- Main card area -->
     <div id="main-area">
-      <div class="xp-groupbox">
-        <div class="xp-groupbox-title">
-          <span class="q-num-tag" id="q-num">Q—</span>
+      <div class="card-body" id="card-body">
+        <div class="card-header-row">
+          <span class="q-num" id="q-num">Q—</span>
           <span class="diff-tag" id="diff-tag">—</span>
           <span class="cat-tag" id="cat-tag">—</span>
         </div>
-        <div class="card-body" id="card-body">
-          <div id="question-container"></div>
-          <div class="reveal-hint" id="reveal-hint" onclick="revealAnswer()">
-            ▼ Click to reveal answer &nbsp;<span class="key-hint">SPACE</span>
-          </div>
-          <div class="answer-block" id="answer-block">
-            <div class="answer-label" id="answer-label">ANSWER:</div>
-            <div id="answer-container"></div>
-          </div>
+        <div id="question-container"></div>
+        <div class="answer-block" id="answer-block">
+          <div class="answer-label" id="answer-label">ANSWER:</div>
+          <div id="answer-container"></div>
         </div>
-      </div>
-
-      <!-- Action buttons -->
-      <div class="action-row" id="action-row-reveal" style="margin-top:6px;">
-        <button class="action-xp-btn reveal-btn" onclick="revealAnswer()">▼ Reveal Answer &nbsp;<span class="key-hint">SPACE</span></button>
-      </div>
-      <div class="action-row" id="action-row-grade" style="display:none;margin-top:6px;">
-        <button class="action-xp-btn got-it-btn" onclick="grade('correct')">✔ Got It &nbsp;<span class="key-hint">1</span></button>
-        <button class="action-xp-btn missed-btn"  onclick="grade('wrong')">✘ Missed &nbsp;<span class="key-hint">2</span></button>
-        <button class="action-xp-btn skip-btn"    onclick="grade('skip')">→ Skip &nbsp;<span class="key-hint">3</span></button>
+        <div class="action-row" id="action-row-reveal">
+          <button class="xp-btn reveal-btn" onclick="revealAnswer()">▼ Reveal Answer &nbsp;<kbd>SPACE</kbd></button>
+        </div>
+        <div class="action-row" id="action-row-grade" style="display:none">
+          <button class="xp-btn grade-btn ok-btn" onclick="grade('correct')">✔ Got It &nbsp;<kbd>1</kbd></button>
+          <button class="xp-btn grade-btn bad-btn" onclick="grade('wrong')">✘ Missed &nbsp;<kbd>2</kbd></button>
+          <button class="xp-btn grade-btn skip-btn" onclick="grade('skip')">→ Skip &nbsp;<kbd>3</kbd></button>
+        </div>
       </div>
     </div>
 
-    <!-- Done screen -->
     <div class="done-screen" id="done-screen">
-      <div class="done-dialog">
-        <div class="done-title">🎉 Session Complete</div>
-        <div class="done-body">
-          <div class="done-icon">🏆</div>
-          <div class="done-score" id="final-score">—</div>
-          <div class="done-sub" id="final-sub"></div>
-          <div class="done-btns">
-            <button class="action-xp-btn reveal-btn" onclick="restartDeck()" style="flex:unset;padding:5px 16px;">↺ Restart</button>
-            <button class="action-xp-btn got-it-btn" onclick="reviewMissed()" style="flex:unset;padding:5px 16px;">Review Missed</button>
-          </div>
-          <div class="missed-list" id="missed-list"></div>
+      <div class="done-trophy">🎉</div>
+      <div class="done-title">Session Complete</div>
+      <div class="done-icon">🏆</div>
+      <div class="done-score" id="final-score"></div>
+      <div class="done-sub" id="final-sub"></div>
+      <div class="action-row" style="margin-top:16px">
+        <button class="xp-btn" onclick="restartDeck()">↺ Restart</button>
+        <button class="xp-btn" onclick="reviewMissed()">Review Missed</button>
+      </div>
+      <div id="missed-list" style="margin-top:16px;text-align:left"></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════ LEARN TAB ═══════════════════ -->
+  <div id="page-learn" class="tab-page" style="display:none">
+    <div class="ref-layout">
+      <div class="ref-sidebar" id="learn-sidebar"></div>
+      <div class="ref-content" id="learn-content">
+        <div class="ref-welcome">
+          <h2>📚 FV Reference Library</h2>
+          <p>Select a topic from the sidebar to view detailed reference material. Use this alongside the flashcards to understand the <em>why</em> behind the answers.</p>
+          <div class="ref-topics-grid" id="learn-topics-grid"></div>
         </div>
       </div>
     </div>
+  </div>
 
-  </div><!-- /window-body -->
-</div><!-- /xp-window -->
+  <!-- ═══════════════════ TCL TAB ═══════════════════ -->
+  <div id="page-tcl" class="tab-page" style="display:none">
+    <div class="ref-layout">
+      <div class="ref-sidebar" id="tcl-sidebar"></div>
+      <div class="ref-content" id="tcl-content">
+        <div class="ref-welcome">
+          <h2>💻 JasperGold TCL Scripting</h2>
+          <p>Comprehensive TCL reference for JasperGold FPV flows. Covers everything from language basics to production CI scripts. Select a section from the sidebar.</p>
+          <div class="ref-topics-grid" id="tcl-topics-grid"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
 
 <!-- Taskbar -->
+<!-- Start Menu -->
+<div id="start-menu" class="start-menu" style="display:none">
+  <div class="sm-header">
+    <div class="sm-header-icon">🔬</div>
+    <div class="sm-header-text">
+      <div class="sm-user">FV Engineer</div>
+      <div class="sm-sub">Formal Verification</div>
+    </div>
+  </div>
+  <div class="sm-body">
+    <div class="sm-left">
+      <div class="sm-section-label">Recently Opened</div>
+      <div class="sm-item" onclick="openWindow();closeStartMenu()">
+        <span class="sm-item-icon">🔬</span>
+        <span class="sm-item-text">FV Interview Prep</span>
+      </div>
+      <div class="sm-item" onclick="switchTabFromMenu('learn');closeStartMenu()">
+        <span class="sm-item-icon">📚</span>
+        <span class="sm-item-text">Learn Reference</span>
+      </div>
+      <div class="sm-item" onclick="switchTabFromMenu('tcl');closeStartMenu()">
+        <span class="sm-item-icon">💻</span>
+        <span class="sm-item-text">TCL Scripting</span>
+      </div>
+      <div class="sm-divider"></div>
+      <div class="sm-item" onclick="restartDeck();openWindow();closeStartMenu()">
+        <span class="sm-item-icon">🔄</span>
+        <span class="sm-item-text">Restart Deck</span>
+      </div>
+    </div>
+    <div class="sm-right">
+      <div class="sm-item sm-right-item" onclick="closeStartMenu()">
+        <span class="sm-item-icon">📁</span>
+        <span class="sm-item-text">All Categories</span>
+      </div>
+      <div class="sm-divider"></div>
+      <div class="sm-item sm-right-item shutdown" onclick="closeWindow();closeStartMenu()">
+        <span class="sm-item-icon">🔴</span>
+        <span class="sm-item-text">Close Window</span>
+      </div>
+    </div>
+  </div>
+  <div class="sm-footer">
+    <button class="sm-footer-btn" onclick="closeWindow();closeStartMenu()">🔴 Turn Off Computer</button>
+  </div>
+</div>
+
+<!-- Closed screen (shown when window is closed) -->
+<div id="closed-screen" style="display:none" class="closed-screen">
+  <div class="desktop-icon" ondblclick="openWindow()">
+    <div class="di-icon">🔬</div>
+    <div class="di-label">FV Interview Prep</div>
+  </div>
+</div>
+
 <div class="taskbar">
-  <button class="start-btn">⊞ start</button>
+  <button class="start-btn" onclick="toggleStartMenu()" id="start-btn">⊞ start</button>
   <div class="taskbar-sep"></div>
-  <div class="taskbar-app">🔬 FV Interview Prep</div>
+  <div class="taskbar-app active-task" id="taskbar-app-btn" onclick="toggleWindow()">🔬 FV Interview Prep</div>
   <div class="taskbar-clock" id="taskbar-clock">00:00</div>
 </div>
 
 <script src="questions.js"></script>
+<script src="learn.js"></script>
+<script src="tcl_ref.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

@@ -175,3 +175,525 @@ const ALL_QUESTIONS = [
   {id:907,diff:"Bug2",cat:"Spot the Bug II",q:"What is wrong with this use of $past in a reset property?",code:"assert property (@(posedge clk)\n  $rose(rst_n) |-> $past(state, 1) == IDLE);",a:"$past(state, 1) at the cycle when $rose(rst_n) is true gives the value of state at the PREVIOUS cycle — which is the last cycle when rst_n was low (during reset).\n\nThe property checks: 'at the cycle reset deasserts, the state in the PREVIOUS cycle (during reset) was IDLE.' This may or may not be useful, but almost certainly NOT what was intended.\n\nTypical intent: 'after reset deasserts, the first post-reset state is IDLE.' Correct form:\nassert property (@(posedge clk)\n  $rose(rst_n) |=> state == IDLE);\n\nUsing |=> checks state at the NEXT cycle after $rose(rst_n) — the first clock edge after reset deasserts, when flops have propagated to their reset values.\n\n$past looks BACKWARDS; use |=> to check FORWARD."},
   {id:908,diff:"Bug2",cat:"Spot the Bug II",q:"What is wrong with this property intended to check a FIFO never loses data?",code:"assert property (@(posedge clk)\n  push_en && !full |=>\n    ##[1:DEPTH] (pop_en && pop_data == push_data));",a:"Three bugs:\n\n1) push_data is captured at push time but the sequence waits [1:DEPTH] cycles for pop. By then, push_data (an input) may have changed. The assertion checks push_data's CURRENT value at the pop cycle — not the value that was pushed. Fix: use a local variable:\n  (push_en && !full, data_cap = push_data) ##[1:DEPTH] (pop_en && pop_data == data_cap)\n\n2) The property does not specify WHICH pop is the corresponding one. If multiple pops happen, only the first matching pop satisfies the [1:DEPTH] window — other data might be silently dropped.\n\n3) No disable iff for reset — a push during reset creates an obligation that may not be satisfiable from the reset state."}
 ];
+// ── COVERAGE APP (ids 1001–1010) ──────────────────────────────
+ALL_QUESTIONS.push(
+{id:1001,diff:"CovApp",cat:"Coverage App",
+q:"What does the JasperGold Coverage App (FCA) prove, and how is it fundamentally different from simulation coverage?",
+a:"The Coverage App formally proves whether each coverage target is REACHABLE under any possible input sequence.\n\nThree possible results:\n- Covered: formal witness found — there exists a valid input sequence that hits this target.\n- Unreachable: formally proven impossible. No input sequence, ever, can reach that code. Mathematical proof — not just 'we didn't test it.'\n- Undetermined: timed out or hit resource limits at the current proof depth.\n\nSimulation coverage gives you: 'these tests hit this line.'\nFormal coverage gives you: 'this line is provably reachable / provably dead.'\n\nThe Unreachable result is the key differentiator — it eliminates false coverage goals entirely, something simulation fundamentally cannot do. Simulation at 100% means every target was hit in some test. Formal closure means every reachable target is proven reachable and every dead one is proven dead."},
+
+{id:1002,diff:"CovApp",cat:"Coverage App",
+q:"What types of coverage targets does the JasperGold Coverage App analyse?",
+a:"Line/statement coverage — which RTL lines are reachable.\nBranch coverage — both directions of every if/case branch.\nCondition coverage — each sub-expression in compound conditions.\nFSM state coverage — which states can be reached from reset.\nFSM transition coverage — which arcs of the state diagram can fire.\nToggle coverage — which signal bits can go 0->1 and 1->0.\nUser-defined cover properties — your SVA cover property() statements.\n\nFor each target: Covered (witness found) / Unreachable (proven impossible) / Undetermined (incomplete).\n\nThe Covered results come with witness traces you can replay in simulation as directed tests. The Unreachable results eliminate those targets from your simulation plan permanently."},
+
+{id:1003,diff:"CovApp",cat:"Coverage App",
+q:"What is 'formally closed coverage' and what are the conditions to claim it?",
+a:"Formally closed coverage means every coverage target in scope has a definitive formal result — Covered or Unreachable.\n\nConditions to claim it:\n1. Zero Undetermined results — or all Undetermined targets explicitly bounded and accepted at documented proof depth.\n2. Every Unreachable target reviewed: intentional dead code (waived), RTL bug (fixed), or over-constrained environment (constraint loosened).\n3. The analysis ran with correct clock, reset, and environment constraints — not an over-constrained model making everything appear unreachable.\n4. Waivers signed off.\n\nFormal closure is stronger than simulation closure. 100% simulation coverage means every target was hit in some test — but the test may have used impossible stimulus. Formal closure means every unreachable result is a proof, not a gap."},
+
+{id:1004,diff:"CovApp",cat:"Coverage App",
+q:"How do formal coverage witnesses accelerate simulation coverage closure?",
+a:"A coverage witness is the exact input sequence from reset that the solver found to hit a coverage target. It's the shortest proven path to a hard corner case.\n\nWorkflow:\n1. Run Coverage App. For every Covered target, JasperGold stores a witness trace.\n2. Export: report_witness -property <name> -format vcd -out witness.vcd\n   Batch: foreach p [get_property_list -include {status==covered}] { report_witness -property $p -format vcd -out witnesses/$p.vcd }\n3. Replay in simulation: convert VCD to UVM sequence or directed test. Run it — closes the coverage target immediately, mathematically guaranteed.\n\nFor Unreachable targets: stop writing tests entirely. They're dead code.\n\nThis eliminates the 'write 1000 random tests hoping to hit corner cases' anti-pattern. The formal tool hands you exact stimulus for every reachable corner case."},
+
+{id:1005,diff:"CovApp",cat:"Coverage App",
+q:"What is FSM coverage in the Coverage App and what are the most valuable findings?",
+a:"The Coverage App auto-extracts FSMs from always_ff blocks and checks:\n- State reachability: can every encoded state be reached from reset?\n- Transition reachability: can every arc of the state diagram be taken?\n- Reset state: does the FSM always start in the documented reset state?\n\nMost valuable findings:\n1. Unreachable states: states that can never be entered. Often means: missing trigger condition, wrong encoding, or a feature spec'd but never implemented in the RTL entry path. Real RTL bug.\n2. Unreachable transitions: an arc exists in the RTL but the condition that fires it can never be true given inputs. Dead logic.\n3. Asymmetric reachability: you can reach state S from IDLE but can never return to IDLE from S. Potential deadlock.\n\nPair FSM coverage with explicit cover property assertions on each state to cross-validate the formal results with your property set."},
+
+{id:1006,diff:"CovApp",cat:"Coverage App",
+q:"How do you use formal coverage to eliminate simulation targets before running any simulation?",
+a:"Run Coverage App before simulation, not after — this is the highest-ROI use.\n\n1. RTL drops. Run Coverage App immediately. No properties, no testbench needed.\n2. Get Unreachable list. These targets are provably dead. Remove them from your simulation coverage plan now.\n3. Update the verification plan: annotate each removed target with the formal proof as justification. No reviewer can argue with a formal proof.\n4. Remaining targets are all provably reachable. Simulation only needs to hit these.\n5. Export witnesses for Covered targets — replay them in simulation to close immediately.\n\nResult: your simulation plan is smaller (no dead targets), every target in it is achievable, and you have formal-generated stimulus for most. Coverage closure time drops significantly. You never write a test for dead code again."},
+
+{id:1007,diff:"CovApp",cat:"Coverage App",
+q:"What does an Unreachable coverage result mean for RTL quality and what do you do with each one?",
+a:"An Unreachable result is a mathematical certificate that no input sequence can ever execute that code.\n\nWhat it means:\n1. Dead code — intentional or unintentional. May be a defensive default case (fine, waive it) or a feature the spec described but the RTL logic inadvertently blocks (RTL bug).\n2. Over-constrained environment — your assume set is too tight. The code would be reachable in reality, but your assumes prevent it. FV environment bug.\n\nDisposition process for every single Unreachable result:\n- Intentional dead code: waive with justification in sign-off document.\n- RTL bug: file bug, fix RTL, re-run.\n- Over-constrained: loosen the assume, re-run. If it becomes Covered, your original environment was wrong.\n\nNever silently batch-waive Unreachable results. Each one requires an explicit engineering decision."},
+
+{id:1008,diff:"CovApp",cat:"Coverage App",
+q:"What are the limitations of toggle coverage even when measured formally?",
+a:"Toggle coverage tracks whether each signal bit can transition 0->1 and 1->0.\n\nIn formal: the Coverage App proves whether each toggle is achievable — Covered means the solver found a path that flips the bit; Unreachable means it's provably stuck.\n\nLimitations:\n1. Necessary but not sufficient. A bit that toggles in many wrong contexts passes toggle coverage. Toggling doesn't mean toggling correctly.\n2. No correlation between bits. Proving bit[0] can be 1 and bit[1] can be 1 independently doesn't prove they can be 1 simultaneously.\n3. No ordering. Toggle coverage is stateless — doesn't check that a toggle happens at the right time or in response to the right condition.\n4. Wide bus inflation. A 64-bit bus = 128 toggle targets. Formally proving all 128 tells you nothing about data path correctness.\n\nBest use: tells you which signals are live (not stuck at a constant). If a signal never toggles in either direction, it's dead logic. Combine with assertion coverage for meaningful behavioural checking."},
+
+{id:1009,diff:"CovApp",cat:"Coverage App",
+q:"Why do you need both formal coverage AND mutation coverage? What does each miss alone?",
+a:"They answer completely different questions.\n\nFormal coverage (structural): 'Which parts of the RTL are reachable?' Says nothing about whether your verification catches bugs there.\n\nMutation coverage: 'Does my assertion set catch bugs?' Mutates the RTL (flip operator, offset constant, stuck bit) and checks whether any assertion falsifies the mutant. High score = properties are sensitive to RTL changes.\n\nWhat each misses alone:\n- 100% formal coverage + zero assertions = perfect coverage, zero bug-catching. Reachability proven, no properties to check correctness.\n- 100% mutation score + 20% formal coverage = strong assertions over 20% of the design. The other 80% unchecked.\n\nYou need both: formal coverage confirms every reachable state is being explored; mutation score confirms the property set catches bugs in those states. Sign-off requires demonstrating both dimensions."},
+
+{id:1010,diff:"CovApp",cat:"Coverage App",
+q:"Write the minimal JasperGold TCL script to run the Coverage App in batch mode and export results.",
+a:"clear -all\nanalyze -sv09 -f filelist.f\nelaborate -top my_module\nclock clk\nreset -expression {!rst_n}\n\n# Run formal coverage\ncheck_coverage -type {line branch fsm toggle}\n\n# Report\nreport_coverage -summary\nreport_coverage -format html -out coverage_report.html\n\n# List unreachable targets\nset unreach [get_coverage_list -filter {status == unreachable}]\nforeach t $unreach { puts \"UNREACHABLE: $t\" }\n\n# Export witnesses for all covered targets\nfile mkdir witnesses\nforeach p [get_property_list -include {status == covered}] {\n  report_witness -property $p -format vcd \\\n    -out witnesses/${p}.vcd\n}\n\n# Run in batch: jg -batch -tcl run_cov.tcl -logfile cov.log"}
+);
+
+// ── ABSTRACTIONS & MODELLING (ids 1101–1110) ──────────────────
+ALL_QUESTIONS.push(
+{id:1101,diff:"Abstraction",cat:"Abstractions & Modelling",
+q:"What is state space explosion and why does it kill FPV on large designs?",
+a:"A design with N flip-flops has up to 2^N reachable states. A block with 100 FFs has more states than atoms in the observable universe. Formal tools prove properties by exploring this space — too large means timeout or memory exhaustion.\n\nExplosion contributors:\n- Wide data buses: a 32-bit bus contributes 2^32 values per cycle\n- Deep pipelines: state grows multiplicatively with depth\n- Large FIFOs: depth-256 width-32 FIFO has 8192 state bits — catastrophic\n- Interacting FSMs: independent state machines multiply the state space\n\nAbstraction is the engineering response: replace detailed logic with simpler models that preserve the properties being proven. Core principle: the abstract model must be a superset of real behaviours (soundness) — it may allow more behaviours (over-approximation) but must allow all real ones."},
+
+{id:1102,diff:"Abstraction",cat:"Abstractions & Modelling",
+q:"What is the standard 3-property FIFO abstraction and why is it sound?",
+a:"A FIFO with depth D and width W has D*W state bits. The 3-property abstraction replaces the full model:\n\n1. Occupancy bounds:\nassert property (@(posedge clk) occupancy >= 0 && occupancy <= DEPTH);\n\n2. Flag correctness:\nassert property (@(posedge clk) full == (occupancy==DEPTH));\nassert property (@(posedge clk) empty == (occupancy==0));\n\n3. Data integrity (symbolic scoreboard):\n- Pick one symbolic address/position and one symbolic data value (free variables)\n- Track that symbolic data written at that position emerges in order at the output\n\nSoundness: by the substitution principle. Any component correctly interacting with the real FIFO will also correctly interact with any model satisfying these three observable contracts. The FIFO is then set_blackbox'd and its outputs constrained by these three assumes. State reduces from D*W bits to ~log2(D) bits (occupancy counter) + one symbolic pair."},
+
+{id:1103,diff:"Abstraction",cat:"Abstractions & Modelling",
+q:"What is counter abstraction and when is it valid?",
+a:"Counter abstraction replaces a concrete N-bit counter with a free (unconstrained) variable plus boundary constraints.\n\nValid when: the property depends only on boundary behaviour (reaching max, reaching zero) — NOT on specific mid-range values.\n\nPattern:\n// Replace concrete counter with free variable\nlogic [W-1:0] credits_abs; // unconstrained\n// Add boundary constraints\nassume property (@(posedge clk) credits_abs <= MAX_CREDITS);\n// Prove boundary property\nassert property (@(posedge clk) !consume || credits_abs > 0);\n\nWhen NOT valid: if the property cares about specific mid-range values (e.g., 'exactly 3 cycles after req, grant fires'), abstraction loses precision.\n\nSoundness: the abstract model over-approximates — it allows the counter to jump anywhere within bounds between cycles. If a property is proven on the over-approximation, it holds on the concrete counter. If you get a CEX, verify it's not spurious by checking whether the counter jump is physically possible."},
+
+{id:1104,diff:"Abstraction",cat:"Abstractions & Modelling",
+q:"Describe the symbolic variable trick for memory verification. Write the bind file pattern.",
+a:"A 256x32 memory has 8192 state bits — completely intractable. The trick: prove data integrity for ONE symbolic address and ONE symbolic data value. Because they're free variables, the proof holds for ALL addresses and ALL data simultaneously.\n\nBind file pattern:\nmodule mem_fv_props #(parameter AW=8, DW=32) (\n  input clk, rst_n,\n  input wr_en, [AW-1:0] wr_addr, [DW-1:0] wr_data,\n  input rd_en, [AW-1:0] rd_addr, output [DW-1:0] rd_data);\n\n  logic [AW-1:0] sym_addr; // free variable — solver picks any\n  logic [DW-1:0] sym_data; // free variable — solver picks any\n\n  logic written;\n  always_ff @(posedge clk or negedge rst_n)\n    if (!rst_n) written <= 0;\n    else if (wr_en && wr_addr==sym_addr && wr_data==sym_data)\n      written <= 1;\n\n  ap_integrity: assert property (\n    @(posedge clk) disable iff (!rst_n)\n    written && rd_en && rd_addr==sym_addr\n    |-> rd_data == sym_data);\nendmodule\nbind mem_model mem_fv_props fv_i (.*);\n\nSolver treats sym_addr/sym_data as universally quantified — one proof covers all addresses and all data values."},
+
+{id:1105,diff:"Abstraction",cat:"Abstractions & Modelling",
+q:"What does set_blackbox do in JasperGold and what are the soundness implications?",
+a:"set_blackbox -design {module_name} removes the module's entire internal logic. The module's output ports become FREE VARIABLES — unconstrained, can take any value at any time.\n\nSoundness:\n- Property PROVEN with blackbox: holds even when the module can output anything -> holds a fortiori for the real (more constrained) module. Safe.\n- CEX found with blackbox: may be spurious — the blackboxed module might have taken an output value the real module would never produce. Must verify.\n\nBest practice: after blackboxing, add assume properties constraining the module's outputs to its interface contract:\nset_blackbox -design {arbiter_sub}\nassume property (@(posedge clk) $onehot0(arb_grant)); // contract\nassume property (@(posedge clk) grant |-> $past(req)); // contract\n\nThis tightens the over-approximation and reduces spurious CEX."},
+
+{id:1106,diff:"Abstraction",cat:"Abstractions & Modelling",
+q:"What is `stopat` in JasperGold, how does it differ from set_blackbox, and when do you use it?",
+a:"stopat <signal_path> cuts a specific signal — from that point forward it becomes a free variable. Signal-level abstraction vs. set_blackbox's module-level abstraction.\n\nKey difference:\n- set_blackbox: removes entire module, all outputs free.\n- stopat: cuts ONE signal anywhere in hierarchy, regardless of module boundaries. More surgical.\n\nWhen to use stopat:\n1. Only one output of a submodule is causing complexity — blackboxing the whole module is too coarse.\n2. Formal fault injection: stopat on a state register output (e.g., FSM state_o) injects any arbitrary value. Prove security properties hold under any corrupted state. This is how OpenTitan verifies prim_count and prim_double_lfsr security assertions — stopat on state registers, then prove fault-detection properties activate under any corrupted state.\n3. Cutting combinational feedback loops causing convergence problems.\n\nJG command: stopat dut.datapath.complex_unit.result\n\nSoundness: same as cutpoints — over-approximation. Proofs hold; CEX may be spurious."},
+
+{id:1107,diff:"Abstraction",cat:"Abstractions & Modelling",
+q:"What is a ghost (auxiliary) variable, where MUST it live, and why?",
+a:"A ghost variable is verification-only logic tracking design state to enable richer assertions — never synthesised, never in the real design.\n\nWhere it MUST live: in a separate bind file — NEVER inside the RTL module being verified.\n\nWhy: putting always_ff ghost logic inside the RTL module causes it to synthesise — you've permanently added state to the real design. Hard bug.\n\nCorrect pattern:\n// In arbiter_fv.sv (bind file ONLY):\nmodule arbiter_fv (input clk, rst_n, req, ack);\n  // Ghost: tracks how many cycles req has been waiting\n  logic [7:0] req_age;\n  always_ff @(posedge clk or negedge rst_n)\n    if (!rst_n || !req) req_age <= 0;\n    else req_age <= req_age + 1;\n\n  // Bounded latency assertion using ghost\n  ap_latency: assert property (\n    @(posedge clk) disable iff (!rst_n)\n    req_age >= MAX_WAIT |-> ack);\nendmodule\nbind arbiter arbiter_fv fv_i (.*);\n\nCompile only under +define+FPV=1. The DUT sees no changes. Bind injects non-intrusively."},
+
+{id:1108,diff:"Abstraction",cat:"Abstractions & Modelling",
+q:"What is set_case_analysis in JasperGold and how does it differ from an assume property?",
+a:"set_case_analysis <value> <signal_path> forces a signal to a constant value at ELABORATION TIME — it's compile-time constant propagation. The solver simplifies the logic netlist, collapsing all logic in the COI that depends on this signal.\n\nset_case_analysis 0 {dut.dft_mode}  // DFT logic collapses out of the model\nset_case_analysis 1 {dut.func_en}   // Functional path always active\n\nDifference from assume property:\n- set_case_analysis: acts at elaboration time — actually simplifies the circuit. Smaller model, faster proof.\n- assume property (@(posedge clk) !dft_mode): runtime constraint. The DFT logic is still in the model; the solver just never explores paths where dft_mode=1. Less efficient.\n\nUse set_case_analysis for signals that are truly constant in the verification context (DFT mode, configuration bits, clock gate enables). Use assume for signals that are almost always a certain value but can change (e.g., a feature enable that's usually 1 but you want to constrain for this proof)."},
+
+{id:1109,diff:"Abstraction",cat:"Abstractions & Modelling",
+q:"What is reset abstraction and when does it help convergence?",
+a:"Reset abstraction allows the solver to start from non-zero initial state values — instead of forcing the proof to always begin from the fixed post-reset state.\n\nWhy it helps:\n1. FIFO pointer wrap-around bugs: pointers reset to 0, interesting bugs happen near DEPTH. Reset abstraction lets the solver start with pointers near DEPTH and find wrap bugs at proof depth=2 instead of depth=DEPTH.\n2. Slow ramp-up designs: designs that need many cycles post-reset to reach interesting states. Reset abstraction jumps directly to mid-operation states.\n3. Counter overflow: start near MAX rather than from 0 — finds overflow bugs at depth=1.\n\nIn JasperGold: constrain initial values in the bind file rather than forcing fixed reset values:\n// Allow write pointer to start anywhere within valid range\nassume property (@(posedge clk) $past(cyc_cnt,1)==0 |-> wr_ptr inside {[0:DEPTH-1]});\n\nCaveat: a CEX from non-zero initial state may not be reachable from real reset. Validate whether the initial state requires a long sequence to reach from reset before filing as a real bug."},
+
+{id:1110,diff:"Abstraction",cat:"Abstractions & Modelling",
+q:"What makes an FPV environment model good vs. dangerous?",
+a:"The environment model is the set of assumes constraining the DUT's inputs to valid stimulus space.\n\nGood environment model:\n- Tight enough: excludes physically impossible inputs (push when full, address out of range).\n- Loose enough: includes ALL valid input sequences the real system can produce. Over-constraining hides real bugs.\n- Every assume cites a spec clause as justification.\n- Companion cover properties verify every assume is satisfiable. If a cover is Uncovered, an assume is too tight.\n- Correct reset modelling: inputs behave correctly during and after reset.\n\nDangerous patterns:\n- Copied assumes from a previous project: massively over-constrains the new design, produces vacuous proofs.\n- Assume that mirrors the assert: assume (A |-> B) while trying to prove (A |-> B). You've assumed the conclusion. Instant vacuous proof.\n- Missing assumes: solver explores physically impossible inputs, generates false CEX.\n\nThe triangle of trust: write assumes -> write covers verifying assumes are satisfiable -> write asserts. If a cover is Uncovered, an assume is too tight. If a CEX looks wrong, an assume is missing."}
+);
+
+// ── SVA INTERNALS (ids 1201–1207) ─────────────────────────────
+ALL_QUESTIONS.push(
+{id:1201,diff:"SVA_Int",cat:"SVA Internals",
+q:"What is the difference between antecedent vacuity and consequent vacuity in SVA?",
+a:"Two distinct vacuity types, often conflated:\n\nAntecedent vacuity (common): the antecedent of an implication NEVER fires. Property p |-> q proves because p is never true — nothing is ever checked.\nExample: assert property (state==S_GRANT |-> grant_valid);\nIf state never reaches S_GRANT, this proves vacuously.\nDetection: run companion cover property (state==S_GRANT). If Uncovered, antecedent never fires. JasperGold check_vacuity catches this.\n\nConsequent vacuity (harder to catch): the consequent q is always true regardless of the antecedent — it's a tautology.\nExample: assert property (req |-> (a || !a));\nConsequent (a||!a) is always true. Property proves trivially even if req fires constantly.\nDetection: requires mutation testing or manual review. JasperGold check_vacuity primarily catches antecedent vacuity — consequent vacuity requires mutation testing (flip an operator in the consequent; if the assertion still passes, the consequent may be a tautology)."},
+
+{id:1202,diff:"SVA_Int",cat:"SVA Internals",
+q:"What are the exact semantics of `disable iff` — synchronous or asynchronous — and why does it matter?",
+a:"disable iff implements ASYNCHRONOUS disabling — property evaluation is abandoned immediately when the disable condition becomes true, not at the next clock edge.\n\n- The disable condition is sampled continuously. If rst_n goes low MID-SEQUENCE, in-flight evaluations are abandoned at that point.\n- No failure is reported for the abandoned incomplete sequence.\n\nWhy it matters:\nFor asynchronous reset designs — if reset deasserts between clock edges, disable iff correctly abandons evaluation immediately. A synchronous model (using |-> in the clock domain) only checks reset at clock edges and CAN miss a brief async reset pulse.\n\nCorrect for async reset design:\nassert property (@(posedge clk) disable iff (!rst_n)\n  req |-> ##[1:8] ack);\n\nSynchronous-only model (less correct for async reset):\nassert property (@(posedge clk) (!rst_n) |-> ...);\n// Only checks reset at posedge clk — misses sub-cycle async behaviour\n\nFor synchronous reset designs: both forms give equivalent results. For async reset designs: always use disable iff."},
+
+{id:1203,diff:"SVA_Int",cat:"SVA Internals",
+q:"What are the scoping rules for local variables in SVA sequences?",
+a:"Local variables capture values mid-sequence and carry them forward. Key rules:\n\n1. Scoped to the declaring sequence — cannot be referenced outside it.\n2. Comma operator assigns on firing: (condition, var = expr) — assignment happens when the condition is satisfied at that sequence step.\n3. Antecedent->consequent transfer: local variables declared in the antecedent CAN be used in the consequent. Main use case: capture data at write time, verify at read time.\n4. Repetitions [*N]: the variable is NOT shared across repetitions — each iteration gets its own instance. Use external ghost logic if you need to accumulate across repetitions.\n\nExample:\nproperty data_integrity;\n  logic [31:0] cap;\n  @(posedge clk) disable iff (!rst_n)\n  (wr_en, cap = wr_data) |-> ##[1:16] (rd_valid && rd_data == cap);\nendproperty\n\nThis captures wr_data at write time, then checks rd_data matches within 16 cycles."},
+
+{id:1204,diff:"SVA_Int",cat:"SVA Internals",
+q:"What does `bind` do in SystemVerilog, what are the advantages for FPV, and what are its hard limits?",
+a:"bind <target_module> <checker_module> <instance_name> (<connections>);\n\nbind injects a checker module into target_module's scope non-intrusively. The checker sees all DUT internal signals. The RTL source is unchanged.\n\nAdvantages:\n- Non-intrusive: RTL unchanged, zero synthesis impact.\n- Full internal visibility: checker can reference any internal signal, not just ports.\n- Reusable: same bind file applies to every instance of the module.\n- Excludable: compile only under +define+FPV=1 — synthesis never sees it.\n\nHard limits:\n- Read-only: checker can READ internal DUT signals but CANNOT drive them back into the DUT.\n- No new I/O: you cannot add visible ports to the target module via bind.\n- Parameterised targets: need careful parameter matching in the bind statement."},
+
+{id:1205,diff:"SVA_Int",cat:"SVA Internals",
+q:"What is the most common SVA bug from confusing |-> and |=>?",
+a:"The most common: using |-> (same-cycle) instead of |=> (next-cycle) for a registered output.\n\n|-> overlapping: antecedent true at cycle T -> consequent must be true at SAME cycle T.\n|=> non-overlapping: antecedent true at cycle T -> consequent must be true at cycle T+1.\n|=> is exactly equivalent to: |-> ##1\n\nBuggy (registered output):\nassert property (@(posedge clk) wr_en |-> reg_updated);\n// reg_updated is a flip-flop — it appears ONE cycle AFTER wr_en\n// Same-cycle check is always false -> assertion constantly fails or is trivially vacuous\n\nCorrect:\nassert property (@(posedge clk) wr_en |=> reg_updated);\n\nAnother common confusion:\nassert property (@(posedge clk) count==MAX |-> count==0);\n// Same cycle: count can't be MAX and 0 simultaneously\nassert property (@(posedge clk) count==MAX |=> count==0);\n// Next cycle: checks counter wraps after MAX — correct\n\nRule: combinational relationship -> use |->; registered output -> use |=>."},
+
+{id:1206,diff:"SVA_Int",cat:"SVA Internals",
+q:"What do $rose, $fell, $stable, $changed actually sample, and what are the critical edge cases to know?",
+a:"All four compare current sampled value against PREVIOUS SAMPLED value (one clock tick ago):\n\n$rose(x): LSB was 0 last cycle, is 1 this cycle. Equivalent to: !$past(x) && x\n$fell(x): LSB was 1 last cycle, is 0 this cycle. Equivalent to: $past(x) && !x\n$stable(x): same value as last cycle. Equivalent to: x == $past(x,1)\n$changed(x): different value than last cycle. Equivalent to: !$stable(x)\n\nCritical edge cases:\n1. Undefined at time 0: no 'previous' value exists. Defaults: $stable->1, $rose->0, $fell->0, $changed->0. $stable(data) silently passes at reset even if data is garbage. ALWAYS use disable iff(!rst_n).\n\n2. $rose/$fell only check the LSB for multi-bit expressions. For multi-bit transition detection use $changed.\n\n3. Stability gotcha: $stable(data) is true on the very first cycle even if data was garbage before — it just needs to not change THIS cycle vs. last. Guard explicitly:\n  valid && !$past(valid) |=> $stable(data) // stability from second valid cycle\n\n4. $past(x, N) returns 0 for time steps before N cycles have elapsed — causes false passes at startup without disable iff."},
+
+{id:1207,diff:"SVA_Int",cat:"SVA Internals",
+q:"What are strong vs. weak SVA operators (IEEE 1800-2012) and when do they matter in formal?",
+a:"Weak operators (default): if a sequence doesn't complete by end of proof horizon, the property PASSES. Incomplete = vacuous pass.\n\nStrong operators (s_ prefix): if sequence doesn't complete by end of proof horizon, property FAILS. Incomplete = violation.\n\nKey strong operators:\n- s_eventually(p): fails if p never becomes true within proof bound\n- s_nexttime(p): fails at last evaluated time step if p not seen\n- strong(seq): makes any sequence fail-if-incomplete\n\nWhen they matter in formal:\n- Weak semantics + bounded proof: a liveness property ##[1:$] ack may 'pass' if the solver can't find a long enough CEX within the depth. Property passes vacuously for short paths that don't resolve.\n- Strong semantics: s_eventually ack fails if the solver finds ANY finite path where ack never fires — closer to true liveness checking.\n\nPractical reality: most industrial FPV uses explicit bounded ranges (##[1:MAX_CYCLES]) rather than s_eventually because strong operator proof behaviour varies by tool version and proof depth. Explicit bounds are more predictable and debuggable."}
+);
+
+// ── METHODOLOGY: HYBRID FLOWS (ids 1301–1308) ─────────────────
+ALL_QUESTIONS.push(
+{id:1301,diff:"Hybrid",cat:"Methodology",
+q:"What is the two-phase FPV methodology and why is it structured this way?",
+a:"Phase 1 — Structural (before writing any SVA property):\n- Superlint App: latches, reset-incomplete FFs, dead states, combo loops, X-propagation\n- Coverage App: identify dead code before investing in functional properties\n- Connectivity App: verify expected paths exist / unwanted paths don't\n- CDC App: structural clock domain violations\nGoal: RTL is structurally clean. Typically takes days.\n\nPhase 2 — Functional FPV:\n- Write and prove SVA properties, scoped using Phase 1 results\nGoal: prove the design does what the spec says.\n\nWhy structured this way:\n1. Phase 1 catches real bugs immediately with high ROI — no property writing required.\n2. Structural bugs corrupt functional proofs. A latch or reset issue causes spurious CEX in functional properties. Fix structure first.\n3. Dead code from Phase 1 eliminates a portion of functional scope — smaller Phase 2.\n4. Phase 1 runs can start the moment RTL drops, while property writing happens in parallel."},
+
+{id:1302,diff:"Hybrid",cat:"Methodology",
+q:"What are the top reasons FPV efforts fail or get abandoned on real projects?",
+a:"1. Scope too large from day one: trying to verify a 100K-line SoC block instead of individual modules. State space explodes immediately. Fix: always start with block-level FPV.\n\n2. No sign-off criteria defined upfront: team runs FPV with no agreed exit conditions. Proof runs indefinitely. Fix: agree on proof targets, depth, mutation score before writing the first property.\n\n3. Properties written without design understanding: trivially vacuous or constantly falsifying correct RTL. Fix: day-1 pairing between FV engineer and RTL designer is mandatory.\n\n4. Non-convergence treated as 'FPV doesn't work here': first run doesn't converge so the team quits. Convergence requires iteration — abstraction, blackboxing, case-splitting. Fix: treat non-convergence as an engineering problem.\n\n5. Over-constrained environment caught late: everything proves fast. Looks great. Sign-off review: half the covers are Uncovered. Months of vacuous proofs. Fix: run companion covers alongside every assert from day 1.\n\n6. Schedule: FPV added post-RTL-freeze as an afterthought. No time for iteration. Fix: FPV planning at spec phase.\n\n7. Resource: formal is compute-heavy. Shared underpowered machines. Fix: dedicated compute and licences upfront."},
+
+{id:1303,diff:"Hybrid",cat:"Methodology",
+q:"How do you use formal witnesses as simulation seeds?",
+a:"A formal witness is the exact input sequence from reset that the solver found to prove a cover property. It's the shortest proven path to a corner case.\n\nWorkflow:\n1. Run FPV with cover properties or run Coverage App.\n2. Export witness: report_witness -property <name> -format vcd -out witness.vcd\n   Batch: foreach p [get_property_list -include {status==covered}] { report_witness -property $p -format vcd -out witnesses/$p.vcd }\n3. Convert VCD to UVM sequence or $readmemh stimulus.\n4. Run in simulation — closes the coverage target immediately, mathematically guaranteed.\n\nFor a 12-cycle sequence that only occurs at FIFO wrap with simultaneous push/pop, the witness is the only practical way to get there reliably.\n\nAlso useful for bug reporting: when FPV finds a CEX, export as simulation replay to demonstrate the bug in a waveform viewer the RTL team is comfortable with."},
+
+{id:1304,diff:"Hybrid",cat:"Methodology",
+q:"How do you port SVA assertions between formal and simulation flows?",
+a:"Assertions written for FPV should be reused in simulation. Key differences to manage:\n\n1. disable iff: works correctly in both flows. Leave as-is.\n\n2. Assume properties: in FPV, assumes constrain input space. In simulation, assumes are treated as assertions — a testbench violating an assume fires as a failure. Useful (catches testbench bugs). To silence in sim: `ifndef FORMAL assume property (...); `endif\n\n3. Unbounded sequences (##[0:$]): valid in formal. In simulation can hang if condition never fires. Replace with explicit bounds: ##[0:MAX_LATENCY].\n\n4. Ghost variables in bind files: compile in both flows — the bind file is included in simulation too and acts as a runtime monitor.\n\n5. OpenTitan macro pattern (standard industry approach):\n`ASSERT(name, prop, clk, rst)     -> assert property in both flows\n`ASSUME_FPV(name, prop, clk, rst) -> assume in FPV, assert in simulation\n`COVER(name, prop, clk, rst)      -> cover property in both flows\n\nThis maximises reuse and ensures testbench compliance with formal constraints."},
+
+{id:1305,diff:"Hybrid",cat:"Methodology",
+q:"What is unreachable state elimination and why is it the highest-ROI use of formal?",
+a:"Classic simulation problem: millions of cycles but can't reach 100% coverage. Remaining targets are either (a) reachable but needing specific stimulus or (b) genuinely dead code. Without formal, you can't tell which — you write tests for (b) forever.\n\nFormal solution — zero property writing required:\n1. Run Coverage App when RTL drops.\n2. Every Unreachable result: remove from simulation plan. The formal proof is the justification.\n3. Every Covered result: export witness, replay in simulation — immediate closure.\n4. Remaining targets: all provably reachable. Focus ALL simulation effort here.\n\nWhy highest ROI: requires no property writing. Just run the Coverage App. Output: a cleaned simulation plan with no dead targets and formal-generated stimulus for the reachable ones. You stop wasting compute on dead code permanently."},
+
+{id:1306,diff:"Hybrid",cat:"Methodology",
+q:"What is waveform-driven assume generation and what are its risks?",
+a:"Mines existing simulation waveforms to auto-draft assume properties — rather than writing them from scratch against the spec.\n\nWorkflow:\n1. Run existing simulation (UVM, directed, random), capture VCD/FSDB.\n2. Mine for patterns: signals always correlated, constraints always satisfied. (e.g., push_en && full never co-occurred in 10M cycles)\n3. Translate to assume properties: assume property (full |-> !push_en);\n4. Validate: run companion cover properties to verify assumes are satisfiable.\n\nRisks:\n- Simulation may not have explored all valid input patterns. Mined assumes may be too tight, hiding real bugs.\n- Simulation correlations may be testbench artefacts, not architectural constraints.\n- Mined assumes that mirror your asserts prove nothing — you've assumed the conclusion.\n\nAlways validate mined assumes with companion covers before using in sign-off runs. Treat as a draft, not a final answer."},
+
+{id:1307,diff:"Hybrid",cat:"Methodology",
+q:"What is assume-guarantee reasoning and how is it applied in practice?",
+a:"Assume-guarantee reasoning decomposes a large verification problem by specifying contracts at module boundaries.\n\nPrinciple:\n- Module A's spec becomes the assume set for Module B's proof (A guarantees its interface; B can assume it).\n- Module B's spec becomes the assume set for Module A's proof.\n- Each module proved independently using the other's contract.\n\nPractical workflow:\n1. Write interface contracts for each module — what it guarantees on outputs given valid inputs.\n2. Prove each contract formally.\n3. In adjacent modules' FPV environments, instantiate proven contracts as assume properties.\n4. Prove adjacent modules' properties with these assumes — no need to re-verify submodules.\n\nBenefit: avoids state-space explosion of full-system verification. Each module's proof is bounded to its own state space plus a lightweight contract model of its neighbours.\n\nChallenge: incomplete or wrong contracts mean the composed system can have bugs even though each piece proved independently. Contract completeness is the hard part — companion covers and the Coverage App help catch gaps."},
+
+{id:1308,diff:"Hybrid",cat:"Methodology",
+q:"What is the Cone of Influence (COI) in formal and how do you use it to guide abstraction?",
+a:"The COI of a property is the set of all signals and logic that can affect the property's outcome — the transitive fan-in through both combinational and sequential logic.\n\nWhy it matters: JasperGold only explores the state space of signals in the COI. Logic outside the COI is irrelevant to this proof and is ignored. Large COI = many state bits in the proof = high complexity = potential non-convergence.\n\nUsing COI to guide abstraction:\n1. Analyse COI: report_coi -property {my_assert}\n2. Find the largest contributors: which submodules drive the most COI signals?\n3. Blackbox the largest irrelevant contributors: if a complex memory controller appears in the COI but only its outputs matter (not its internals), blackbox it.\n4. Verify COI shrinks: re-run report_coi after blackboxing.\n5. Check for unexpected signals: a signal you didn't expect in the COI means either a missing assume constraint (that would exclude it) or a property that's broader than intended.\n\nTCL: set coi [get_coi_signals -property {my_prop}]; puts [llength $coi]"}
+);
+
+// ── INTERVIEW SCENARIOS: Design an FPV Environment (ids 1401–1410) ──
+ALL_QUESTIONS.push(
+
+{id:1401,diff:"Interview",cat:"Interview Scenarios",
+q:"Design a complete FPV environment for a 4-lane AXI4 interconnect. Walk through every decision you'd make from RTL handoff to sign-off.",
+a:`Walk through in this order:
+
+1. UNDERSTAND THE SPEC FIRST
+Before writing a line of SVA: read the AMBA AXI4 spec. Identify which rules are mandatory (no response without request), which are advisory (latency SLOs), and which are your design-specific additions (ordering guarantees, error handling). This scoping call saves weeks.
+
+2. PHASE 1 — STRUCTURAL
+Run Superlint immediately on RTL drop: catch latches, reset-incomplete FFs, dead states. Run Connectivity App to verify all 4 lanes connect correctly to the crossbar, no crossed wires, no missing paths.
+
+3. ENVIRONMENT MODEL
+- Clock: separate clock per channel if CDC exists; otherwise single clock
+- Reset: AXI requires ARESETn held low for ≥1 cycle — model correctly with async reset
+- Master model: assume AWVALID/WVALID/ARVALID follow AXI handshake rules (valid doesn't deassert while waiting for ready)
+- Slave model: assume BVALID/RVALID issued only after corresponding request
+
+4. CORE PROPERTIES
+- Handshake stability: valid && !ready |=> $stable(valid) and $stable(chan_signals)
+- Response ordering: BRESP/RRESP must correspond to the correct AWID/ARID
+- No spurious response: BVALID |-> prior AWVALID with matching AWID
+- ID uniqueness: no two outstanding transactions share the same ID per lane
+- Lane isolation: traffic on lane[i] never corrupts lane[j] state
+
+5. GHOST VARIABLES
+AXI ordering requires tracking in-flight transaction IDs — can't do it without a ghost scoreboard in a bind file. Track: write address issued → write data → write response per AWID.
+
+6. COVERAGE
+Cover all 4 lanes active simultaneously. Cover back-to-back transactions (no idle gap). Cover max outstanding transactions. Cover OKAY, SLVERR, DECERR response codes.
+
+7. ABSTRACTION
+If the interconnect includes buffering/FIFOs, abstract them with the 3-property pattern. Blackbox any QoS arbitration logic not under test — it's irrelevant to the channel correctness properties.
+
+8. SIGN-OFF
+Proven: all handshake, ordering, lane isolation properties. Covered: all cover properties reachable. Vacuity: clean. Mutation score: ≥85%. Document the bounded depth (ordering properties may need depth=20+).`},
+
+{id:1402,diff:"Interview",cat:"Interview Scenarios",
+q:"How would you set up FPV for a credit-based flow control block with 8 virtual channels, each with independent credit counters?",
+a:`This is a common senior-level scenario. Key challenges: 8 independent counters, inter-channel isolation, no overflow/underflow.
+
+ENVIRONMENT SETUP
+- One clock, synchronous reset to known state (all counters = MAX_CREDITS)
+- Constraints: credit_return[i] only asserts if prior credit_consume[i] asserted — you can't return credits you never issued. Model this per-channel with a ghost occupancy counter.
+
+CORE PROPERTIES (for each channel i, use generate loop):
+genvar i;
+generate for (i=0; i<8; i++) begin : gen_ch
+  // No consume when empty
+  ap_no_underflow: assert property (@(posedge clk) disable iff (!rst_n)
+    credits[i] == 0 |-> !consume[i]);
+  // Counter stays in bounds
+  ap_bounds: assert property (@(posedge clk) disable iff (!rst_n)
+    credits[i] <= MAX_CREDITS);
+  // Return only after consume (ghost enforced via assume)
+  ap_no_spurious_return: assert property (@(posedge clk) disable iff (!rst_n)
+    cum_returns[i] <= cum_consumes[i]);
+end endgenerate
+
+ISOLATION PROPERTY — critical and often missed:
+// Activity on channel j must not affect channel i's counter
+// Proven implicitly if each counter's COI excludes other channels —
+// verify this with report_coi and inspect for cross-channel signals
+
+GHOST VARIABLES
+Cumulative consume/return counters per channel to track the spurious-return constraint. Must be in bind file.
+
+ABSTRACTION
+If upstream logic that issues consumes is complex: blackbox it, assume consume[i] can fire any time credits[i] > 0. This constrains the over-approximation correctly.
+
+CONVERGENCE
+8 counters × counter width bits = significant state. Abstract with counter abstraction (free variable + bounds) if proof doesn't converge. The boundary properties are what matter, not mid-range values.`},
+
+{id:1403,diff:"Interview",cat:"Interview Scenarios",
+q:"You're handed a FIFO that has been in silicon twice before and 'always worked.' How do you approach FPV on it?",
+a:`'Always worked in simulation' is not a verification closure argument. Here's the approach:
+
+1. TREAT IT AS UNVERIFIED
+The fact that it passed simulation before means the common paths are probably fine. The interesting question is: what corner cases did simulation never explore? FIFO wrap-around with simultaneous push/pop. Full→empty in one cycle (if flush logic exists). Pointer aliasing at exact depth boundary.
+
+2. RUN COVERAGE APP FIRST
+Before writing properties, run the Coverage App. This immediately shows whether the FIFO's dead-code candidates are intentional or bugs. Any Unreachable transition in the FSM is a finding worth reviewing regardless of prior silicon history.
+
+3. CORE PROPERTIES
+- No push when full (overflow)
+- No pop when empty (underflow)
+- Occupancy counter matches actual entries in FIFO
+- Data integrity: the symbolic scoreboard pattern — write sym_data to sym_addr, prove it comes back out in order
+- Pointer wrap: write pointer wraps correctly at DEPTH, not at DEPTH-1 or DEPTH+1
+- Full/empty flag correctness: assert full == (wr_ptr == rd_ptr + DEPTH) etc.
+
+4. THE HARD ONE — data ordering
+In most FIFOs this is the property that simulation never properly stress-tested. Use local variable capture pattern or symbolic scoreboard. Prove at depth = DEPTH+2 to cover the full wrap scenario.
+
+5. APPROACH PREVIOUS DESIGNERS WITH EVIDENCE
+Don't frame it as 'your FIFO is broken.' Frame it as 'here's what formal proves about it.' If you find a bug, the formal CEX is the conversation-starter, not the accusation.`},
+
+{id:1404,diff:"Interview",cat:"Interview Scenarios",
+q:"Design an FPV environment for a parameterised round-robin arbiter with N requestors and configurable priority override.",
+a:`Parameterised design = parameterised proof. This is a common senior question because it tests whether you can write scalable SVA.
+
+PARAMETERISATION STRATEGY
+Don't hardcode N. Write properties with generate loops so the same property file works for N=2, N=4, N=8, N=16. Prove for N=4 as the primary proof; use N=2 as a quick sanity configuration.
+
+CORE PROPERTIES
+genvar i, j;
+generate
+  // 1. Mutual exclusion — at most one grant
+  ap_onehot: assert property (@(posedge clk) disable iff (!rst_n)
+    $onehot0(grant));
+
+  // 2. Grant only when requested
+  for (i=0; i<N; i++) begin : gen_grant
+    ap_req_grant: assert property (@(posedge clk) disable iff (!rst_n)
+      grant[i] |-> req[i]);
+
+    // 3. Bounded latency — every request eventually served (bounded)
+    // Ghost variable: age counter per requestor
+    ap_latency: assert property (@(posedge clk) disable iff (!rst_n)
+      req_age[i] >= MAX_WAIT |-> grant[i]);
+  end
+
+  // 4. Round-robin fairness — if all N requestors active, each gets one grant
+  // in every N-cycle window. Harder to express in SVA — often done as cover
+  cp_all_served: cover property (@(posedge clk)
+    grant[0] ##[1:N] grant[1] ##[1:N] grant[2] ##[1:N] grant[3]);
+endgenerate
+
+PRIORITY OVERRIDE
+Model override as a case split: run one proof with override inactive (prove fairness), one with override active (prove that the priority requestor always beats round-robin). Use set_case_analysis on override_en.
+
+GHOST VARIABLES
+req_age[i] counters in bind file — one per requestor, increments while req[i] is high and grant[i] is low.
+
+CONVERGENCE
+With N=4 and ghost latency counters, this should converge with Ht engine. N=8 may need counter abstraction on the age counters.`},
+
+{id:1405,diff:"Interview",cat:"Interview Scenarios",
+q:"How would you formally verify a reset domain crossing (RDC) block — a module whose registers are reset by different reset signals?",
+a:`RDC is structurally similar to CDC but for reset signals. Less tool support, so more manual work.
+
+1. IDENTIFY THE RESETS
+First step is always: list every reset signal in the block, which registers they control, and whether they're synchronous or asynchronous. Superlint's reset-completeness check gives you the register-to-reset mapping directly — run it first.
+
+2. STRUCTURAL VERIFICATION
+Check reset coverage: every flip-flop reachable by at least one reset path. Any FF with no reset path is a Superlint finding. Check also: if reset_A deasserts while reset_B is still asserted, is the design in a defined state? This is the core RDC safety question.
+
+3. FPV PROPERTIES
+For each pair of reset domains (reset_A, reset_B):
+
+// When reset_A deasserts but reset_B is still active:
+// outputs driven by reset_B domain must be in known reset state
+ap_partial_reset_safe: assert property (
+  @(posedge clk) disable iff (!reset_B)
+  $rose(reset_A) |=> domain_B_output == RESET_VALUE);
+
+// Data transferred from domain_A to domain_B must not be sampled
+// during domain_B's reset — capture ordering
+ap_no_capture_during_reset: assert property (
+  @(posedge clk)
+  !reset_B |-> !latch_enable_B);
+
+4. RESET SEQUENCING
+If your design requires reset_A to always deassert before reset_B: model this as an assume, then prove the design is safe. Then separately prove the assume is architecturally guaranteed (or document that the system integration must ensure it).
+
+5. COMMON BUG
+A register in domain_A is read by logic in domain_B. If domain_B resets while domain_A is still live, the domain_B consumer reads a stale value after its reset. FPV catches this because it can independently control reset_A and reset_B — simulation almost never does this.`},
+
+{id:1406,diff:"Interview",cat:"Interview Scenarios",
+q:"You need to verify a multi-ported register file (4 read ports, 2 write ports, 32 registers × 32-bit). How do you approach this with FPV?",
+a:`A 32×32 register file has 1024 state bits — on the edge of tractability. The approach is almost entirely abstraction-driven.
+
+SYMBOLIC VARIABLE APPROACH (mandatory)
+Never model the full register file in FPV. Use the symbolic address trick:
+
+// One symbolic register index and symbolic data value
+logic [4:0] sym_reg;   // free variable: 0–31
+logic [31:0] sym_data; // free variable
+
+// Track: was sym_data written to sym_reg?
+logic written;
+always_ff @(posedge clk or negedge rst_n)
+  if (!rst_n) written <= 0;
+  else if (wr_en_A && wr_addr_A==sym_reg && wr_data_A==sym_data) written <= 1;
+  else if (wr_en_B && wr_addr_B==sym_reg && wr_data_B==sym_data) written <= 1;
+
+// Assert: any read of sym_reg after write returns sym_data
+generate for (genvar p=0; p<4; p++) begin : gen_rp
+  ap_integrity: assert property (
+    @(posedge clk) disable iff (!rst_n)
+    written && rd_addr[p]==sym_reg |-> rd_data[p]==sym_data);
+end endgenerate
+
+WRITE CONFLICT PROPERTIES
+Two write ports targeting same address simultaneously — define the priority and prove it:
+ap_write_conflict: assert property (
+  @(posedge clk) wr_en_A && wr_en_B && wr_addr_A==wr_addr_B
+  |=> rd_data[0] == wr_data_A);  // port A wins by spec
+
+RESET
+All registers reset to 0 — prove with symbolic approach: sym_reg can be any register, after reset, reading it returns 0.
+
+CONVERGENCE
+With symbolic abstraction: state space is ~5+32 bits (sym_reg + written flag + sym_data doesn't contribute to state). This converges cleanly. Without abstraction: 1024 bits → never converges.`},
+
+{id:1407,diff:"Interview",cat:"Interview Scenarios",
+q:"A designer hands you an FSM with 24 states and tells you 'some of these states might be dead.' How do you handle this with FPV?",
+a:`This is exactly the Coverage App's highest-value use case.
+
+STEP 1 — COVERAGE APP, NOT MANUAL INSPECTION
+Don't manually trace the state transition diagram. Run the Coverage App immediately:
+check_coverage -type fsm
+
+This gives you, for every state and every transition:
+- Covered: formally reachable from reset under some input
+- Unreachable: formally proven impossible — dead state
+- Undetermined: couldn't resolve within proof depth
+
+STEP 2 — INTERPRET THE UNREACHABLE STATES
+For each Unreachable state, exactly one of three things is true:
+
+1. Intentional dead state: the designer encoded 24 states but only 20 are used. The extra 4 are safe padding. Waive with justification.
+2. RTL bug: a state was designed to be reachable (it's in the spec) but a guard condition or transition trigger has a logic error. The formal tool just found a real bug.
+3. Over-constrained environment: your assume set is too tight, cutting off the input that would drive the FSM into that state. Loosen the assume and re-run.
+
+STEP 3 — ILLEGAL STATE PROPERTIES
+After dead-state analysis, write properties for the states that should never be reached from reset:
+ap_no_illegal_state: assert property (
+  @(posedge clk) disable iff (!rst_n)
+  state inside {LEGAL_STATE_LIST});
+
+STEP 4 — TRANSITION COVERAGE
+Run FSM transition coverage. An unreachable transition is often more interesting than an unreachable state — it means a valid state exists but a particular arc from it can never fire. Often indicates a missing condition in the RTL.
+
+DELIVERABLE
+Send the designer the formal Coverage App report with each Unreachable state annotated: intentional (waived) / bug (needs fix) / investigate. This is far more useful than 'I think states S12 and S17 look suspicious.'`},
+
+{id:1408,diff:"Interview",cat:"Interview Scenarios",
+q:"How would you formally verify a scoreboard / out-of-order completion tracker that accepts requests and returns completions potentially out of order?",
+a:`Out-of-order completion is one of the harder FPV problems because you need to track which response belongs to which request across an unbounded number of in-flight transactions.
+
+THE CORE CHALLENGE
+You cannot track all in-flight transactions simultaneously in FPV — the state space is proportional to the number of outstanding transactions × tag width. The symbolic variable trick solves this.
+
+SYMBOLIC TRACKER APPROACH
+// Symbolic tag — proves for all possible tags simultaneously
+logic [TAG_W-1:0] sym_tag;
+logic [DATA_W-1:0] sym_data;
+logic issued, completed;
+
+always_ff @(posedge clk or negedge rst_n) begin
+  if (!rst_n) begin issued <= 0; completed <= 0; end
+  else begin
+    if (req_valid && req_tag==sym_tag && req_data==sym_data)
+      issued <= 1;
+    if (resp_valid && resp_tag==sym_tag && issued)
+      completed <= 1;
+  end
+end
+
+// Every request with sym_tag eventually gets a completion
+ap_completion: assert property (
+  @(posedge clk) disable iff (!rst_n)
+  issued && !completed |-> ##[1:MAX_OUTSTANDING] completed);
+
+// Completion carries correct data
+ap_data_integrity: assert property (
+  @(posedge clk) disable iff (!rst_n)
+  resp_valid && resp_tag==sym_tag && issued
+  |-> resp_data == sym_data);
+
+// No duplicate completion for same tag
+ap_no_dup: assert property (
+  @(posedge clk) disable iff (!rst_n)
+  completed |-> !resp_valid || resp_tag != sym_tag);
+
+ENVIRONMENT CONSTRAINTS
+- Tag uniqueness: assume no two simultaneous outstanding requests share the same tag
+- Bounded outstanding: assume at most MAX_OUTSTANDING requests in flight
+- Response validity: assume resp_tag is always a tag of a previously-issued request
+
+GHOST VARIABLE
+The issued/completed state machine lives in a bind file.`},
+
+{id:1409,diff:"Interview",cat:"Interview Scenarios",
+q:"Your manager asks why the FPV team's proofs keep being vacuous. What systematic process do you put in place to prevent this?",
+a:`Vacuous proofs are a process failure, not just a technical one. Here's the systematic fix:
+
+THE ROOT CAUSES (in order of frequency)
+1. Antecedents that never fire — over-constrained environment blocks the triggering condition
+2. Assumes that contradict the asserts — you've assumed the conclusion
+3. Properties copy-pasted from a previous project without re-validating for the new design
+
+THE PROCESS
+
+Step 1 — Mandatory companion covers
+For every assert property (A |-> B), write a paired:
+cover property (@(posedge clk) A);
+This is a gate requirement, not optional. No assert ships without its companion cover. If the cover is Uncovered, the assert is vacuous — stop, fix before continuing.
+
+Step 2 — Run check_vacuity on every assert, every run
+Add to your standard TCL script:
+check_vacuity -all
+Any property flagged is a blocker — must be resolved before results are reported.
+
+Step 3 — check_assumptions every run
+check_assumptions
+If this reports contradictions, your entire proof run is meaningless. Fix assumes first.
+
+Step 4 — Code review for assumes
+Every assume property is reviewed by a second engineer before being committed. The review question: 'Does this assume reflect a real architectural constraint? Where in the spec is it documented?'
+
+Step 5 — Mutation testing gates sign-off
+No sign-off without a mutation score. If your mutation score is < 85%, properties aren't doing real work — either vacuous or too weak. The mutation score catches what check_vacuity misses (consequent vacuity).
+
+Step 6 — RTL designer pairing session
+The RTL designer walks the FV engineer through the design intent. This session catches assumes that are architecturally wrong — constraints that would never hold in the real system.
+
+REPORTING
+Track and report companion cover status alongside assert status in your weekly FV metrics. 'N asserts proven, M companion covers uncovered' tells management exactly where the risk is.`},
+
+{id:1410,diff:"Interview",cat:"Interview Scenarios",
+q:"How would you set up FPV for a clock gating cell controller that manages power domains?",
+a:`Clock gating and power-aware FPV sits at the intersection of FPV and low-power — requires specific methodology.
+
+TOOL SETUP
+Use the JasperGold LP (Low Power) App or VC Formal FLP App rather than vanilla FPV. These apps understand UPF/CPF power intent and can model isolation cells, retention registers, and power switches formally.
+
+If you're doing basic clock gate controller verification without UPF:
+
+CLOCK GATING VERIFICATION WITHOUT UPF
+The clock gate controller has inputs: enable, test_mode, clk_in. Output: clk_out (gated clock).
+
+Core properties:
+// Clock gate must not produce a glitch — output only changes on falling edge of clk_in
+ap_no_glitch: assert property (
+  @(negedge clk_in) disable iff (test_mode)
+  clk_out == (clk_in && latch_q));
+
+// Enable captured correctly into latch (level-sensitive, not edge)
+ap_enable_latch: assert property (
+  @(posedge clk_in) !latch_q |-> !enable || clk_in);
+
+// DFT override: test_mode bypasses gate entirely
+ap_dft_bypass: assert property (
+  @(posedge clk_in) test_mode |-> clk_out == clk_in);
+
+// No spurious enable deassert mid-clock
+ap_stable_during_high: assert property (
+  @(posedge clk_in) clk_out |=> $stable(latch_q));
+
+POWER DOMAIN PROPERTIES
+If verifying isolation cells:
+// Outputs of powered-down domain must be held at isolation value
+ap_isolation: assert property (
+  @(posedge clk) disable iff (!rst_n)
+  !domain_powered |-> iso_output == ISO_VALUE);
+
+// Retention register retains value across power cycle
+ap_retention: assert property (
+  @(posedge clk)
+  power_off ##[1:$] $rose(power_on) |=> reg_out == $past(reg_in, 1));
+
+ENVIRONMENT
+set_case_analysis 1 {dut.dft_mode} for DFT bypass runs.
+set_case_analysis 0 {dut.dft_mode} for functional runs.
+Never verify both modes simultaneously — case-split to keep COI manageable.`}
+
+);
