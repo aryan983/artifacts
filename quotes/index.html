@@ -666,6 +666,9 @@ border-radius: 3px;
       <button class="nav-btn primary" id="btnNext" title="Next">
         <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
       </button>
+      <button class="nav-btn" id="btnShuffle" title="Random">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/></svg>
+      </button>
       <button class="nav-btn" id="btnSearch" title="Search">
         <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
       </button>
@@ -1056,7 +1059,112 @@ const QUOTES = [
   // ── ZERO DARK THIRTY ──
   {q:"I'm the motherfucker that found this place.", src:"Zero Dark Thirty", year:2012, type:"movie", char:"Maya", actors:[{name:"Jessica Chastain",role:"Maya"}], desc:"The only thing Maya can say on the plane home after ten years of singular obsession. The victory is hollow. She doesn't know where she's going. The cost of complete commitment to a single purpose.", trivia:["Jessica Chastain was nominated for the Academy Award for Best Actress.","Kathryn Bigelow became the first woman to win the Academy Award for Best Director for The Hurt Locker."], cat:"Purpose"},
 
+  // ── ALMOST FAMOUS ──
+  {q:"The only true currency in this bankrupt world is what you share with someone else when you are uncool.", src:"Almost Famous", year:2000, type:"movie", char:"Lester Bangs", actors:[{name:"Philip Seymour Hoffman",role:"Lester Bangs"}], desc:"Lester's farewell wisdom to William — the idea that the authentic, vulnerable, unfashionable parts of you are your only real offering to another person. Everything cool is performance. Everything uncool is the truth.", trivia:["Cameron Crowe based the film on his own experience as a teenage Rolling Stone writer.","Philip Seymour Hoffman said Lester Bangs was the role he was most proud of in his career."], cat:"Relationships"},
+
+  {q:"I always tell the girls, never take it seriously. If you never take it seriously, you never get hurt. If you never get hurt, you always have fun. And if you ever get lonely, just go to the record store and visit your friends.", src:"Almost Famous", year:2000, type:"movie", char:"Penny Lane", actors:[{name:"Kate Hudson",role:"Penny Lane"}], desc:"Penny's philosophy of detachment — and the heartbreaking irony that she believes it completely until she doesn't. A speech about building a life around avoiding pain, which is its own kind of pain.", trivia:["Kate Hudson was 19 when the film was made.","Almost Famous won the Academy Award for Best Original Screenplay."], cat:"Self-Knowledge"},
+
+  // ── FIELD OF DREAMS ──
+  {q:"We just don't recognize the most significant moments of our lives while they're happening. Back then I thought, well, there'll be other days. I didn't realize that that was the only day.", src:"Field of Dreams", year:1989, type:"movie", char:"Moonlight Graham", actors:[{name:"Burt Lancaster",role:"Moonlight Graham"}], desc:"An old man on one perfect moment in his life — the day he stood on a major league field and never batted. He didn't know it was the only day. You don't know which day is the only day either.", trivia:["Burt Lancaster's final film performance. He was 75 and reportedly cried during this scene.","The film is based on W.P. Kinsella's novel Shoeless Joe."], cat:"Mortality"},
+
+  // ── BARBIE ──
+  {q:"It is literally impossible to be a woman. You are so beautiful, and so smart, and it kills me that you don't think you're good enough.", src:"Barbie", year:2023, type:"movie", char:"Gloria", actors:[{name:"America Ferrera",role:"Gloria"}], desc:"Gloria's monologue on the impossible expectations placed on women — a speech that landed so precisely that audiences applauded in cinemas. The impossibility she describes isn't exclusive to women.", trivia:["America Ferrera improvised parts of the speech. Greta Gerwig wrote the monologue over several weeks.","The monologue became one of the most discussed pieces of film writing in 2023."], cat:"Identity"},
+
+  // ── OPPENHEIMER ──
+  {q:"Now I am become Death, the destroyer of worlds.", src:"Oppenheimer", year:2023, type:"movie", char:"J. Robert Oppenheimer", actors:[{name:"Cillian Murphy",role:"J. Robert Oppenheimer"}], desc:"Oppenheimer quoting the Bhagavad Gita as the first nuclear bomb detonates. A man recognising in real time that he has changed the nature of human existence forever. The weight of knowledge without the ability to unsee it.", trivia:["The real Oppenheimer quoted this line in a 1965 NBC documentary — Nolan collapsed the timeline deliberately.","Cillian Murphy read the Bhagavad Gita three times to prepare for the role."], cat:"Choices"},
+
+  // ── STAND BY ME ──
+  {q:"I never had any friends later on like the ones I had when I was twelve. Jesus, does anyone?", src:"Stand by Me", year:1986, type:"movie", char:"Gordie Lachance", actors:[{name:"Richard Dreyfuss",role:"Gordie (narrator)"}], desc:"The last line of the film. A question that lands differently depending on how old you are when you hear it. By the time you understand exactly what he means, you've already proved him right.", trivia:["Stephen King said Stand by Me was his favourite adaptation of his work.","River Phoenix based Chris Chambers on himself — his own family situation closely mirrored the character's."], cat:"Mortality"},
+
+  // ── ANNIE HALL ──
+  {q:"A relationship, I think, is like a shark. You know? It has to constantly move forward or it dies. And I think what we got on our hands is a dead shark.", src:"Annie Hall", year:1977, type:"movie", char:"Alvy Singer", actors:[{name:"Woody Allen",role:"Alvy Singer"}], desc:"Alvy diagnosing the end of a relationship — and by extension, any living thing that requires momentum. The metaphor is strange and exactly right.", trivia:["Annie Hall won Best Picture over Star Wars — still one of the most debated Oscar decisions.","Woody Allen has said the film is his most personal work."], cat:"Relationships"},
+
+  // ── GLENGARRY GLEN ROSS ──
+  {q:"You think this is abuse? You can't take this, how can you take the abuse you get on a sit? You don't like it, leave.", src:"Glengarry Glen Ross", year:1992, type:"movie", char:"Blake", actors:[{name:"Alec Baldwin",role:"Blake"}], desc:"Blake's rationale for cruelty — it's preparation. The logic of every system that brutalises its members by calling it training. The question is who benefits from convincing people to accept abuse.", trivia:["Baldwin's role was written specifically for the film — he doesn't appear in Mamet's original play.","The 'coffee is for closers' line was also added by Mamet for the film."], cat:"Truth"},
+
+  // ── V FOR VENDETTA ──
+  {q:"It seems strange that my life should end in such a terrible place, but for three years I had roses, and apologised to nobody.", src:"V for Vendetta", year:2005, type:"movie", char:"Valerie", actors:[{name:"Natasha Wightman",role:"Valerie"}], desc:"A letter written in a prison cell before execution. Not a cry for justice but a statement of what mattered. She had love. She didn't apologise for it. Three years of roses against a lifetime of survival.", trivia:["Alan Moore wrote Valerie's story as a direct tribute to LGBT people who suffered under repressive regimes.","Hugo Weaving performed the entire film in a mask — every emotion communicated through voice alone."], cat:"Courage"},
+
+  // ── THE ROYAL TENENBAUMS ──
+  {q:"I've had a rough year, Dad.", src:"The Royal Tenenbaums", year:2001, type:"movie", char:"Chas Tenenbaum", actors:[{name:"Ben Stiller",role:"Chas Tenenbaum"}], desc:"Chas — who has spent the entire film behind armour — finally breaking. Said to the father he resents most, at the moment he needs him most. Six words that carry a whole film.", trivia:["Wes Anderson said this was the scene he was building the entire film toward.","Ben Stiller said it was the hardest scene he ever filmed — he had to access genuine grief."], cat:"Grief"},
+
+  // ── IKIRU ──
+  {q:"I don't know what I've been doing with my life all these years.", src:"Ikiru", year:1952, type:"movie", char:"Kanji Watanabe", actors:[{name:"Takashi Shimura",role:"Kanji Watanabe"}], desc:"A bureaucrat learns he has stomach cancer and realises he has wasted his life pushing papers. Kurosawa made this film as a direct question to the audience: what are you doing with yours?", trivia:["Akira Kurosawa said Ikiru was the film he was most proud of making.","The film's title means 'To Live' in Japanese."], cat:"Regret"},
+
+  // ── INSIDE OUT ──
+  {q:"Crying helps me slow down and obsess over the weight of life's problems.", src:"Inside Out", year:2015, type:"movie", char:"Sadness", actors:[{name:"Phyllis Smith",role:"Sadness (voice)"}], desc:"The film's radical reframe of sadness as function rather than malfunction. Joy spends the whole film trying to eliminate Sadness — and learns she was wrong. Sadness is the mechanism that lets people in.", trivia:["Pete Docter said the film was inspired by watching his daughter go through a difficult emotional period.","Sadness was the hardest character to write — the team spent years understanding her purpose."], cat:"Self-Knowledge"},
+
+  // ── THE BREAKFAST CLUB ──
+  {q:"When you grow up, your heart dies.", src:"The Breakfast Club", year:1985, type:"movie", char:"Allison Reynolds", actors:[{name:"Ally Sheedy",role:"Allison Reynolds"}], desc:"The most honest thing anyone says in the film — delivered by the character everyone dismisses. The question it poses: at what point did you stop feeling things as fully as you used to?", trivia:["Ally Sheedy said Allison Reynolds was the most autobiographical role she ever played.","John Hughes locked the five actors in a room for three days before filming to build genuine familiarity."], cat:"Mortality"},
+
+  // ── TO KILL A MOCKINGBIRD ──
+  {q:"You never really understand a person until you consider things from his point of view — until you climb inside of his skin and walk around in it.", src:"To Kill a Mockingbird", year:1962, type:"movie", char:"Atticus Finch", actors:[{name:"Gregory Peck",role:"Atticus Finch"}], desc:"Atticus's instruction to Scout — the most precise definition of empathy in mainstream cinema. Not sympathy from a distance. Actually inhabiting someone else's position.", trivia:["Gregory Peck won the Academy Award for Best Actor.","Harper Lee reportedly wept when she saw Peck's performance — she said he was Atticus."], cat:"Relationships"},
+
+  // ── CAST AWAY ──
+  {q:"I know what I have to do now. I gotta keep breathing. Because tomorrow the sun will rise. Who knows what the tide could bring?", src:"Cast Away", year:2000, type:"movie", char:"Chuck Noland", actors:[{name:"Tom Hanks",role:"Chuck Noland"}], desc:"Chuck at the end — having lost everything he came back for, standing at a crossroads. He doesn't have a plan. He has a principle: keep going and see. The most stripped-down definition of hope.", trivia:["Tom Hanks lost 55 pounds for the second half of the film, requiring a production break.","Robert Zemeckis broke production for a full year while Hanks lost the weight."], cat:"Courage"},
+
+  // ── CURIOUS CASE OF BENJAMIN BUTTON ──
+  {q:"Our lives are defined by opportunities, even the ones we miss.", src:"The Curious Case of Benjamin Button", year:2008, type:"movie", char:"Benjamin Button", actors:[{name:"Brad Pitt",role:"Benjamin Button"}], desc:"The missed opportunity as constitutive — not just the losses but the defining shape of a life. What you didn't do is as much yours as what you did.", trivia:["David Fincher said the film was really about the relationship between time and regret.","Eric Roth won the Academy Award for Best Adapted Screenplay."], cat:"Regret"},
+
+  // ── WILD ──
+  {q:"What if I forgave myself? What if I was sorry, but if I could go back in time I wouldn't do a single thing differently?", src:"Wild", year:2014, type:"movie", char:"Cheryl Strayed", actors:[{name:"Reese Witherspoon",role:"Cheryl Strayed"}], desc:"The hardest form of self-forgiveness — not retroactive justification but genuine acceptance. She was sorry. She wouldn't change it. Both things are true simultaneously.", trivia:["The film is based on Cheryl Strayed's memoir of her 1,100-mile hike on the Pacific Crest Trail.","Reese Witherspoon won the Golden Globe for Best Actress."], cat:"Regret"},
+
+  // ── SOUL ──
+  {q:"I heard this story about a fish. He swims up to an older fish and says: 'I'm trying to find this thing they call the ocean.' The older fish says, 'The ocean? That's what you're in right now.' The little fish says, 'This? But this is water. I want the ocean!'", src:"Soul", year:2020, type:"movie", char:"Dorothea Williams", actors:[{name:"Angela Bassett",role:"Dorothea Williams (voice)"}], desc:"A jazz musician's parable about spending your whole life chasing something you're already inside. The purpose isn't somewhere else.", trivia:["Soul is the first Pixar film with a Black lead character.","The film's exploration of what gives life meaning was developed in consultation with philosophers."], cat:"Purpose"},
+
+  // ── MARY AND MAX ──
+  {q:"When I was young, I wanted to be anybody but myself.", src:"Mary and Max", year:2009, type:"movie", char:"Max Jerry Horovitz", actors:[{name:"Philip Seymour Hoffman",role:"Max Jerry Horovitz (voice)"}], desc:"Max's admission — and the film shows what happens when you finally accept yourself: not happiness exactly, but something more durable. Peace.", trivia:["Adam Elliot wrote the film based on a real twenty-year pen-pal friendship he had.","The film is entirely in clay — every object was handmade over seven years."], cat:"Identity"},
+
+  // ── GOOD WILL HUNTING (additional) ──
+  {q:"Most days I wish I never met you. Because then I could sleep at night, and I wouldn't have to walk around with the knowledge there was someone like you out there.", src:"Good Will Hunting", year:1997, type:"movie", char:"Sean Maguire", actors:[{name:"Robin Williams",role:"Sean Maguire"}], desc:"Sean confessing that knowing Will has made everything harder. The highest compliment possible — someone who makes you incapable of settling for less. The cost of contact with real potential.", trivia:["Robin Williams was not Gus Van Sant's first choice — he auditioned because he loved the script.","Matt Damon has said these speeches are the writing he's proudest of."], cat:"Relationships"},
+
+  // ── WAR ──
+  {q:"Every man I kill, the farther away from home I feel.", src:"Black Hawk Down", year:2001, type:"movie", char:"John Grimes", actors:[{name:"Ewan McGregor",role:"John Grimes"}], desc:"Said quietly, almost to himself, by a desk clerk who ended up in the worst firefight of the Somalia mission. Not about glory or duty — just the creeping realisation that violence is its own kind of exile. Each act of it puts distance between you and who you were.", trivia:["Ewan McGregor based Grimes on the real John Grimes, who became a Ranger specifically because he felt he was missing the action from a desk job.","Ridley Scott filmed in Morocco with real Black Hawk helicopters — the production was one of the most logistically complex in history."], cat:"War"},
+
+  {q:"I love the smell of napalm in the morning. You know, one time we had a hill bombed for twelve hours. When it was all over I walked up. We didn't find one of 'em, not one stinkin' dink body. The smell, you know that gasoline smell, the whole hill. Smelled like... victory.", src:"Apocalypse Now", year:1979, type:"movie", char:"Lt. Col. Kilgore", actors:[{name:"Robert Duvall",role:"Lt. Col. Kilgore"}], desc:"The full speech — not the truncated version. Kilgore is euphoric. He surfed while men died. He is the film's first warning about what war does to the people who love it. The horror isn't that he's lying. It's that he isn't.", trivia:["Robert Duvall improvised much of the speech. Francis Ford Coppola kept every word.","Duvall was nominated for the Academy Award for Best Supporting Actor."], cat:"War"},
+
+  {q:"Someday this war's gonna end.", src:"Apocalypse Now", year:1979, type:"movie", char:"Lt. Col. Kilgore", actors:[{name:"Robert Duvall",role:"Lt. Col. Kilgore"}], desc:"Said with something close to sadness. Kilgore doesn't want it to end — the war has given him everything: purpose, permission, the perfect wave. The line is the film's darkest joke about what war does to the people it suits.", trivia:["Coppola has said Kilgore was the most purely American character he ever put on screen.","The surfing sequence was filmed during an actual military operation — the cooperation of the Philippine army was essential."], cat:"War"},
+
+  {q:"Charlie don't surf.", src:"Apocalypse Now", year:1979, type:"movie", char:"Lt. Col. Kilgore", actors:[{name:"Robert Duvall",role:"Lt. Col. Kilgore"}], desc:"Kilgore's justification for attacking a beach village — so his men can surf. The absurdity is the point. The war has become so unreal that a man can order an assault because of the waves. Coppola's Vietnam is a place where American logic has eaten itself.", trivia:["The line was improvised on set.","Apocalypse Now spent 238 days in production, during which the director nearly had a breakdown and a typhoon destroyed the sets."], cat:"War"},
+
+  {q:"We were in the jungle, there were too many of us, we had access to too much money, too much equipment, and little by little we went insane.", src:"Apocalypse Now", year:1979, type:"movie", char:"Francis Ford Coppola", actors:[{name:"Francis Ford Coppola",role:"Himself (documentary footage)"}], desc:"Coppola describing the making of the film — but he's also describing the film's subject. The production became the war it was depicting. The line appears in the documentary Hearts of Darkness and haunts every frame.", trivia:["Hearts of Darkness: A Filmmaker's Apocalypse (1991) documents the making of the film and is considered one of the greatest documentaries ever made.","Coppola mortgaged his house to finish the film."], cat:"War"},
+
+  {q:"I want to tell you something and I want to tell you this as plainly as I can. You can't kil the enemy. You can't kill what it represents. You can only kill what it's doing.", src:"Platoon", year:1986, type:"movie", char:"Sgt. Elias", actors:[{name:"Willem Dafoe",role:"Sgt. Elias"}], desc:"Elias's distinction between the enemy as people and what they represent — the idea itself can't be shot. It's a soldier questioning the logic of everything he's been asked to do. Oliver Stone said Elias was the man he wanted to be in Vietnam.", trivia:["Oliver Stone served in Vietnam before making the film.","Platoon won the Academy Award for Best Picture and Best Director."], cat:"War"},
+
+  {q:"I think now, looking back, we did not fight the enemy. We fought ourselves. And the enemy was in us.", src:"Platoon", year:1986, type:"movie", char:"Chris Taylor", actors:[{name:"Charlie Sheen",role:"Chris Taylor"}], desc:"Taylor's closing narration — the war as a mirror. Every atrocity was a choice made by an American. Stone's thesis: Vietnam didn't reveal who the enemy was, it revealed who we were.", trivia:["Charlie Sheen's father Martin Sheen starred in Apocalypse Now — both films reached the same conclusion from different directions.","Oliver Stone based Chris Taylor almost entirely on his own experience."], cat:"War"},
+
+  {q:"The most important thing I learned on Tralfamadore was that when a person dies he only appears to die. He is still very much alive in the past, so it is very silly for people to cry at his funeral.", src:"Slaughterhouse-Five", year:1972, type:"movie", char:"Billy Pilgrim", actors:[{name:"Michael Sacks",role:"Billy Pilgrim"}], desc:"Vonnegut's consolation — the dead are not gone from all moments, only from this one. It doesn't actually console. Which is the point. Billy applies alien philosophy to Dresden because human philosophy isn't sufficient for what he survived.", trivia:["Kurt Vonnegut called the film the only faithful adaptation of any of his novels.","Vonnegut survived the firebombing of Dresden in 1945 hidden in an underground meat locker."], cat:"War"},
+
+  {q:"If you talk to God you're religious. If God talks to you, you're psychotic.", src:"Full Metal Jacket", year:1987, type:"movie", char:"Private Joker", actors:[{name:"Matthew Modine",role:"Private Joker"}], desc:"Joker's aside on the institutional logic of faith and madness. In a film about turning people into killing machines, the line asks which version of unreality is more acceptable to the system.", trivia:["Stanley Kubrick cast mostly unknown actors to make the dehumanisation feel authentic.","Full Metal Jacket was filmed entirely in England — Kubrick hadn't left the country in years and refused to fly."], cat:"War"},
+
+  {q:"How do you shoot women and children? Easy. You just don't lead 'em so much.", src:"Full Metal Jacket", year:1987, type:"movie", char:"Door Gunner", actors:[{name:"Tim Colceri",role:"Door Gunner"}], desc:"Said with a grin. The most nauseating joke in the film — and Kubrick puts it in a side character so the horror lands before you have time to distance yourself from it. Dehumanisation as punchline.", trivia:["Tim Colceri originally auditioned for the role of Gunnery Sergeant Hartman — the role went to R. Lee Ermey instead.","Kubrick wanted the scene to feel like an interruption — something ugly inserted into a quiet helicopter ride."], cat:"War"},
+
+  {q:"The dead only know one thing: it is better to be alive.", src:"Full Metal Jacket", year:1987, type:"movie", char:"Private Joker", actors:[{name:"Matthew Modine",role:"Private Joker"}], desc:"Joker's epigraph for the film — said at the end, over the bodies. Not wisdom, just the irreducible fact. The living walk away from the dead carrying only that.", trivia:["The line is Kubrick's addition — it doesn't appear in the source novel The Short-Timers.","Matthew Modine kept a diary throughout filming — it was later published as Full Metal Jacket Diary."], cat:"War"},
+
+  {q:"Rejoice, O young man, in thy youth.", src:"Jarhead", year:2005, type:"movie", char:"Swofford", actors:[{name:"Jake Gyllenhaal",role:"Anthony Swofford"}], desc:"Swofford quoting Ecclesiastes over the desert — a man waiting for a war that keeps not starting. Jarhead is the film about the damage of preparation without release, purpose without action, youth spent waiting.", trivia:["Sam Mendes made Jarhead directly after American Beauty — both films are about men trapped in performance.","Jake Gyllenhaal lost 25 pounds for the role and trained with real Marines."], cat:"War"},
+
+  {q:"Every soldier gives something. The infantry gives the most.", src:"We Were Soldiers", year:2002, type:"movie", char:"Lt. Col. Hal Moore", actors:[{name:"Mel Gibson",role:"Lt. Col. Hal Moore"}], desc:"Moore's unflinching acknowledgment of hierarchy in sacrifice. Not a celebration — a reckoning. The people who bear the cost of decisions made far away.", trivia:["The real Hal Moore was present during filming and approved of Gibson's portrayal.","The film is based on the memoir We Were Soldiers Once... And Young, co-written by Moore and journalist Joseph Galloway."], cat:"War"},
+
+  {q:"I don't think we should be fighting this war. I think it is wrong. But I'm going anyway, because there are men out there who need my help.", src:"Casualties of War", year:1989, type:"movie", char:"Sgt. Meserve", actors:[{name:"Michael J. Fox",role:"Pfc. Eriksson"}], desc:"Eriksson's impossible position — moral objection and moral obligation pulling in opposite directions. Brian De Palma's most underrated film about the cost of bearing witness.", trivia:["The film is based on a real incident in 1966 Vietnam reported by journalist Daniel Lang.","Michael J. Fox said this was the most difficult role of his career."], cat:"War"},
+
+  // ── BAND OF BROTHERS ──
+  {q:"The only hope you have is to accept the fact that you're already dead. The sooner you accept that, the sooner you'll be able to function as a soldier is supposed to function: without mercy, without compassion, without remorse. All war depends on it.", src:"Band of Brothers", year:2001, type:"tv", char:"Capt. Ronald Speirs", actors:[{name:"Matthew Settle",role:"Capt. Ronald Speirs"}], desc:"Speirs speaking to a soldier paralysed by fear in a ditch on D-Day. It's brutal advice — and the most honest thing anyone says about what combat actually requires a person to become. The terror isn't in the enemy. It's in what you must dismantle in yourself to survive.", trivia:["The real Ronald Speirs was one of the most decorated soldiers in Easy Company — and one of the most feared.","Matthew Settle said this speech was the scene that defined his entire performance in the series."], cat:"War"},
+
+  {q:"I wonder what will happen to us, to people like you and me, when there are no more wars to occupy us?", src:"Band of Brothers", year:2001, type:"tv", char:"German Colonel", actors:[{name:"Peter Youngblood Hills",role:"German Colonel"}], desc:"A defeated German officer to his American counterpart — not a villain's line but a soldier's question. Both men built their entire identities around war. What happens to a person shaped entirely by extremity when the extremity ends? The question doesn't have a comfortable answer.", trivia:["The scene is based on a real encounter documented by historian Stephen Ambrose.","The German colonel's question was considered by the writers to be the thematic heart of the entire series."], cat:"War"},
+
+  {q:"Grandpa, were you a hero in the war? No. But I served in a company of heroes.", src:"Band of Brothers", year:2001, type:"tv", char:"Mike Ranney", actors:[{name:"Scott Grimes",role:"Malarkey / Mike Ranney (epilogue)"}], desc:"Ranney's answer to his grandson — and the most precise definition of humility in the whole series. He doesn't claim the credit. He claims the company. The greatest soldiers often describe themselves last.", trivia:["Mike Ranney's letter to Winters became the closing narration of the final episode.","The real Mike Ranney died in 1988 — thirteen years before the series aired."], cat:"War"},
+
+  {q:"We're paratroopers, Lieutenant. We're supposed to be surrounded.", src:"Band of Brothers", year:2001, type:"tv", char:"Maj. Richard Winters", actors:[{name:"Damian Lewis",role:"Maj. Richard Winters"}], desc:"Winters, told by a staff officer that Easy Company will be completely encircled. His response reframes the threat as the condition they trained for. The reframe is the whole psychology — what looks like a trap is just the job.", trivia:["Damian Lewis said this was the line that first made him understand who Winters was.","The real Richard Winters reviewed scripts for the series and was present on set during filming."], cat:"War"},
+
+  {q:"Men, it's been a long war, it's been a tough war. You've fought bravely, proudly for your country. You've found in one another a bond that exists only in combat, among brothers. You've shared foxholes, held each other in dire moments. You've seen death and suffered together. I'm proud to have served with each and every one of you. You all deserve long and happy lives in peace.", src:"Band of Brothers", year:2001, type:"tv", char:"German General", actors:[{name:"Klaus Löwitsch",role:"German General"}], desc:"A German general addressing his surrendering troops — and the words are indistinguishable from what any Allied commander might say. That's the point. The speech strips away ideology and leaves only men who suffered together. Easy Company listens in silence.", trivia:["The scene was written to force the audience to feel the war from the other side, without excusing it.","This episode, 'The Last Patrol', is considered by the writers to be the emotional centrepiece of the series."], cat:"War"},
+
+  {q:"What the fuck are we doing here?", src:"Band of Brothers", year:2001, type:"tv", char:"David Webster", actors:[{name:"Eion Bailey",role:"David Webster"}], desc:"Webster — a Harvard-educated soldier who volunteered — screaming at surrendering German troops in the street after years of combat. Not rhetoric. A genuine breakdown. The question that surfaces when the cause no longer sustains the cost.", trivia:["The real David Webster returned home and struggled to re-enter civilian life.","Webster wrote extensively about the war but never published his memoir in his lifetime — he drowned in 1961."], cat:"War"},
+
+  {q:"Each of us would be forever connected by our shared experience, and each would have to rejoin the world as best he could.", src:"Band of Brothers", year:2001, type:"tv", char:"Richard Winters", actors:[{name:"Damian Lewis",role:"Richard Winters"}], desc:"Winters's closing narration after Japan's surrender — the quiet acknowledgment that coming home wasn't the end of it. The war connected them permanently, and civilian life was something each man had to figure out alone. The bond and the isolation existed simultaneously.", trivia:["The real Winters retired to a small farm in Pennsylvania and lived there until his death in 2011.","Tom Hanks and Steven Spielberg personally called Winters before the series aired to thank him."], cat:"War"},
+
 ];
+
+
 
 
 
@@ -1271,6 +1379,30 @@ function goPrev() {
 
 document.getElementById('btnNext').addEventListener('click', goNext);
 document.getElementById('btnPrev').addEventListener('click', goPrev);
+document.getElementById('btnShuffle').addEventListener('click', goRandom);
+
+function goRandom() {
+  if (_navigating || filteredQuotes.length <= 1) return;
+  _navigating = true;
+  const card = document.getElementById('activeCard');
+  // Pick a random index that isn't the current one
+  let newIdx;
+  do { newIdx = Math.floor(Math.random() * filteredQuotes.length); }
+  while (newIdx === currentIndex);
+
+  if (!card) { currentIndex = newIdx; renderCard(); _navigating = false; return; }
+
+  // Animate out upward with slight rotation — distinct from left/right nav
+  card.style.transition = 'transform 0.3s cubic-bezier(0.4,0,0.8,0.6), opacity 0.22s ease';
+  card.style.transform = 'translateY(-110%) rotate(3deg) scale(0.9)';
+  card.style.opacity = '0';
+  card.style.pointerEvents = 'none';
+  setTimeout(() => {
+    currentIndex = newIdx;
+    renderCard();
+    _navigating = false;
+  }, 260);
+}
 
 // ── Touch/swipe ──
 function setupSwipe() {
