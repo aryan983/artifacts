@@ -42,7 +42,7 @@ position: fixed;
 top: 0; left: 0; right: 0;
 z-index: 100;
 padding: 18px 24px 14px;
-background: linear-gradient(to bottom, var(–bg) 60%, transparent);
+background: linear-gradient(to bottom, #0a0a0c 60%, transparent);
 display: flex;
 justify-content: space-between;
 align-items: center;
@@ -89,8 +89,8 @@ padding: 0 20px;
 .quote-card {
 position: absolute;
 width: 100%;
-background: var(–surface);
-border: 1px solid var(–border);
+background: #111116;
+border: 1px solid rgba(255,255,255,0.07);
 border-radius: 20px;
 padding: 40px 32px 32px;
 transition: transform 0.08s ease, opacity 0.08s ease;
@@ -98,43 +98,21 @@ touch-action: pan-y;
 user-select: none;
 cursor: grab;
 will-change: transform;
-box-shadow: 0 4px 60px rgba(0,0,0,0.5);
+box-shadow: 0 8px 40px rgba(0,0,0,0.7);
 }
 
 .card-ghost-1 {
 transform: scale(0.94) translateY(14px);
-opacity: 1;
+opacity: 0.6;
 pointer-events: none;
 z-index: 2;
-overflow: hidden;
-}
-
-.card-ghost-1::after {
-content: ‘’;
-position: absolute;
-inset: 0;
-background: #0d0d10;
-opacity: 0.72;
-border-radius: 20px;
-pointer-events: none;
 }
 
 .card-ghost-2 {
 transform: scale(0.88) translateY(28px);
-opacity: 1;
+opacity: 0.35;
 pointer-events: none;
 z-index: 1;
-overflow: hidden;
-}
-
-.card-ghost-2::after {
-content: ‘’;
-position: absolute;
-inset: 0;
-background: #0d0d10;
-opacity: 0.88;
-border-radius: 20px;
-pointer-events: none;
 }
 
 .quote-card.active {
@@ -392,7 +370,7 @@ align-items: center;
 justify-content: center;
 font-size: 15px;
 font-weight: 600;
-color: var(–bg);
+color: #0a0a0c;
 flex-shrink: 0;
 font-family: ‘DM Sans’, sans-serif;
 }
@@ -430,7 +408,7 @@ position: fixed;
 bottom: 0; left: 0; right: 0;
 z-index: 100;
 padding: 20px 24px 36px;
-background: linear-gradient(to top, var(–bg) 60%, transparent);
+background: linear-gradient(to top, #0a0a0c 60%, transparent);
 }
 
 .controls-inner {
@@ -472,15 +450,15 @@ gap: 16px;
 width: 52px;
 height: 52px;
 border-radius: 50%;
-background: var(–surface2);
-border: 1px solid var(–border);
+background: #18181f;
+border: 1px solid rgba(255,255,255,0.08);
 display: flex;
 align-items: center;
 justify-content: center;
 cursor: pointer;
 transition: background 0.15s, transform 0.1s, border-color 0.15s;
 -webkit-tap-highlight-color: transparent;
-color: var(–muted);
+color: #6b6878;
 }
 
 .nav-btn:active { transform: scale(0.92); }
@@ -488,20 +466,20 @@ color: var(–muted);
 .nav-btn.primary {
 width: 64px;
 height: 64px;
-background: var(–accent);
-border-color: var(–accent);
-color: var(–bg);
+background: #c8a96e;
+border-color: #c8a96e;
+color: #0a0a0c;
 }
 
 .nav-btn svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 2; }
-.nav-btn.primary svg { width: 24px; height: 24px; stroke: var(–bg); }
+.nav-btn.primary svg { width: 24px; height: 24px; stroke: #0a0a0c; }
 
 /* search overlay */
 #search-overlay {
 position: fixed;
 inset: 0;
 z-index: 300;
-background: var(–bg);
+background: #0a0a0c;
 display: flex;
 flex-direction: column;
 padding: 60px 24px 24px;
@@ -1091,25 +1069,24 @@ function renderCard() {
   counterEl.textContent = `${currentIndex + 1} / ${filteredQuotes.length}`;
   renderDots();
 
-  const positions = [2, 1, 0]; // back to front
-  positions.forEach((offset, i) => {
-    const idx = (currentIndex + offset) % filteredQuotes.length;
-    if (!filteredQuotes[idx]) return;
-    const d = filteredQuotes[idx];
-    const card = buildCard(d, idx);
-    if (offset === 0) {
-      card.classList.add('active');
-      card.style.zIndex = 10;
-      card.style.transform = 'scale(1) translateY(0)';
-      card.style.opacity = 1;
-      if (i === 2) card.classList.add('card-incoming');
-    } else if (offset === 1) {
-      card.classList.add('card-ghost-1');
-    } else {
-      card.classList.add('card-ghost-2');
-    }
-    cardStack.appendChild(card);
-  });
+  // Render ghost cards first (back → front), then active on top
+  // Ghost cards are empty shells — no content, just visual depth
+  if (filteredQuotes.length > 2) {
+    const ghost2 = document.createElement('div');
+    ghost2.className = 'quote-card card-ghost-2';
+    cardStack.appendChild(ghost2);
+  }
+  if (filteredQuotes.length > 1) {
+    const ghost1 = document.createElement('div');
+    ghost1.className = 'quote-card card-ghost-1';
+    cardStack.appendChild(ghost1);
+  }
+
+  // Active card — full content, on top
+  const d = filteredQuotes[currentIndex];
+  const card = buildCard(d, currentIndex);
+  card.classList.add('active', 'card-incoming');
+  cardStack.appendChild(card);
 
   setupSwipe();
 }
