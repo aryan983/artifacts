@@ -24,11 +24,16 @@
 
 html, body {
 height: 100%;
-background: var(–bg);
+background: #0a0a0c !important;
+background-color: #0a0a0c !important;
 color: var(–text);
 font-family: ‘DM Sans’, sans-serif;
 overflow: hidden;
 -webkit-tap-highlight-color: transparent;
+}
+
+@media (prefers-color-scheme: light) {
+html, body { background: #0a0a0c !important; background-color: #0a0a0c !important; }
 }
 
 /* ── Header ── */
@@ -97,17 +102,39 @@ box-shadow: 0 4px 60px rgba(0,0,0,0.5);
 }
 
 .card-ghost-1 {
-transform: scale(0.95) translateY(12px);
-opacity: 0.4;
+transform: scale(0.94) translateY(14px);
+opacity: 1;
 pointer-events: none;
-z-index: 0;
+z-index: 2;
+overflow: hidden;
+}
+
+.card-ghost-1::after {
+content: ‘’;
+position: absolute;
+inset: 0;
+background: #0d0d10;
+opacity: 0.72;
+border-radius: 20px;
+pointer-events: none;
 }
 
 .card-ghost-2 {
-transform: scale(0.9) translateY(24px);
-opacity: 0.2;
+transform: scale(0.88) translateY(28px);
+opacity: 1;
 pointer-events: none;
-z-index: -1;
+z-index: 1;
+overflow: hidden;
+}
+
+.card-ghost-2::after {
+content: ‘’;
+position: absolute;
+inset: 0;
+background: #0d0d10;
+opacity: 0.88;
+border-radius: 20px;
+pointer-events: none;
 }
 
 .quote-card.active {
@@ -121,23 +148,25 @@ transition: none;
 }
 
 .quote-card.flying-left {
-transition: transform 0.35s cubic-bezier(0.4,0,0.2,1), opacity 0.35s ease;
-transform: translateX(-120%) rotate(-8deg) !important;
-opacity: 0;
+transition: transform 0.38s cubic-bezier(0.55, 0, 0.8, 0.45), opacity 0.3s ease !important;
+transform: translateX(-115%) rotate(-10deg) scale(0.95) !important;
+opacity: 0 !important;
+pointer-events: none;
 }
 
 .quote-card.flying-right {
-transition: transform 0.35s cubic-bezier(0.4,0,0.2,1), opacity 0.35s ease;
-transform: translateX(120%) rotate(8deg) !important;
-opacity: 0;
+transition: transform 0.38s cubic-bezier(0.55, 0, 0.8, 0.45), opacity 0.3s ease !important;
+transform: translateX(115%) rotate(10deg) scale(0.95) !important;
+opacity: 0 !important;
+pointer-events: none;
 }
 
 .card-incoming {
-animation: cardIn 0.4s cubic-bezier(0.34,1.56,0.64,1) forwards;
+animation: cardIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 @keyframes cardIn {
-from { transform: scale(0.88) translateY(30px); opacity: 0; }
+from { transform: scale(0.9) translateY(24px); opacity: 0; }
 to   { transform: scale(1) translateY(0); opacity: 1; }
 }
 
@@ -1031,6 +1060,7 @@ let currentIndex = 0;
 let liked = new Set();
 let touchStartX = 0, touchStartY = 0, touchCurrentX = 0;
 let isDragging = false;
+let _lastTouchX = 0, _lastTouchT = 0, _touchVelocity = 0;
 let activeCategory = 'All';
 
 const allCategories = ['All', ...new Set(QUOTES.map(q => q.cat))];
@@ -1181,15 +1211,22 @@ function closeDrawer() { infoDrawer.classList.remove('open'); }
 drawerBackdrop.addEventListener('click', closeDrawer);
 
 // ── Navigation ──
+function _doNext() {
+  currentIndex = (currentIndex + 1) % filteredQuotes.length;
+  renderCard();
+}
+
+function _doPrev() {
+  currentIndex = (currentIndex - 1 + filteredQuotes.length) % filteredQuotes.length;
+  renderCard();
+}
+
 function goNext() {
   if (filteredQuotes.length === 0) return;
   const activeCard = cardStack.querySelector('.active');
   if (activeCard) {
     activeCard.classList.add('flying-left');
-    setTimeout(() => {
-      currentIndex = (currentIndex + 1) % filteredQuotes.length;
-      renderCard();
-    }, 300);
+    setTimeout(_doNext, 320);
   }
 }
 
@@ -1198,10 +1235,7 @@ function goPrev() {
   const activeCard = cardStack.querySelector('.active');
   if (activeCard) {
     activeCard.classList.add('flying-right');
-    setTimeout(() => {
-      currentIndex = (currentIndex - 1 + filteredQuotes.length) % filteredQuotes.length;
-      renderCard();
-    }, 300);
+    setTimeout(_doPrev, 320);
   }
 }
 
@@ -1236,21 +1270,35 @@ function onTouchStart(e) {
   touchStartY = e.touches[0].clientY;
   touchCurrentX = touchStartX;
   isDragging = false;
+  _lastTouchX = touchStartX;
+  _lastTouchT = Date.now();
+  _touchVelocity = 0;
 }
 
 function onTouchMove(e) {
-  touchCurrentX = e.touches[0].clientX;
-  const dx = touchCurrentX - touchStartX;
+  const now = Date.now();
+  const cx = e.touches[0].clientX;
+  const dx = cx - touchStartX;
   const dy = e.touches[0].clientY - touchStartY;
-  if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 8) {
+
+  // Track velocity
+  const dt = now - _lastTouchT;
+  if (dt > 0) _touchVelocity = (cx - _lastTouchX) / dt;
+  _lastTouchX = cx;
+  _lastTouchT = now;
+  touchCurrentX = cx;
+
+  if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 6) {
     e.preventDefault();
     isDragging = true;
     const card = e.currentTarget;
     card.classList.add('dragging');
-    const rotate = dx * 0.04;
-    const opacity = 1 - Math.abs(dx) / 400;
-    card.style.transform = `translateX(${dx}px) rotate(${rotate}deg)`;
-    card.style.opacity = Math.max(opacity, 0.3);
+    // Resistance curve — feels more physical
+    const resist = Math.sign(dx) * Math.min(Math.abs(dx) * 0.85, window.innerWidth * 0.6);
+    const rotate = resist * 0.045;
+    const opacity = Math.max(1 - Math.abs(resist) / (window.innerWidth * 0.7), 0.25);
+    card.style.transform = `translateX(${resist}px) rotate(${rotate}deg)`;
+    card.style.opacity = opacity;
   }
 }
 
@@ -1258,31 +1306,57 @@ function onTouchEnd(e) {
   const dx = touchCurrentX - touchStartX;
   const card = e.currentTarget;
   card.classList.remove('dragging');
-  if (isDragging && Math.abs(dx) > 80) {
-    dx < 0 ? goNext() : goPrev();
+
+  // Trigger on distance OR velocity flick
+  const shouldSwipe = isDragging && (Math.abs(dx) > 72 || Math.abs(_touchVelocity) > 0.4);
+
+  if (shouldSwipe) {
+    // Fling in the direction the card is heading
+    const dir = dx < 0 ? 'left' : 'right';
+    const vx = Math.abs(_touchVelocity);
+    const flyDist = Math.max(110, Math.min(vx * 200, window.innerWidth));
+    card.style.transition = `transform ${Math.max(0.22, 0.35 - vx * 0.1)}s cubic-bezier(0.4,0,1,1), opacity 0.25s ease`;
+    card.style.transform = `translateX(${dir === 'left' ? -flyDist : flyDist}%) rotate(${dir === 'left' ? -10 : 10}deg) scale(0.95)`;
+    card.style.opacity = '0';
+    setTimeout(() => {
+      dir === 'left' ? _doNext() : _doPrev();
+    }, Math.max(220, 350 - vx * 100));
   } else {
+    // Spring snap back
+    card.style.transition = 'transform 0.4s cubic-bezier(0.34,1.4,0.64,1), opacity 0.3s ease';
     card.style.transform = '';
     card.style.opacity = '';
+    setTimeout(() => { card.style.transition = ''; }, 400);
   }
   isDragging = false;
 }
 
 // mouse
-let mouseStartX = 0, mouseDragging = false;
+let mouseStartX = 0, mouseDragging = false, _mouseVelocity = 0, _lastMouseX = 0, _lastMouseT = 0;
 function onMouseDown(e) {
   mouseStartX = e.clientX;
   mouseDragging = false;
+  _mouseVelocity = 0;
+  _lastMouseX = e.clientX;
+  _lastMouseT = Date.now();
   document.addEventListener('mousemove', onMouseMove);
   document.addEventListener('mouseup', onMouseUp);
 }
 function onMouseMove(e) {
+  const now = Date.now();
+  const dt = now - _lastMouseT;
+  if (dt > 0) _mouseVelocity = (e.clientX - _lastMouseX) / dt;
+  _lastMouseX = e.clientX;
+  _lastMouseT = now;
+
   const dx = e.clientX - mouseStartX;
-  if (Math.abs(dx) > 8) {
+  if (Math.abs(dx) > 6) {
     mouseDragging = true;
     const card = cardStack.querySelector('.active');
     if (card) {
-      card.style.transform = `translateX(${dx}px) rotate(${dx*0.04}deg)`;
-      card.style.opacity = Math.max(1 - Math.abs(dx)/400, 0.3);
+      const resist = Math.sign(dx) * Math.min(Math.abs(dx) * 0.85, window.innerWidth * 0.6);
+      card.style.transform = `translateX(${resist}px) rotate(${resist * 0.045}deg)`;
+      card.style.opacity = Math.max(1 - Math.abs(resist) / (window.innerWidth * 0.7), 0.25);
     }
   }
 }
@@ -1290,14 +1364,19 @@ function onMouseUp(e) {
   document.removeEventListener('mousemove', onMouseMove);
   document.removeEventListener('mouseup', onMouseUp);
   const dx = e.clientX - mouseStartX;
-  if (mouseDragging && Math.abs(dx) > 80) {
+  const card = cardStack.querySelector('.active');
+  const shouldSwipe = mouseDragging && (Math.abs(dx) > 72 || Math.abs(_mouseVelocity) > 0.4);
+  if (shouldSwipe && card) {
     dx < 0 ? goNext() : goPrev();
-  } else {
-    const card = cardStack.querySelector('.active');
-    if (card) { card.style.transform = ''; card.style.opacity = ''; }
+  } else if (card) {
+    card.style.transition = 'transform 0.4s cubic-bezier(0.34,1.4,0.64,1), opacity 0.3s ease';
+    card.style.transform = '';
+    card.style.opacity = '';
+    setTimeout(() => { card.style.transition = ''; }, 400);
   }
   mouseDragging = false;
 }
+
 
 // keyboard
 document.addEventListener('keydown', e => {
