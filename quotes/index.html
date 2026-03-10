@@ -1,0 +1,1383 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Lines That Matter</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+–bg: #0a0a0c;
+–surface: #111116;
+–surface2: #18181f;
+–border: rgba(255,255,255,0.07);
+–accent: #c8a96e;
+–accent2: #7b68ee;
+–text: #e8e4dc;
+–muted: #6b6878;
+–pill-bg: rgba(200,169,110,0.12);
+–pill-hover: rgba(200,169,110,0.22);
+}
+
+html, body {
+height: 100%;
+background: var(–bg);
+color: var(–text);
+font-family: ‘DM Sans’, sans-serif;
+overflow: hidden;
+-webkit-tap-highlight-color: transparent;
+}
+
+/* ── Header ── */
+header {
+position: fixed;
+top: 0; left: 0; right: 0;
+z-index: 100;
+padding: 18px 24px 14px;
+background: linear-gradient(to bottom, var(–bg) 60%, transparent);
+display: flex;
+justify-content: space-between;
+align-items: center;
+}
+
+.logo {
+font-family: ‘Playfair Display’, serif;
+font-style: italic;
+font-size: 18px;
+letter-spacing: 0.02em;
+color: var(–accent);
+opacity: 0.9;
+}
+
+.counter {
+font-size: 12px;
+color: var(–muted);
+letter-spacing: 0.08em;
+font-weight: 300;
+}
+
+/* ── Main card area ── */
+#stage {
+position: fixed;
+inset: 0;
+display: flex;
+align-items: center;
+justify-content: center;
+padding: 80px 0 180px;
+overflow: hidden;
+}
+
+.card-stack {
+position: relative;
+width: 100%;
+max-width: 480px;
+height: 100%;
+display: flex;
+align-items: center;
+justify-content: center;
+padding: 0 20px;
+}
+
+.quote-card {
+position: absolute;
+width: 100%;
+background: var(–surface);
+border: 1px solid var(–border);
+border-radius: 20px;
+padding: 40px 32px 32px;
+transition: transform 0.08s ease, opacity 0.08s ease;
+touch-action: pan-y;
+user-select: none;
+cursor: grab;
+will-change: transform;
+box-shadow: 0 4px 60px rgba(0,0,0,0.5);
+}
+
+.card-ghost-1 {
+transform: scale(0.95) translateY(12px);
+opacity: 0.4;
+pointer-events: none;
+z-index: 0;
+}
+
+.card-ghost-2 {
+transform: scale(0.9) translateY(24px);
+opacity: 0.2;
+pointer-events: none;
+z-index: -1;
+}
+
+.quote-card.active {
+z-index: 10;
+cursor: grab;
+}
+
+.quote-card.dragging {
+cursor: grabbing;
+transition: none;
+}
+
+.quote-card.flying-left {
+transition: transform 0.35s cubic-bezier(0.4,0,0.2,1), opacity 0.35s ease;
+transform: translateX(-120%) rotate(-8deg) !important;
+opacity: 0;
+}
+
+.quote-card.flying-right {
+transition: transform 0.35s cubic-bezier(0.4,0,0.2,1), opacity 0.35s ease;
+transform: translateX(120%) rotate(8deg) !important;
+opacity: 0;
+}
+
+.card-incoming {
+animation: cardIn 0.4s cubic-bezier(0.34,1.56,0.64,1) forwards;
+}
+
+@keyframes cardIn {
+from { transform: scale(0.88) translateY(30px); opacity: 0; }
+to   { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+/* ── Quote text ── */
+.quote-mark {
+font-family: ‘Playfair Display’, serif;
+font-size: 52px;
+line-height: 0.5;
+color: var(–accent);
+opacity: 0.35;
+display: block;
+margin-bottom: 12px;
+}
+
+.quote-text {
+font-family: ‘Playfair Display’, serif;
+font-size: clamp(18px, 5vw, 24px);
+font-style: italic;
+line-height: 1.55;
+color: var(–text);
+font-weight: 400;
+margin-bottom: 28px;
+}
+
+.quote-source {
+display: flex;
+align-items: flex-start;
+gap: 12px;
+padding-top: 20px;
+border-top: 1px solid var(–border);
+}
+
+.source-icon {
+width: 36px;
+height: 36px;
+border-radius: 8px;
+background: var(–surface2);
+display: flex;
+align-items: center;
+justify-content: center;
+font-size: 16px;
+flex-shrink: 0;
+border: 1px solid var(–border);
+}
+
+.source-details {
+flex: 1;
+min-width: 0;
+}
+
+.source-title {
+font-size: 13px;
+font-weight: 500;
+color: var(–text);
+opacity: 0.9;
+white-space: nowrap;
+overflow: hidden;
+text-overflow: ellipsis;
+}
+
+.source-meta {
+font-size: 11px;
+color: var(–muted);
+margin-top: 2px;
+font-weight: 300;
+letter-spacing: 0.04em;
+}
+
+.source-type-badge {
+font-size: 10px;
+padding: 3px 8px;
+border-radius: 20px;
+font-weight: 500;
+letter-spacing: 0.06em;
+text-transform: uppercase;
+flex-shrink: 0;
+align-self: center;
+}
+.badge-movie  { background: rgba(200,169,110,0.15); color: var(–accent); }
+.badge-tv     { background: rgba(123,104,238,0.15); color: var(–accent2); }
+
+/* ── Info pills ── */
+.info-pills {
+display: flex;
+gap: 8px;
+margin-top: 20px;
+flex-wrap: wrap;
+}
+
+.pill {
+display: flex;
+align-items: center;
+gap: 5px;
+padding: 7px 13px;
+border-radius: 30px;
+background: var(–pill-bg);
+border: 1px solid rgba(200,169,110,0.2);
+font-size: 11px;
+font-weight: 500;
+color: var(–accent);
+cursor: pointer;
+letter-spacing: 0.05em;
+text-transform: uppercase;
+transition: background 0.15s ease, transform 0.1s ease;
+-webkit-tap-highlight-color: transparent;
+}
+
+.pill:active { transform: scale(0.96); background: var(–pill-hover); }
+
+.pill svg { width: 11px; height: 11px; stroke: var(–accent); fill: none; }
+
+/* ── Drawer panel ── */
+.info-drawer {
+position: fixed;
+inset: 0;
+z-index: 200;
+display: flex;
+flex-direction: column;
+justify-content: flex-end;
+pointer-events: none;
+opacity: 0;
+transition: opacity 0.25s ease;
+}
+
+.info-drawer.open {
+pointer-events: all;
+opacity: 1;
+}
+
+.drawer-backdrop {
+position: absolute;
+inset: 0;
+background: rgba(0,0,0,0.65);
+backdrop-filter: blur(4px);
+}
+
+.drawer-sheet {
+position: relative;
+z-index: 1;
+background: var(–surface);
+border-radius: 24px 24px 0 0;
+border: 1px solid var(–border);
+border-bottom: none;
+padding: 12px 24px 48px;
+max-height: 72vh;
+overflow-y: auto;
+transform: translateY(100%);
+transition: transform 0.32s cubic-bezier(0.34,1.2,0.64,1);
+}
+
+.info-drawer.open .drawer-sheet {
+transform: translateY(0);
+}
+
+.drawer-handle {
+width: 36px;
+height: 4px;
+background: var(–border);
+border-radius: 2px;
+margin: 0 auto 24px;
+}
+
+.drawer-tab-title {
+font-family: ‘Playfair Display’, serif;
+font-size: 11px;
+letter-spacing: 0.14em;
+text-transform: uppercase;
+color: var(–accent);
+margin-bottom: 16px;
+font-style: normal;
+}
+
+.drawer-content {
+display: none;
+}
+.drawer-content.active { display: block; }
+
+.drawer-movie-title {
+font-family: ‘Playfair Display’, serif;
+font-size: 22px;
+font-weight: 700;
+color: var(–text);
+margin-bottom: 6px;
+}
+
+.drawer-movie-year {
+font-size: 13px;
+color: var(–muted);
+margin-bottom: 16px;
+}
+
+.drawer-body-text {
+font-size: 14px;
+line-height: 1.7;
+color: rgba(232,228,220,0.75);
+font-weight: 300;
+}
+
+.drawer-actor-list {
+display: flex;
+flex-direction: column;
+gap: 12px;
+margin-top: 4px;
+}
+
+.actor-row {
+display: flex;
+align-items: center;
+gap: 14px;
+padding: 12px;
+background: var(–surface2);
+border-radius: 12px;
+border: 1px solid var(–border);
+}
+
+.actor-avatar {
+width: 42px;
+height: 42px;
+border-radius: 50%;
+background: linear-gradient(135deg, var(–accent) 0%, var(–accent2) 100%);
+display: flex;
+align-items: center;
+justify-content: center;
+font-size: 15px;
+font-weight: 600;
+color: var(–bg);
+flex-shrink: 0;
+font-family: ‘DM Sans’, sans-serif;
+}
+
+.actor-info { flex: 1; }
+
+.actor-name {
+font-size: 14px;
+font-weight: 500;
+color: var(–text);
+}
+
+.actor-role {
+font-size: 11px;
+color: var(–muted);
+margin-top: 2px;
+font-style: italic;
+}
+
+.trivia-item {
+padding: 14px;
+background: var(–surface2);
+border-radius: 12px;
+border-left: 3px solid var(–accent);
+font-size: 13px;
+line-height: 1.65;
+color: rgba(232,228,220,0.8);
+margin-bottom: 10px;
+font-weight: 300;
+}
+
+/* ── Bottom controls ── */
+#controls {
+position: fixed;
+bottom: 0; left: 0; right: 0;
+z-index: 100;
+padding: 20px 24px 36px;
+background: linear-gradient(to top, var(–bg) 60%, transparent);
+}
+
+.controls-inner {
+max-width: 480px;
+margin: 0 auto;
+display: flex;
+flex-direction: column;
+gap: 14px;
+}
+
+/* swipe hint */
+.swipe-hint {
+text-align: center;
+font-size: 11px;
+color: var(–muted);
+letter-spacing: 0.08em;
+display: flex;
+align-items: center;
+justify-content: center;
+gap: 10px;
+}
+
+.swipe-hint::before, .swipe-hint::after {
+content: ‘’;
+flex: 1;
+height: 1px;
+background: var(–border);
+}
+
+/* ── Nav buttons ── */
+.nav-buttons {
+display: flex;
+align-items: center;
+justify-content: center;
+gap: 16px;
+}
+
+.nav-btn {
+width: 52px;
+height: 52px;
+border-radius: 50%;
+background: var(–surface2);
+border: 1px solid var(–border);
+display: flex;
+align-items: center;
+justify-content: center;
+cursor: pointer;
+transition: background 0.15s, transform 0.1s, border-color 0.15s;
+-webkit-tap-highlight-color: transparent;
+color: var(–muted);
+}
+
+.nav-btn:active { transform: scale(0.92); }
+
+.nav-btn.primary {
+width: 64px;
+height: 64px;
+background: var(–accent);
+border-color: var(–accent);
+color: var(–bg);
+}
+
+.nav-btn svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 2; }
+.nav-btn.primary svg { width: 24px; height: 24px; stroke: var(–bg); }
+
+/* search overlay */
+#search-overlay {
+position: fixed;
+inset: 0;
+z-index: 300;
+background: var(–bg);
+display: flex;
+flex-direction: column;
+padding: 60px 24px 24px;
+opacity: 0;
+pointer-events: none;
+transition: opacity 0.2s ease;
+}
+
+#search-overlay.open {
+opacity: 1;
+pointer-events: all;
+}
+
+.search-bar {
+display: flex;
+align-items: center;
+gap: 12px;
+background: var(–surface);
+border: 1px solid var(–border);
+border-radius: 16px;
+padding: 14px 18px;
+margin-bottom: 20px;
+}
+
+.search-bar svg { stroke: var(–muted); width: 18px; height: 18px; flex-shrink: 0; }
+
+.search-bar input {
+flex: 1;
+background: none;
+border: none;
+outline: none;
+font-family: ‘DM Sans’, sans-serif;
+font-size: 16px;
+color: var(–text);
+caret-color: var(–accent);
+}
+
+.search-bar input::placeholder { color: var(–muted); }
+
+.search-close {
+background: none;
+border: none;
+color: var(–muted);
+font-size: 14px;
+cursor: pointer;
+font-family: ‘DM Sans’, sans-serif;
+padding: 4px 8px;
+letter-spacing: 0.04em;
+}
+
+.search-results {
+flex: 1;
+overflow-y: auto;
+display: flex;
+flex-direction: column;
+gap: 10px;
+}
+
+.search-result-item {
+padding: 16px;
+background: var(–surface);
+border-radius: 14px;
+border: 1px solid var(–border);
+cursor: pointer;
+transition: background 0.15s;
+}
+
+.search-result-item:active { background: var(–surface2); }
+
+.sri-quote {
+font-family: ‘Playfair Display’, serif;
+font-style: italic;
+font-size: 14px;
+color: var(–text);
+line-height: 1.5;
+margin-bottom: 8px;
+display: -webkit-box;
+-webkit-line-clamp: 2;
+-webkit-box-orient: vertical;
+overflow: hidden;
+}
+
+.sri-meta {
+font-size: 11px;
+color: var(–muted);
+}
+
+.search-empty {
+text-align: center;
+color: var(–muted);
+font-size: 14px;
+padding: 40px 0;
+}
+
+.category-filter {
+display: flex;
+gap: 8px;
+overflow-x: auto;
+padding-bottom: 12px;
+scrollbar-width: none;
+margin-bottom: 4px;
+}
+.category-filter::-webkit-scrollbar { display: none; }
+
+.cat-btn {
+white-space: nowrap;
+padding: 7px 14px;
+border-radius: 20px;
+background: var(–surface);
+border: 1px solid var(–border);
+color: var(–muted);
+font-size: 12px;
+cursor: pointer;
+font-family: ‘DM Sans’, sans-serif;
+transition: all 0.15s;
+-webkit-tap-highlight-color: transparent;
+}
+
+.cat-btn.active {
+background: var(–pill-bg);
+border-color: var(–accent);
+color: var(–accent);
+}
+
+/* liked icon pulse */
+@keyframes heartPulse {
+0%   { transform: scale(1); }
+50%  { transform: scale(1.35); }
+100% { transform: scale(1); }
+}
+.liked svg { animation: heartPulse 0.3s ease; stroke: #e05d5d !important; fill: #e05d5d !important; }
+
+/* progress dots */
+.progress-dots {
+display: flex;
+gap: 5px;
+justify-content: center;
+margin-bottom: 4px;
+}
+.progress-dot {
+width: 5px;
+height: 5px;
+border-radius: 50%;
+background: var(–border);
+transition: all 0.25s ease;
+}
+.progress-dot.current {
+background: var(–accent);
+width: 16px;
+border-radius: 3px;
+}
+</style>
+
+</head>
+<body>
+
+<header>
+  <div class="logo">Lines That Matter</div>
+  <div class="counter" id="counterEl">0 / 0</div>
+</header>
+
+<div id="stage">
+  <div class="card-stack" id="cardStack">
+    <!-- cards injected here -->
+  </div>
+</div>
+
+<div id="controls">
+  <div class="controls-inner">
+    <div class="progress-dots" id="progressDots"></div>
+    <div class="swipe-hint">swipe to navigate</div>
+    <div class="nav-buttons">
+      <button class="nav-btn" id="btnPrev" title="Previous">
+        <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <button class="nav-btn" id="btnLike" title="Like">
+        <svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+      </button>
+      <button class="nav-btn primary" id="btnNext" title="Next">
+        <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+      <button class="nav-btn" id="btnSearch" title="Search">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Info drawer -->
+
+<div class="info-drawer" id="infoDrawer">
+  <div class="drawer-backdrop" id="drawerBackdrop"></div>
+  <div class="drawer-sheet" id="drawerSheet">
+    <div class="drawer-handle"></div>
+    <div class="drawer-tab-title" id="drawerTabTitle">Film Info</div>
+
+```
+<div class="drawer-content active" id="drawerContentFilm">
+  <div class="drawer-movie-title" id="drawerFilmTitle"></div>
+  <div class="drawer-movie-year" id="drawerFilmYear"></div>
+  <div class="drawer-body-text" id="drawerFilmDesc"></div>
+</div>
+
+<div class="drawer-content" id="drawerContentActors">
+  <div class="drawer-actor-list" id="drawerActorList"></div>
+</div>
+
+<div class="drawer-content" id="drawerContentTrivia">
+  <div id="drawerTriviaContent"></div>
+</div>
+```
+
+  </div>
+</div>
+
+<!-- Search overlay -->
+
+<div id="search-overlay">
+  <div class="search-bar">
+    <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <input type="text" id="searchInput" placeholder="Search quotes, films, actors…" autocomplete="off" />
+    <button class="search-close" id="searchClose">Done</button>
+  </div>
+  <div class="category-filter" id="categoryFilter"></div>
+  <div class="search-results" id="searchResults"></div>
+</div>
+
+<script>
+const QUOTES = [
+  // ── CLASSICS ──
+  {q:"Frankly, my dear, I don't give a damn.", src:"Gone with the Wind", year:1939, type:"movie", char:"Rhett Butler", actors:[{name:"Clark Gable",role:"Rhett Butler"}], desc:"The most voted #1 movie quote of all time by the American Film Institute. Delivered in the final scene as Rhett walks out on Scarlett for good.", trivia:["The word 'damn' was considered scandalous in 1939 — producer David O. Selznick paid a $5,000 fine to use it.","Clark Gable almost didn't say it. He felt the line was too melodramatic. Director Victor Fleming convinced him to go for it."], cat:"Classic"},
+  {q:"I'm going to make him an offer he can't refuse.", src:"The Godfather", year:1972, type:"movie", char:"Vito Corleone", actors:[{name:"Marlon Brando",role:"Vito Corleone"}], desc:"The defining line of Francis Ford Coppola's masterpiece. Spoken with quiet menace, it encapsulates the entire philosophy of power and fear.", trivia:["Marlon Brando improvised much of his performance. He stuffed cotton in his cheeks to appear jowly — for the actual film he wore a dental prosthetic.","The film was adapted from Mario Puzo's novel. Puzo himself co-wrote the screenplay with Coppola."], cat:"Classic"},
+  {q:"You don't understand! I could've had class. I could've been a contender. I could've been somebody, instead of a bum, which is what I am.", src:"On the Waterfront", year:1954, type:"movie", char:"Terry Malloy", actors:[{name:"Marlon Brando",role:"Terry Malloy"}], desc:"One of cinema's great expressions of regret — a wasted life summed up in a taxi cab. The speech confronts the cost of moral compromise.", trivia:["Brando based his performance partly on his own feelings of having compromised himself.","The film was Elia Kazan's personal atonement for naming names to HUAC — an irony not lost on critics."], cat:"Classic"},
+  {q:"Here's looking at you, kid.", src:"Casablanca", year:1942, type:"movie", char:"Rick Blaine", actors:[{name:"Humphrey Bogart",role:"Rick Blaine"}], desc:"Tender, bittersweet, and iconic. Rick says it four times in the film, each time the weight of it grows heavier.", trivia:["Bogart reportedly said this phrase to Ingrid Bergman while teaching her poker between takes.","Casablanca holds the record for most quotes in the AFI top 100 — with six entries."], cat:"Classic"},
+  {q:"You talkin' to me?", src:"Taxi Driver", year:1976, type:"movie", char:"Travis Bickle", actors:[{name:"Robert De Niro",role:"Travis Bickle"}], desc:"Entirely improvised. Travis rehearses in front of a mirror, rehearsing a confrontation that exists only in his mind. A chilling portrait of isolation.", trivia:["The line is not in the original script by Paul Schrader. De Niro improvised the entire mirror scene.","Scorsese told De Niro there was nobody else in the room — the rest came naturally."], cat:"Classic"},
+  {q:"What we've got here is failure to communicate.", src:"Cool Hand Luke", year:1967, type:"movie", char:"The Captain", actors:[{name:"Strother Martin",role:"The Captain"}], desc:"Bureaucratic cruelty dressed up as reason. The line captures every institution that punishes independence by calling it a communication problem.", trivia:["The line was ranked #11 in AFI's 100 greatest movie quotes.","It was sampled in Guns N' Roses' 'Civil War' in 1991, introducing it to a new generation."], cat:"Classic"},
+  {q:"I love the smell of napalm in the morning.", src:"Apocalypse Now", year:1979, type:"movie", char:"Lt. Col. Kilgore", actors:[{name:"Robert Duvall",role:"Lt. Col. Kilgore"}], desc:"The full speech ends with '…smells like victory.' A blackly comic meditation on war's seduction — Kilgore means every word.", trivia:["Duvall's improvised additions to the scene were largely kept in the final cut.","Francis Ford Coppola filmed this during an actual military operation in the Philippines."], cat:"Classic"},
+  {q:"You can't handle the truth!", src:"A Few Good Men", year:1992, type:"movie", char:"Col. Jessep", actors:[{name:"Jack Nicholson",role:"Col. Nathan Jessep"}], desc:"The complete speech is even more devastating — an argument that civilian comfort depends on soldiers doing terrible things. Jessep isn't entirely wrong, which makes him terrifying.", trivia:["Nicholson reportedly hated the line and argued with director Rob Reiner about it.","Tom Cruise had the line in mind throughout shooting — their first scene together was written for maximum tension."], cat:"Classic"},
+  {q:"I am big! It's the pictures that got small.", src:"Sunset Boulevard", year:1950, type:"movie", char:"Norma Desmond", actors:[{name:"Gloria Swanson",role:"Norma Desmond"}], desc:"One of cinema's great lines about fame, delusion and obsolescence. Norma doesn't know she's the joke — which is the tragedy.", trivia:["Gloria Swanson was herself a faded silent film star — the line hit painfully close to home.","Billy Wilder cast her after she was passed over for a major studio role."], cat:"Classic"},
+  {q:"I'm as mad as hell, and I'm not going to take this anymore!", src:"Network", year:1976, type:"movie", char:"Howard Beale", actors:[{name:"Peter Finch",role:"Howard Beale"}], desc:"Paddy Chayefsky's prophetic script predicted the age of outrage media. Howard Beale is the first televised demagogue.", trivia:["Peter Finch died of a heart attack before the film's release and became the first actor to win a posthumous Academy Award.","Director Sidney Lumet called it the most important film he ever made."], cat:"Classic"},
+  {q:"All right, Mr. DeMille, I'm ready for my close-up.", src:"Sunset Boulevard", year:1950, type:"movie", char:"Norma Desmond", actors:[{name:"Gloria Swanson",role:"Norma Desmond"}], desc:"The final line of the film, delivered as Norma descends the stairs having lost her mind. Tragic, deluded, unforgettable.", trivia:["The real Cecil B. DeMille appears in the film, paying tribute to Swanson as a former collaborator.","Ranked #7 on the AFI 100 greatest movie quotes list."], cat:"Classic"},
+  {q:"The stuff that dreams are made of.", src:"The Maltese Falcon", year:1941, type:"movie", char:"Sam Spade", actors:[{name:"Humphrey Bogart",role:"Sam Spade"}], desc:"Bogart, holding the fake statue at the end. A line stolen from Shakespeare's The Tempest — 'we are such stuff as dreams are made on.'", trivia:["John Huston's directorial debut.","The Maltese Falcon was the third film adaptation of Dashiell Hammett's novel — and by far the best."], cat:"Classic"},
+  {q:"After all, tomorrow is another day.", src:"Gone with the Wind", year:1939, type:"movie", char:"Scarlett O'Hara", actors:[{name:"Vivien Leigh",role:"Scarlett O'Hara"}], desc:"Scarlett's defining moment — resilient, selfish, and somehow admirable. She'll deal with grief in the morning.", trivia:["It's the last line of the film, and almost the last line of Margaret Mitchell's novel.","Vivien Leigh beat out several hundred other candidates for the role of Scarlett."], cat:"Classic"},
+
+  // ── ACTION & THRILLER ──
+  {q:"I'll be back.", src:"The Terminator", year:1984, type:"movie", char:"The Terminator", actors:[{name:"Arnold Schwarzenegger",role:"The Terminator"}], desc:"Simple, flat, and completely terrifying in context. Arnie's accent actually made director James Cameron nervous about the line — it became the most quoted line of his career.", trivia:["Schwarzenegger originally said 'I'll come back' — Cameron insisted on 'I'll be back.'","The line is ranked #37 on AFI's top 100 movie quotes."], cat:"Action"},
+  {q:"Go ahead, make my day.", src:"Sudden Impact", year:1983, type:"movie", char:"Harry Callahan", actors:[{name:"Clint Eastwood",role:"Harry Callahan"}], desc:"Said to a criminal holding a woman hostage over a diner breakfast. Harry is hoping they'll resist so he has an excuse to shoot. Cold.", trivia:["Ronald Reagan used the line in a 1985 speech threatening to veto a tax increase, cementing its cultural status.","It was the #6 ranked quote on AFI's top 100 list."], cat:"Action"},
+  {q:"You're gonna need a bigger boat.", src:"Jaws", year:1975, type:"movie", char:"Martin Brody", actors:[{name:"Roy Scheider",role:"Martin Brody"}], desc:"Entirely improvised by Roy Scheider. A moment of terrified understatement that set the tone for the blockbuster era.", trivia:["An in-joke on set — the crew constantly complained the facilities boat was too small for all their equipment.","Steven Spielberg considered cutting the scene several times before seeing the audience reaction."], cat:"Action"},
+  {q:"Do you feel lucky? Well, do ya, punk?", src:"Dirty Harry", year:1971, type:"movie", char:"Harry Callahan", actors:[{name:"Clint Eastwood",role:"Harry Callahan"}], desc:"Harry stands over a wounded robber, unsure himself if his .44 Magnum is loaded. He's bluffing — probably. Pure machismo and psychological warfare.", trivia:["The actual line is 'You've got to ask yourself one question: Do I feel lucky? Well, do ya, punk?' — most people misquote it.","Clint Eastwood initially turned down the role before agreeing to it."], cat:"Action"},
+  {q:"I know what you're thinking. Did he fire six shots or only five?", src:"Dirty Harry", year:1971, type:"movie", char:"Harry Callahan", actors:[{name:"Clint Eastwood",role:"Harry Callahan"}], desc:"The opening of Harry's famous speech — a masterclass in screen intimidation. Harry's holding all the cards and he knows it.", trivia:["The opening scene was shot entirely on location in San Francisco.","The Scorpio Killer costume was modelled on the Zodiac Killer."], cat:"Action"},
+  {q:"I am Groot.", src:"Guardians of the Galaxy", year:2014, type:"movie", char:"Groot", actors:[{name:"Vin Diesel",role:"Groot"}], desc:"Three words that contain multitudes. By the film's end, delivered with a sacrificial tenderness, they mean everything.", trivia:["Vin Diesel recorded this line in multiple languages for international releases.","Director James Gunn said the final 'We are Groot' took him completely by surprise during filming."], cat:"Action"},
+  {q:"Why so serious?", src:"The Dark Knight", year:2008, type:"movie", char:"The Joker", actors:[{name:"Heath Ledger",role:"The Joker"}], desc:"Chaos philosophy in three words. The Joker doesn't want money, power or recognition — he just wants to watch order collapse.", trivia:["Heath Ledger kept a method-acting diary for months before filming, exploring the Joker's psyche.","Ledger died before the film's release. His performance won a posthumous Academy Award."], cat:"Action"},
+  {q:"Some men just want to watch the world burn.", src:"The Dark Knight", year:2008, type:"movie", char:"Alfred Pennyworth", actors:[{name:"Michael Caine",role:"Alfred Pennyworth"}], desc:"Alfred's explanation of the Joker — a villain without motive, beyond reason, beyond negotiation. The scariest kind.", trivia:["The line was written by Christopher and Jonathan Nolan and is often cited as the most chilling moment in the script.","Michael Caine based Alfred partly on his own father."], cat:"Action"},
+  {q:"With great power comes great responsibility.", src:"Spider-Man", year:2002, type:"movie", char:"Uncle Ben", actors:[{name:"Cliff Robertson",role:"Uncle Ben"}], desc:"The moral spine of the entire Spider-Man mythology. Ben dies because Peter didn't act — making this the most consequential lesson in superhero cinema.", trivia:["The phrase actually predates Spider-Man — versions of it appear in texts going back to the French Revolution.","Cliff Robertson insisted on being credited properly and had a famous dispute with Columbia over screen credit."], cat:"Action"},
+  {q:"I'm the king of the world!", src:"Titanic", year:1997, type:"movie", char:"Jack Dawson", actors:[{name:"Leonardo DiCaprio",role:"Jack Dawson"}], desc:"Pure, reckless joy. Jack stands at the bow of the Titanic with everything ahead of him — a shot of freedom before the tragedy.", trivia:["James Cameron improvised this line during filming. DiCaprio was reluctant but Cameron insisted.","The shot required a full-scale bow section built specifically for the film."], cat:"Action"},
+
+  // ── DRAMA ──
+  {q:"Life is like a box of chocolates. You never know what you're gonna get.", src:"Forrest Gump", year:1994, type:"movie", char:"Forrest Gump", actors:[{name:"Tom Hanks",role:"Forrest Gump"}], desc:"Simple wisdom from a simple man. Mama Gump's philosophy has become one of the most quoted lines in American cinema.", trivia:["The box of chocolates is shown on screen but the quote differs slightly from the book, where it reads 'was like a box of chocolates.'","Tom Hanks shot his scenes on a bench in Savannah, Georgia over multiple days."], cat:"Drama"},
+  {q:"Houston, we have a problem.", src:"Apollo 13", year:1995, type:"movie", char:"Jim Lovell", actors:[{name:"Tom Hanks",role:"Jim Lovell"}], desc:"The real transmission was 'Houston, we've had a problem.' The slight present-tense alteration makes it more urgent — and it stuck in culture.", trivia:["The actual words were spoken by astronaut Jack Swigert, not Jim Lovell — the film attributes them to Lovell.","Tom Hanks met the real Jim Lovell during production and they became close friends."], cat:"Drama"},
+  {q:"Today, I consider myself the luckiest man on the face of the earth.", src:"The Pride of the Yankees", year:1942, type:"movie", char:"Lou Gehrig", actors:[{name:"Gary Cooper",role:"Lou Gehrig"}], desc:"Lou Gehrig's 1939 farewell speech, reproduced almost verbatim. A man facing terminal illness choosing gratitude over grief.", trivia:["Gary Cooper was actually left-handed, unlike Gehrig. He had to learn to bat right-handed and throw southpaw for the film.","The actual speech was delivered at Yankee Stadium on July 4, 1939. It lasted just 277 words."], cat:"Drama"},
+  {q:"If you build it, he will come.", src:"Field of Dreams", year:1989, type:"movie", char:"Shoeless Joe Jackson", actors:[{name:"Ray Liotta",role:"Shoeless Joe Jackson"}], desc:"A voice in a cornfield tells a man to build a baseball diamond. It's really about faith, fathers, and the things we leave undone.", trivia:["The actual voice actor is not Ray Liotta — it's uncredited voice actor Ed Harris.","The original novel by W.P. Kinsella used 'he' — some editions misprint it as 'they will come.'"], cat:"Drama"},
+  {q:"It's not who I am underneath, but what I do that defines me.", src:"Batman Begins", year:2005, type:"movie", char:"Bruce Wayne / Batman", actors:[{name:"Christian Bale",role:"Bruce Wayne"}], desc:"The film's thesis statement — Bruce reflecting Rachel's own words back at her. Identity is action, not origin.", trivia:["This line is an inversion of what Rachel tells Bruce earlier — Nolan structures the script to complete the circle.","Christian Bale lost nearly 30kg for The Machinist before bulking up for Batman Begins."], cat:"Drama"},
+  {q:"Get busy living, or get busy dying.", src:"The Shawshank Redemption", year:1994, type:"movie", char:"Andy Dufresne", actors:[{name:"Tim Robbins",role:"Andy Dufresne"}], desc:"Prison philosophy stripped to its skeleton. Andy's survived something that should have broken him — this is why.", trivia:["The Shawshank Redemption was a box office disappointment on release but became the most-watched film on Netflix and consistently tops IMDb's ratings.","Frank Darabont adapted it from Stephen King's novella Rita Hayworth and Shawshank Redemption."], cat:"Drama"},
+  {q:"Hope is a good thing, maybe the best of things, and no good thing ever dies.", src:"The Shawshank Redemption", year:1994, type:"movie", char:"Andy Dufresne", actors:[{name:"Tim Robbins",role:"Andy Dufresne"}], desc:"From Andy's letter to Red. In a film about men trapped by unjust systems, hope isn't naïve — it's the only act of defiance left.", trivia:["The letter scene was filmed in a single take. Morgan Freeman was instructed not to read it before the camera rolled.","Stephen King sold the adaptation rights to Frank Darabont for $1 — and sent him a dollar bill when the film became successful."], cat:"Drama"},
+  {q:"I could've saved more. I could've saved more. I don't know, if I'd just... I could've got more.", src:"Schindler's List", year:1993, type:"movie", char:"Oskar Schindler", actors:[{name:"Liam Neeson",role:"Oskar Schindler"}], desc:"The final scene — Schindler's list saved over a thousand lives, and he's destroyed by the knowledge that it wasn't enough.", trivia:["Steven Spielberg said this was the most difficult scene he ever filmed.","Liam Neeson said he couldn't look at the Schindlerjuden watching him without breaking down."], cat:"Drama"},
+  {q:"After all, tomorrow is another day.", src:"Gone with the Wind", year:1939, type:"movie", char:"Scarlett O'Hara", actors:[{name:"Vivien Leigh",role:"Scarlett O'Hara"}], desc:"Scarlett's defiant closing line — she'll deal with the heartbreak later. Resilience mistaken for optimism.", trivia:["Vivien Leigh won the Academy Award for this performance — though she was British and American actors had campaigned for the role.","Clark Gable reportedly cried during the final scene but hid it from the crew."], cat:"Drama"},
+  {q:"In my experience, there is no such thing as luck.", src:"Star Wars", year:1977, type:"movie", char:"Obi-Wan Kenobi", actors:[{name:"Alec Guinness",role:"Obi-Wan Kenobi"}], desc:"Old Ben's quiet wisdom — a Jedi master's quiet rebuke of the mercenary Han Solo's worldview. Force vs cynicism.", trivia:["Alec Guinness won an Academy Award nomination for Best Supporting Actor for this role.","Guinness privately described the dialogue as 'fairy tale rubbish' but committed fully to the performance."], cat:"Drama"},
+
+  // ── CRIME & THRILLER ──
+  {q:"Say hello to my little friend!", src:"Scarface", year:1983, type:"movie", char:"Tony Montana", actors:[{name:"Al Pacino",role:"Tony Montana"}], desc:"The final act of defiance. Tony's backed into a corner, his empire burning, and he goes out on his own terms with an M203 grenade launcher.", trivia:["The scene took three weeks to film. Pacino was hospitalized with pneumonia during production.","Brian De Palma shot the finale in a real Miami mansion. The blood was tomato sauce."], cat:"Crime"},
+  {q:"Every time I try to get out, they pull me back in.", src:"The Godfather Part III", year:1990, type:"movie", char:"Michael Corleone", actors:[{name:"Al Pacino",role:"Michael Corleone"}], desc:"Michael's lament — legitimacy has always been beyond his reach. The Corleone family name is a trap.", trivia:["Often misattributed to The Godfather or Part II, it's actually from the third film.","The line has been parodied and referenced so extensively it's become almost its own entity."], cat:"Crime"},
+  {q:"Leave the gun. Take the cannoli.", src:"The Godfather", year:1972, type:"movie", char:"Peter Clemenza", actors:[{name:"Richard Castellano",role:"Peter Clemenza"}], desc:"After a mob hit, Pete has priorities. The line perfectly captures the banality of violence in organised crime.", trivia:["The line 'take the cannoli' was improvised by actor Richard Castellano — it wasn't in the script.","Screenwriter Robert Towne said it was the funniest and most disturbing improvisation he'd ever heard in a film."], cat:"Crime"},
+  {q:"I'm funny how? Funny like I'm a clown? I amuse you?", src:"Goodfellas", year:1990, type:"movie", char:"Tommy DeVito", actors:[{name:"Joe Pesci",role:"Tommy DeVito"}], desc:"Joe Pesci's chilling improvisation — a real story that Henry Hill told Pesci about his own experience with a mob associate.", trivia:["Pesci told Scorsese about the real incident on which this scene is based — it was incorporated almost verbatim.","The scene was improvised in real time with Ray Liotta genuinely not knowing where it was going."], cat:"Crime"},
+  {q:"As far back as I can remember, I always wanted to be a gangster.", src:"Goodfellas", year:1990, type:"movie", char:"Henry Hill", actors:[{name:"Ray Liotta",role:"Henry Hill"}], desc:"The opening line — Henry's voiceover delivered over a murder scene. The seduction of crime culture is laid out from frame one.", trivia:["The real Henry Hill was a technical consultant on the film.","Ray Liotta was not Martin Scorsese's first choice — Tom Cruise was considered for the role."], cat:"Crime"},
+  {q:"You're going to need a bigger boat.", src:"Jaws", year:1975, type:"movie", char:"Martin Brody", actors:[{name:"Roy Scheider",role:"Martin Brody"}], desc:"See above — the quintessential improvised line of Hollywood's blockbuster era.", trivia:["Roy Scheider ad-libbed this after seeing the mechanical shark for the first time.","The shark's nickname on set was 'Bruce' — after Spielberg's lawyer."], cat:"Crime"},
+  {q:"Get away from her, you bitch!", src:"Aliens", year:1986, type:"movie", char:"Ellen Ripley", actors:[{name:"Sigourney Weaver",role:"Ellen Ripley"}], desc:"Ripley, in a power loader, facing the Alien Queen to protect Newt. The defining action-hero line delivered by a woman at a time when that was still radical.", trivia:["Sigourney Weaver was nominated for an Academy Award for Best Actress — a first for an action film performance.","The line was originally a longer speech. Director James Cameron trimmed it for maximum impact."], cat:"Crime"},
+  {q:"My name is Inigo Montoya. You killed my father. Prepare to die.", src:"The Princess Bride", year:1987, type:"movie", char:"Inigo Montoya", actors:[{name:"Mandy Patinkin",role:"Inigo Montoya"}], desc:"Twenty years of a man's life summarised in two sentences. Revenge, loss, and resolution — the most satisfying callback in cinema.", trivia:["Mandy Patinkin said this was his favourite role of his career because he identified with Inigo's grief — his own father had died of cancer.","The line is repeated six times in the film, each time with slightly different weight."], cat:"Crime"},
+  {q:"I see dead people.", src:"The Sixth Sense", year:1999, type:"movie", char:"Cole Sear", actors:[{name:"Haley Joel Osment",role:"Cole Sear"}], desc:"Haley Joel Osment's trembling whisper — the film's central revelation delivered so quietly it became the defining horror line of its decade.", trivia:["M. Night Shyamalan kept the film's twist secret from everyone except the lead actors.","Haley Joel Osment was 10 years old during filming and received an Academy Award nomination for Best Supporting Actor."], cat:"Crime"},
+
+  // ── ROMANCE & HUMAN ──
+  {q:"You had me at hello.", src:"Jerry Maguire", year:1996, type:"movie", char:"Dorothy Boyd", actors:[{name:"Renée Zellweger",role:"Dorothy Boyd"}], desc:"Jerry's prepared a speech. Dorothy doesn't need it. Everything was decided at the front door.", trivia:["Cameron Crowe wrote the script after a real conversation with his future wife, Nancy Wilson.","Tom Cruise and Renée Zellweger had very little prior rehearsal — Crowe wanted genuine spontaneity."], cat:"Romance"},
+  {q:"I'll have what she's having.", src:"When Harry Met Sally...", year:1989, type:"movie", char:"Older Woman (Estelle Reiner)", actors:[{name:"Estelle Reiner",role:"Customer at Katz's Deli"}], desc:"The punchline to Meg Ryan's famous deli scene. Delivered by director Rob Reiner's own mother — cast specifically for that one line.", trivia:["The deli scene was shot in Katz's Delicatessen, New York. A sign now marks the exact table.","Rob Reiner had originally planned to play the role himself before casting his mother."], cat:"Romance"},
+  {q:"Nobody puts Baby in a corner.", src:"Dirty Dancing", year:1987, type:"movie", char:"Johnny Castle", actors:[{name:"Patrick Swayze",role:"Johnny Castle"}], desc:"The triumphant declaration that ends Baby's passive chapter. Johnny crosses the floor and claims her — it's permission and rebellion at once.", trivia:["Patrick Swayze said this was the hardest line to deliver without laughing — it felt absurd to him.","The film was shot in 43 days on a $6 million budget and grossed over $213 million worldwide."], cat:"Romance"},
+  {q:"After all, tomorrow is another day!", src:"Gone with the Wind", year:1939, type:"movie", char:"Scarlett O'Hara", actors:[{name:"Vivien Leigh",role:"Scarlett O'Hara"}], desc:"Resilience personified. Scarlett has just been abandoned, her marriage is over, her world is ash — and she's already planning the comeback.", trivia:["The final scene was shot without Vivien Leigh and Clark Gable in the same frame — both were exhausted.","Producer David O. Selznick allegedly rewrote this scene eleven times."], cat:"Romance"},
+  {q:"To infinity and beyond!", src:"Toy Story", year:1995, type:"movie", char:"Buzz Lightyear", actors:[{name:"Tim Allen",role:"Buzz Lightyear (voice)"}], desc:"A toy who doesn't know he's a toy, driven by a delusion that becomes metaphor. The phrase found its way into astronaut speeches and graduation addresses.", trivia:["Tim Allen said the line was supposed to sound ridiculous but ended up becoming genuinely inspiring.","'To infinity and beyond' was inscribed on a plaque at NASA's Jet Propulsion Laboratory."], cat:"Drama"},
+
+  // ── PHILOSOPHICAL & PROFOUND ──
+  {q:"After all this time? Always.", src:"Harry Potter and the Deathly Hallows", year:2011, type:"movie", char:"Severus Snape", actors:[{name:"Alan Rickman",role:"Severus Snape"}], desc:"The revelation of Snape's entire story in a single word. Years of sacrifice, cold cruelty, and secret grief distilled into 'always.'", trivia:["Alan Rickman was the only cast member told the ending by J.K. Rowling before filming began — so he could play the role correctly.","This scene made 'always' one of the most searched single words in internet history."], cat:"Profound"},
+  {q:"There are more things in heaven and earth, Horatio, than are dreamt of in your philosophy.", src:"Hamlet", year:1996, type:"movie", char:"Hamlet", actors:[{name:"Kenneth Branagh",role:"Hamlet"}], desc:"Shakespeare's original — Hamlet telling Horatio that the rational mind has limits. Four centuries old and still true.", trivia:["Kenneth Branagh's 1996 adaptation is the only complete unabridged film version of Hamlet — running 4 hours.","The line is often misquoted as 'in your philosophy' when the original reads 'in your philosophy.'"], cat:"Profound"},
+  {q:"The greatest trick the devil ever pulled was convincing the world he didn't exist.", src:"The Usual Suspects", year:1995, type:"movie", char:"Verbal Kint / Keyser Söze", actors:[{name:"Kevin Spacey",role:"Verbal Kint"}], desc:"The whole film is built on this principle. Verbal is the least likely suspect — because he tells you exactly what's happening and you still don't see it.", trivia:["The line is adapted from a Baudelaire poem: 'La plus belle des ruses du diable est de vous persuader qu'il n'existe pas.'","Kevin Spacey won the Academy Award for Best Supporting Actor for the role."], cat:"Profound"},
+  {q:"It's only after we've lost everything that we're free to do anything.", src:"Fight Club", year:1999, type:"movie", char:"Tyler Durden", actors:[{name:"Brad Pitt",role:"Tyler Durden"}], desc:"Tyler Durden's gospel of destruction. He's wrong about almost everything but completely right about the liberating terror of starting over.", trivia:["Fight Club was a box office disappointment on release but became one of the most discussed films of its era.","Brad Pitt spent months in physical preparation for the role and famously refused to eat normally."], cat:"Profound"},
+  {q:"The first rule of Fight Club is: you do not talk about Fight Club.", src:"Fight Club", year:1999, type:"movie", char:"Tyler Durden", actors:[{name:"Brad Pitt",role:"Tyler Durden"}], desc:"A rule designed to be broken. The irony is that Tyler tells this to hundreds of people — the club is a secret everyone knows.", trivia:["The line is delivered twice in rapid succession — a deliberate echo of the film's doubling motif.","The phrase has entered the language and is applied to anything involving secrecy."], cat:"Profound"},
+  {q:"You either die a hero or you live long enough to see yourself become the villain.", src:"The Dark Knight", year:2008, type:"movie", char:"Harvey Dent", actors:[{name:"Aaron Eckhart",role:"Harvey Dent"}], desc:"Dent says it about Batman, not knowing it's about himself. The tragic prophecy of a man destroyed by the system he championed.", trivia:["Aaron Eckhart spent months studying the psychology of optimistic leaders who become corrupted.","The line was voted by fans as one of the greatest in superhero cinema history."], cat:"Profound"},
+  {q:"Just when I thought I was out, they pull me back in.", src:"The Godfather Part III", year:1990, type:"movie", char:"Michael Corleone", actors:[{name:"Al Pacino",role:"Michael Corleone"}], desc:"Michael attempting to legitimise his family and finding the criminal world won't let him go. The prison is the name itself.", trivia:["Al Pacino and Francis Ford Coppola both felt this was the most difficult Corleone scene to shoot emotionally.","The line has been parodied extensively, most famously by The Simpsons."], cat:"Profound"},
+  {q:"Carpe diem. Seize the day, boys. Make your lives extraordinary.", src:"Dead Poets Society", year:1989, type:"movie", char:"John Keating", actors:[{name:"Robin Williams",role:"John Keating"}], desc:"Keating's inaugural lesson — standing in front of photographs of long-dead alumni, reminding boys that they too will be dust.", trivia:["Robin Williams improvised much of his classroom material. Several scenes used genuine student reactions.","The film was ranked #52 on the AFI's list of 100 greatest American films."], cat:"Profound"},
+  {q:"Oh captain, my captain.", src:"Dead Poets Society", year:1989, type:"movie", char:"Todd Anderson", actors:[{name:"Ethan Hawke",role:"Todd Anderson"}], desc:"Borrowed from Walt Whitman's elegy for Lincoln. The boys standing on desks — an act of solidarity against institutional betrayal.", trivia:["Ethan Hawke said this scene was shot with genuine emotion — Robin Williams' eyes filled with tears that weren't scripted.","The Walt Whitman poem 'O Captain! My Captain!' was written in 1865 after Lincoln's assassination."], cat:"Profound"},
+  {q:"Remember who you are.", src:"The Lion King", year:1994, type:"movie", char:"Mufasa (Ghost)", actors:[{name:"James Earl Jones",role:"Mufasa"}], desc:"A father's voice from beyond death reminding a son of his responsibility. Simple, devastating, universally true.", trivia:["James Earl Jones and Jeremy Irons were cast partly because of the power of their contrasting voices.","The film's wildebeest stampede sequence took three years to produce and required entirely new rendering software."], cat:"Profound"},
+  {q:"Why are you trying so hard to fit in when you were born to stand out?", src:"What a Girl Wants", year:2003, type:"movie", char:"Henry Dashwood", actors:[{name:"Colin Firth",role:"Henry Dashwood"}], desc:"Not a canonical classic, but the line landed in culture. Permission to be strange, amplified by every teenager who ever felt out of place.", trivia:["The film was based on the 1958 play The Reluctant Debutante.","Colin Firth reportedly added the line after suggesting the script needed a clearer thesis statement."], cat:"Profound"},
+  {q:"It ain't about how hard you hit. It's about how hard you can get hit and keep moving forward.", src:"Rocky Balboa", year:2006, type:"movie", char:"Rocky Balboa", actors:[{name:"Sylvester Stallone",role:"Rocky Balboa"}], desc:"Stallone wrote this speech for himself after years of professional disappointment. Rocky's talking to his son, but Sly's talking to himself.", trivia:["The speech was not in the original script — Stallone wrote it the night before filming.","Rocky Balboa was made 16 years after Rocky V, with virtually no studio support."], cat:"Profound"},
+  {q:"Fear is the path to the dark side. Fear leads to anger, anger leads to hate, hate leads to suffering.", src:"The Phantom Menace", year:1999, type:"movie", char:"Yoda", actors:[{name:"Frank Oz",role:"Yoda (voice)"}], desc:"Yoda diagnosing Anakin's future in one chain of causation. The philosophy of the entire prequel trilogy compressed into four clauses.", trivia:["Frank Oz puppeteered Yoda while delivering all lines — CGI Yoda was introduced later.","George Lucas cited Buddhist philosophy as the primary inspiration for Yoda's teachings."], cat:"Profound"},
+  {q:"We accept the love we think we deserve.", src:"The Perks of Being a Wallflower", year:2012, type:"movie", char:"Bill", actors:[{name:"Paul Rudd",role:"Bill"}], desc:"A high school teacher telling a student the quiet truth about self-worth and relationships. Becomes the film's emotional key.", trivia:["The film was written and directed by Stephen Chbosky, who also wrote the original novel.","Paul Rudd said he delivers the line differently depending on which screening he's seen — each time it hits differently."], cat:"Profound"},
+
+  // ── TV ──
+  {q:"I am the one who knocks.", src:"Breaking Bad", year:2011, type:"tv", char:"Walter White", actors:[{name:"Bryan Cranston",role:"Walter White"}], desc:"The moment Walter White becomes Heisenberg — permanently. He's spent a season pretending to be afraid. He's not afraid. He is the thing that kills.", trivia:["Writer Gennifer Hutchison said she had no idea the monologue would become iconic when writing it.","Bryan Cranston said he considered this the most important scene of the entire series."], cat:"TV"},
+  {q:"Say my name.", src:"Breaking Bad", year:2012, type:"tv", char:"Walter White", actors:[{name:"Bryan Cranston",role:"Walter White"}], desc:"Heisenberg demanding acknowledgement from a rival drug distributor. Three words, total dominance, no ambiguity about who's in charge now.", trivia:["The scene was filmed in the Albuquerque desert over two days.","The line was later the title of the show's season 5 episode 7."], cat:"TV"},
+  {q:"You come at the king, you best not miss.", src:"The Wire", year:2002, type:"tv", char:"Omar Little", actors:[{name:"Michael K. Williams",role:"Omar Little"}], desc:"Omar's street philosophy — escalation without a decisive blow is fatal. He's right. It's also his own prophecy.", trivia:["Michael K. Williams said Omar was the most complicated and personal role of his career.","Omar Little became one of the most beloved TV characters ever written — Barack Obama cited him as his favourite character."], cat:"TV"},
+  {q:"A man's gotta have a code.", src:"The Wire", year:2002, type:"tv", char:"Omar Little", actors:[{name:"Michael K. Williams",role:"Omar Little"}], desc:"Omar's ethics are rigid even within moral chaos. He doesn't rob civilians, he doesn't harm innocents. His code is more consistent than most legitimate characters.", trivia:["David Simon based Omar loosely on a real-life Baltimore stick-up artist named Donnie Andrews.","The Wire was famously snubbed by awards shows but is now widely considered the greatest TV drama ever made."], cat:"TV"},
+  {q:"Money ain't got no owners, only spenders.", src:"The Wire", year:2003, type:"tv", char:"Omar Little", actors:[{name:"Michael K. Williams",role:"Omar Little"}], desc:"Omar on economics. Money is neutral — it flows to whoever takes it. A street philosopher in a broken system.", trivia:["The Wire season 3 introduced 'Hamsterdam' — a real debate on drug decriminalisation that the show's writers had with actual Baltimore politicians.","David Simon worked as a crime reporter for the Baltimore Sun before creating the show."], cat:"TV"},
+  {q:"More is lost by indecision than wrong decision.", src:"The Sopranos", year:2000, type:"tv", char:"Tony Soprano", actors:[{name:"James Gandolfini",role:"Tony Soprano"}], desc:"Tony's management philosophy. It's sound advice from a terrible man. The Sopranos specialised in making you nod along with the monster.", trivia:["James Gandolfini improvised many of Tony's more philosophical moments in consultation with the writers.","The Sopranos changed the economic model of prestige television, proving that subscribers would pay for dark, morally complex drama."], cat:"TV"},
+  {q:"Those who want respect, give respect.", src:"The Sopranos", year:1999, type:"tv", char:"Tony Soprano", actors:[{name:"James Gandolfini",role:"Tony Soprano"}], desc:"Tony preaching what he doesn't practise — which is half the point of The Sopranos. His self-awareness never reaches deep enough.", trivia:["David Chase has said Tony Soprano was partly inspired by his own difficult relationship with his mother.","James Gandolfini won three Emmy Awards for the role."], cat:"TV"},
+  {q:"I am not in danger, Skyler. I am the danger.", src:"Breaking Bad", year:2012, type:"tv", char:"Walter White", actors:[{name:"Bryan Cranston",role:"Walter White"}], desc:"The full speech ends '…I am the one who knocks.' But this is the pivot — Walter is done asking permission to be what he's become.", trivia:["Anna Gunn, playing Skyler, said filming this scene was the most frightened she ever felt on set.","Bryan Cranston said this was the moment Walter White died and only Heisenberg remained."], cat:"TV"},
+  {q:"I did it for me. I liked it. I was good at it. And I was really… I was alive.", src:"Breaking Bad", year:2013, type:"tv", char:"Walter White", actors:[{name:"Bryan Cranston",role:"Walter White"}], desc:"The show's final confession — the story was never about providing for his family. It was about ego, identity, and finally feeling real.", trivia:["Vince Gilligan said this scene completed Walt's journey — the last honest moment in five seasons of self-deception.","The line was not in early drafts. Bryan Cranston and Gilligan wrote it together in rehearsal."], cat:"TV"},
+  {q:"If you believe that I'm a killer, what do you think is going to happen when I walk out of that door?", src:"The Wire", year:2004, type:"tv", char:"Omar Little", actors:[{name:"Michael K. Williams",role:"Omar Little"}], desc:"Omar in court, cross-examining a detective. The courtroom scene is one of TV's finest — a man without legal legitimacy more credible than the law itself.", trivia:["The scene was based on a real court testimony that David Simon observed as a journalist.","Michael K. Williams had never acted professionally before The Wire — he was a dancer."], cat:"TV"},
+  {q:"I don't want to survive. I want to live.", src:"12 Years a Slave", year:2013, type:"movie", char:"Solomon Northup", actors:[{name:"Chiwetel Ejiofor",role:"Solomon Northup"}], desc:"The distinction between mere biological endurance and a life worth living. Northup refuses to let enslavement reduce him to mere survival.", trivia:["The film is based on Solomon Northup's 1853 memoir — one of the most important abolitionist texts in American history.","Chiwetel Ejiofor won the BAFTA for Best Actor. The film won the Academy Award for Best Picture."], cat:"Drama"},
+  {q:"Before you judge me, try hard to love me. Look within your heart then ask, have you seen my childhood?", src:"Michael Jackson", year:1995, type:"tv", char:"Michael Jackson", actors:[{name:"Michael Jackson",role:"Himself"}], desc:"Not scripted fiction — MJ's real voice from the song 'Childhood.' An artist's plea for understanding wrapped in melody.", trivia:["The song was written for the film Free Willy 2 but became one of Jackson's most personal artistic statements.","Jackson's childhood trauma from his career launch at age 6 informed nearly all his work."], cat:"TV"},
+  {q:"The things you own end up owning you.", src:"Fight Club", year:1999, type:"movie", char:"Tyler Durden", actors:[{name:"Brad Pitt",role:"Tyler Durden"}], desc:"Anti-consumerism as self-liberation — Tyler Durden's manifesto. Twenty-five years on, it's been printed on merchandise sold at Urban Outfitters. The irony is not lost.", trivia:["David Fincher deliberately made Tyler Durden's philosophy seductive — and then showed its consequences.","The film cost $63 million and grossed $37 million in cinemas. On DVD and streaming it became a generational touchstone."], cat:"Profound"},
+  {q:"The world will ask you who you are, and if you do not know, the world will tell you.", src:"The Shawshank Redemption", year:1994, type:"movie", char:"Andy Dufresne", actors:[{name:"Tim Robbins",role:"Andy Dufresne"}], desc:"The quiet terror of identity — define yourself or be defined. Andy speaks from the lowest point of his life and still sees clearly.", trivia:["Frank Darabont wrote the screenplay in eight weeks, convinced the studios wouldn't option a Stephen King drama without horror.","The film received seven Academy Award nominations and won none."], cat:"Profound"},
+  {q:"I've seen things you people wouldn't believe. Attack ships on fire off the shoulder of Orion.", src:"Blade Runner", year:1982, type:"movie", char:"Roy Batty", actors:[{name:"Rutger Hauer",role:"Roy Batty"}], desc:"The dying words of a replicant — memories that will be lost with him. The most beautiful death speech in science fiction. Mostly improvised.", trivia:["Rutger Hauer largely wrote this speech himself the night before filming, cutting the scripted version to its essence.","Director Ridley Scott called it 'the greatest death monologue in cinema history.'"], cat:"Profound"},
+  {q:"All those moments will be lost in time, like tears in rain.", src:"Blade Runner", year:1982, type:"movie", char:"Roy Batty", actors:[{name:"Rutger Hauer",role:"Roy Batty"}], desc:"The continuation of Roy's final speech. A meditation on mortality and the uniqueness of consciousness. He's a machine. He's more human than anyone.", trivia:["This line was also improvised by Hauer — the original script ended differently.","'Tears in rain' has been adopted by philosophers discussing personal identity and the nature of memory."], cat:"Profound"},
+  {q:"Do or do not. There is no try.", src:"The Empire Strikes Back", year:1980, type:"movie", char:"Yoda", actors:[{name:"Frank Oz",role:"Yoda (voice)"}], desc:"Yoda refusing Luke's hedging. Commitment is the Force's first demand. The line has been cited in military training, sports coaching, and countless commencement speeches.", trivia:["Frank Oz performed Yoda with his right hand while puppeteering with three other operators behind the scenes.","George Lucas wrote Yoda's dialogue with a specific grammatical inversion (object-subject-verb) to suggest an alien thought pattern."], cat:"Profound"},
+  {q:"Never tell me the odds.", src:"The Empire Strikes Back", year:1980, type:"movie", char:"Han Solo", actors:[{name:"Harrison Ford",role:"Han Solo"}], desc:"Han dismissing C-3PO's survival calculations. The entire Han Solo character in four words — confident, anti-intellectual, right.", trivia:["Harrison Ford improvised many of Han Solo's most beloved lines, often in conflict with George Lucas's scripted dialogue.","The asteroid field sequence required entirely new ILM technology to render."], cat:"Action"},
+  {q:"I find your lack of faith disturbing.", src:"Star Wars", year:1977, type:"movie", char:"Darth Vader", actors:[{name:"David Prowse",role:"Darth Vader (body)"},{name:"James Earl Jones",role:"Darth Vader (voice)"}], desc:"Vader Force-choking an Imperial officer mid-meeting for doubting the Death Star's weakness. Authority expressed through casual murder.", trivia:["James Earl Jones was uncredited at his own request for the original theatrical release.","David Prowse (the man inside the suit) only discovered Vader was Luke's father by reading the script — he'd been given false pages during filming."], cat:"Action"},
+  {q:"You are who you are. Nothing more, nothing less.", src:"The Lion King", year:1994, type:"movie", char:"Rafiki", actors:[{name:"Robert Guillaume",role:"Rafiki (voice)"}], desc:"Simple identity philosophy from the mandrill philosopher-shaman. Acceptance without diminishment.", trivia:["Robert Guillaume improvised much of Rafiki's accent and cadence.","The Lion King is loosely based on Shakespeare's Hamlet — Disney has never officially confirmed this."], cat:"Profound"},
+  {q:"Courage is not the absence of fear. It is the judgement that something else is more important than fear.", src:"The Princess Diaries", year:2001, type:"movie", char:"Queen Clarisse Renaldi", actors:[{name:"Julie Andrews",role:"Queen Clarisse Renaldi"}], desc:"Julie Andrews reframing heroism. Bravery isn't emotional immunity — it's hierarchy of priorities.", trivia:["The quote is often incorrectly attributed to Ambrose Redmoon — but this film is its most famous delivery.","Director Garry Marshall said this line was the original pitch for the whole film."], cat:"Profound"},
+  {q:"Love is patient, love is kind.", src:"1 Corinthians", year:1984, type:"movie", char:"Various", actors:[{name:"Various actors",role:"Wedding scenes"}], desc:"The passage from Corinthians has appeared in countless films — but in Four Weddings and a Funeral, read at the altar, it lands with new weight.", trivia:["1 Corinthians 13 is the most commonly chosen reading at Christian weddings in the UK.","In Four Weddings, the passage is recited by the deaf character George — signing and speaking simultaneously."], cat:"Romance"},
+
+  // ── MORE TV CLASSICS ──
+  {q:"Winter is coming.", src:"Game of Thrones", year:2011, type:"tv", char:"Ned Stark", actors:[{name:"Sean Bean",role:"Ned Stark"}], desc:"The Stark family motto — and the entire show's central warning. Most of the realm ignores it. Most of the realm suffers for it.", trivia:["George R.R. Martin conceived 'Winter is Coming' as a commentary on climate change and political short-termism.","Sean Bean's Ned Stark was killed at the end of season 1 — subverting the convention that the moral protagonist survives."], cat:"TV"},
+  {q:"A lion does not concern himself with the opinion of sheep.", src:"Game of Thrones", year:2011, type:"tv", char:"Tywin Lannister", actors:[{name:"Charles Dance",role:"Tywin Lannister"}], desc:"Tywin's aristocratic worldview — contempt for popular opinion dressed as philosophy. He's monstrous and he's usually right.", trivia:["Charles Dance said Tywin was the easiest role to inhabit because the character's logic was internally consistent.","GRRM has said Tywin Lannister is the most difficult character to write because his evil is functional and reasonable."], cat:"TV"},
+  {q:"When you play the game of thrones, you win or you die.", src:"Game of Thrones", year:2011, type:"tv", char:"Cersei Lannister", actors:[{name:"Lena Headey",role:"Cersei Lannister"}], desc:"Cersei's statement of political reality — power has no neutral position, no half-measures. This line defines the show's entire moral framework.", trivia:["The line is almost verbatim from George R.R. Martin's novel.","Lena Headey won multiple Emmy nominations for the role but never won, which became a running industry joke."], cat:"TV"},
+  {q:"Not today.", src:"Game of Thrones", year:2012, type:"tv", char:"Arya Stark / Syrio Forel", actors:[{name:"Maisie Williams",role:"Arya Stark"},{name:"Miltos Yerolemou",role:"Syrio Forel"}], desc:"Syrio Forel's answer to the God of Death — refused. Arya carries this into every battle. A two-word philosophy of survival.", trivia:["Miltos Yerolemou (Syrio Forel) trained Maisie Williams in actual swordsmanship for the role.","The line 'not today' is spoken by Arya at the Battle of Winterfell as she kills the Night King — the payoff of seven seasons."], cat:"TV"},
+  {q:"I drink and I know things.", src:"Game of Thrones", year:2016, type:"tv", char:"Tyrion Lannister", actors:[{name:"Peter Dinklage",role:"Tyrion Lannister"}], desc:"Tyrion's self-deprecating philosophy — using humour to deflect the tragedy of being the most intelligent person in every room and the least respected.", trivia:["Peter Dinklage won an Emmy for his portrayal of Tyrion, and the character became one of the most popular in television history.","The line was used on thousands of mugs, t-shirts and prints within weeks of airing."], cat:"TV"},
+  {q:"The night is dark and full of terrors.", src:"Game of Thrones", year:2011, type:"tv", char:"Melisandre", actors:[{name:"Carice van Houten",role:"Melisandre"}], desc:"The Lord of Light religion's prayer against darkness — used by Melisandre with absolute conviction that disguises absolute ruthlessness.", trivia:["Carice van Houten said she enjoyed playing Melisandre's certainty — it's rarer in dramatic characters than ambiguity.","The phrase became standard online vocabulary for expressing dread."], cat:"TV"},
+  {q:"The world is not a wish-granting factory.", src:"The Fault in Our Stars", year:2014, type:"movie", char:"Augustus Waters", actors:[{name:"Ansel Elgort",role:"Augustus Waters"}], desc:"A teenager with cancer refusing to sentimentalise his situation. The film earned its emotional power by resisting the comforting lies.", trivia:["Based on John Green's 2012 novel — Green based Augustus partly on a friend who died of bone cancer.","The film grossed $307 million worldwide on a $12 million budget."], cat:"Profound"},
+  {q:"The truth will set you free. But first, it will piss you off.", src:"Knives Out", year:2019, type:"movie", char:"Benoit Blanc", actors:[{name:"Daniel Craig",role:"Benoit Blanc"}], desc:"A rewritten Gloria Steinem quote — recontextualised as detective philosophy. Rian Johnson's script is full of adapted wisdom.", trivia:["Daniel Craig said he based Benoit Blanc's accent on a specific Southern Gothic tradition he researched extensively.","The film was written with Craig specifically in mind after Johnson saw his dramatic range."], cat:"Profound"},
+  {q:"I'm also just a girl, standing in front of a boy, asking him to love her.", src:"Notting Hill", year:1999, type:"movie", char:"Anna Scott", actors:[{name:"Julia Roberts",role:"Anna Scott"}], desc:"A movie star discarding her fame as a credential and appealing to the most basic human vulnerability. The best romantic speech in British cinema.", trivia:["Richard Curtis wrote the scene in one sitting and said it was the quickest piece of writing he'd ever done.","Julia Roberts said the line felt almost embarrassingly naked — which is exactly what made it work."], cat:"Romance"},
+  {q:"Happiness is only real when shared.", src:"Into the Wild", year:2007, type:"movie", char:"Christopher McCandless", actors:[{name:"Emile Hirsch",role:"Christopher McCandless"}], desc:"McCandless's final journal entry, written as he was dying alone in Alaska. The thing he discovered too late.", trivia:["The real Christopher McCandless died in August 1992 aged 24. His story was first told in Jon Krakauer's 1996 book.","Director Sean Penn corresponded with McCandless's family for years before they granted permission for the film."], cat:"Profound"},
+  {q:"To be, or not to be, that is the question.", src:"Hamlet", year:1996, type:"movie", char:"Hamlet", actors:[{name:"Kenneth Branagh",role:"Hamlet"}], desc:"The most famous line in English literature. The entire play — and arguably the entire Western dramatic tradition — turns on this question.", trivia:["The soliloquy has been analysed in more academic papers than any other passage in English literature.","Kenneth Branagh filmed the soliloquy in a single unbroken take with no cuts."], cat:"Classic"},
+  {q:"Et tu, Bruté?", src:"Julius Caesar (film)", year:1953, type:"movie", char:"Julius Caesar", actors:[{name:"Louis Calhern",role:"Julius Caesar"}], desc:"Shakespeare's dramatisation of Caesar's final words — the betrayal of a friend cutting deeper than the knife. Historically probably not said.", trivia:["Historical sources give different last words — Suetonius suggested Caesar said nothing, others suggest Greek.","The phrase has become shorthand in English for betrayal by a trusted ally."], cat:"Classic"},
+  {q:"Elementary, my dear Watson.", src:"Sherlock Holmes", year:1984, type:"tv", char:"Sherlock Holmes", actors:[{name:"Jeremy Brett",role:"Sherlock Holmes"}], desc:"Arthur Conan Doyle never actually wrote this exact phrase — it's an amalgamation. But Jeremy Brett's delivery made it definitive.", trivia:["The phrase first appeared in a Strand Magazine parody in 1915, not in any Doyle original.","Jeremy Brett is widely considered the definitive screen Holmes — he was diagnosed with bipolar disorder and channelled it into the role."], cat:"Classic"},
+  {q:"My precious.", src:"The Lord of the Rings: The Two Towers", year:2002, type:"movie", char:"Gollum", actors:[{name:"Andy Serkis",role:"Gollum"}], desc:"Gollum's entire tragedy in two words — an object of beauty that corrupted its bearer over centuries. Addiction, obsession, and the destruction of self.", trivia:["Andy Serkis developed the Gollum voice after imagining a character with addiction-style psychology.","Peter Jackson called Serkis's Gollum performance the most technically and emotionally demanding in the trilogy."], cat:"Classic"},
+  {q:"You shall not pass!", src:"The Lord of the Rings: The Fellowship of the Ring", year:2001, type:"movie", char:"Gandalf", actors:[{name:"Ian McKellen",role:"Gandalf"}], desc:"Gandalf standing alone on the Bridge of Khazad-dûm against a Balrog. The line is an act of pure will — the sacrifice of the old wizard for the Fellowship.", trivia:["Ian McKellen said this was the single most emotionally demanding line he'd ever been asked to deliver.","Tolkien's original text reads 'You cannot pass' — the film altered it for emphasis."], cat:"Classic"},
+  {q:"It's a dangerous business, Frodo, going out your door.", src:"The Lord of the Rings: The Fellowship of the Ring", year:2001, type:"movie", char:"Bilbo Baggins", actors:[{name:"Ian Holm",role:"Bilbo Baggins"}], desc:"Tolkien's most beautiful sentence — the first step as the one of consequence. All adventure begins with leaving the comfortable known.", trivia:["Tolkien wrote this in The Fellowship of the Ring — it was Bilbo's journal entry.","Ian Holm had previously played Frodo on BBC Radio 4's 1981 adaptation of Lord of the Rings."], cat:"Classic"},
+  {q:"There can be only one.", src:"Highlander", year:1986, type:"movie", char:"Conner MacLeod", actors:[{name:"Christopher Lambert",role:"Conner MacLeod"}], desc:"The tagline that became canon. Immortals hunting each other across centuries for the Prize — brutal, romantic, and completely mad.", trivia:["The film was a box office flop but became one of the most beloved cult films in history.","Freddie Mercury watched the film and immediately offered Queen's services for the soundtrack."], cat:"Action"},
+  {q:"I'll make him an offer he can't refuse.", src:"The Godfather", year:1972, type:"movie", char:"Vito Corleone", actors:[{name:"Marlon Brando",role:"Vito Corleone"}], desc:"The quintessential expression of power — not a threat, but a certainty. Vito never raises his voice. He doesn't need to.", trivia:["Brando won the Academy Award for Best Actor but sent activist Sacheen Littlefeather to refuse it on his behalf.","The voice Brando used was developed after shoving cotton in his cheeks — a prosthetic was made for the film."], cat:"Crime"},
+  {q:"I am your father.", src:"The Empire Strikes Back", year:1980, type:"movie", char:"Darth Vader", actors:[{name:"James Earl Jones",role:"Darth Vader (voice)"}], desc:"The most famous twist in cinema. It fundamentally changed the nature of the hero's journey — the monster is the father.", trivia:["Almost no one on set knew the real line — David Prowse was given false dialogue and James Earl Jones recorded the real line in post-production.","Mark Hamill has described his reaction when told the truth as 'I was absolutely floored.'"], cat:"Action"},
+  {q:"No. I am your father.", src:"The Empire Strikes Back", year:1980, type:"movie", char:"Darth Vader", actors:[{name:"James Earl Jones",role:"Darth Vader (voice)"},{name:"Mark Hamill",role:"Luke Skywalker"}], desc:"The actual famous quote — most people misremember it as 'Luke, I am your father.' The 'No' is doing enormous work here.", trivia:["The misquote 'Luke, I am your father' is so pervasive that many people refuse to believe the correct version.","Empire Strikes Back was directed by Irvin Kershner, not George Lucas — widely considered the best film in the franchise as a result."], cat:"Action"},
+  {q:"Roads? Where we're going, we don't need roads.", src:"Back to the Future", year:1985, type:"movie", char:"Doc Brown", actors:[{name:"Christopher Lloyd",role:"Doc Brown"}], desc:"The last line of the film — the perfect set-up for a sequel that wasn't yet planned. Ambition and possibility in one perfect image.", trivia:["The ending was changed multiple times. The original script had a different mechanism entirely.","Christopher Lloyd said Doc Brown is the most joyful character he's ever played."], cat:"Action"},
+  {q:"Nobody's perfect.", src:"Some Like It Hot", year:1959, type:"movie", char:"Osgood Fielding III", actors:[{name:"Joe E. Brown",role:"Osgood Fielding III"}], desc:"The last line of the greatest comedy ending in Hollywood history. Jerry reveals he's a man. Osgood shrugs. Nobody's perfect.", trivia:["Billy Wilder's original ending had Osgood discover the truth and the two of them get married — the studio refused it.","Joe E. Brown delivered the line with such conviction that it survived as a perfect punchline — and a strangely progressive statement for 1959."], cat:"Classic"},
+
+  // ── MORE PROFOUND TV ──
+  {q:"Clear eyes, full hearts, can't lose.", src:"Friday Night Lights", year:2006, type:"tv", char:"Coach Eric Taylor", actors:[{name:"Kyle Chandler",role:"Coach Eric Taylor"}], desc:"A coach addressing his team in a small Texas town. Simple enough to be a cliché, earned enough to be profound. The entire show in four words.", trivia:["The phrase became the actual motto of real high school football teams across America after the show aired.","Kyle Chandler won the Emmy for Best Actor in 2011. He wore the exact same suit he'd worn to his first Emmy ceremony years earlier."], cat:"TV"},
+  {q:"I am the one who knocks. I am the danger.", src:"Breaking Bad", year:2011, type:"tv", char:"Walter White", actors:[{name:"Bryan Cranston",role:"Walter White"}], desc:"Heisenberg's complete declaration — he doesn't warn, he doesn't threaten. He identifies. This is the end of Walter White and the beginning of something worse.", trivia:["This scene is cited in studies of TV writing as the definitive moment of character transformation.","Bryan Cranston won four Emmy Awards for his portrayal of Walter White."], cat:"TV"},
+  {q:"Yeah, science!", src:"Breaking Bad", year:2009, type:"tv", char:"Jesse Pinkman", actors:[{name:"Aaron Paul",role:"Jesse Pinkman"}], desc:"Jesse's celebration of chemistry — naively enthusiastic in a context of moral catastrophe. Aaron Paul turned Jesse's comic relief into tragedy.", trivia:["Aaron Paul won three Emmy Awards for Jesse Pinkman — a record for supporting actor.","The line became a popular internet meme and is printed on chemistry teacher merchandise worldwide."], cat:"TV"},
+  {q:"You either win, or you learn.", src:"Peaky Blinders", year:2013, type:"tv", char:"Tommy Shelby", actors:[{name:"Cillian Murphy",role:"Tommy Shelby"}], desc:"Tommy's operational philosophy. Defeat isn't failure if you extract intelligence from it. Post-traumatic pragmatism.", trivia:["Cillian Murphy prepared for the role by studying WWI trauma and shell shock treatment.","Peaky Blinders was rejected by multiple networks before BBC Two picked it up."], cat:"TV"},
+  {q:"I believe in America.", src:"The Godfather", year:1972, type:"movie", char:"Amerigo Bonasera", actors:[{name:"Salvatore Corsitto",role:"Amerigo Bonasera"}], desc:"The first line of the film — an immigrant funeral director appealing to the Don. Three words that immediately establish everything the film is about.", trivia:["The first scene was famously filmed with no natural light — entirely lit by a single source for dramatic chiaroscuro.","Director of Photography Gordon Willis was nicknamed 'The Prince of Darkness' for his work on the Godfather trilogy."], cat:"Classic"},
+  {q:"There are only two ways I can see this ending, and one of them involves me rolling you up in that carpet.", src:"True Detective", year:2014, type:"tv", char:"Rust Cohle", actors:[{name:"Matthew McConaughey",role:"Rust Cohle"}], desc:"Rust's quiet menace — delivered without raising his voice, totally convincing. McConaughey found in Cohle a character darker than anything else in his career.", trivia:["Matthew McConaughey and Woody Harrelson insisted on spending weeks together before filming to establish their character chemistry.","Nic Pizzolatto wrote the entire first season in a cabin in Los Angeles with no staff."], cat:"TV"},
+  {q:"Time is a flat circle.", src:"True Detective", year:2014, type:"tv", char:"Rust Cohle", actors:[{name:"Matthew McConaughey",role:"Rust Cohle"}], desc:"Cohle's nihilistic cosmology — events repeat endlessly, consciousness is a tragedy, free will is an illusion. Delivered while drunk in an interrogation. Riveting.", trivia:["The line references philosopher Friedrich Nietzsche's concept of eternal recurrence.","Matthew McConaughey won the Academy Award for Best Actor (Dallas Buyers Club) the same year True Detective aired."], cat:"TV"},
+  {q:"You know the difference between you and me? I make this look good.", src:"Men in Black", year:1997, type:"movie", char:"James Edwards / J", actors:[{name:"Will Smith",role:"J"}], desc:"First line Will Smith's character says in the MIB uniform. Pure swagger, pure charm. Smith at his most effortlessly compelling.", trivia:["Will Smith turned down the lead in Matrix to make Men in Black. He has since publicly expressed regret.","The film introduced audiences to the concept of 'neuralyzing' memory — the device became a pop culture staple."], cat:"Action"},
+  {q:"Hasta la vista, baby.", src:"Terminator 2: Judgment Day", year:1991, type:"movie", char:"The Terminator", actors:[{name:"Arnold Schwarzenegger",role:"The Terminator"}], desc:"A Terminator, reprogrammed to protect a boy, learning slang. Said before freezing a liquid metal killer with liquid nitrogen and shattering him.", trivia:["The line was written for a scene explaining that John Connor taught the T-800 to say it.","In the German dub, the line became 'Auf Wiedersehen, Baby' — keeping the spirit if not the text."], cat:"Action"},
+  {q:"Life moves pretty fast. If you don't stop and look around once in a while, you could miss it.", src:"Ferris Bueller's Day Off", year:1986, type:"movie", char:"Ferris Bueller", actors:[{name:"Matthew Broderick",role:"Ferris Bueller"}], desc:"Ferris breaking the fourth wall to give the audience permission to pause. The entire 1980s in one philosophy of presence.", trivia:["John Hughes wrote the script in six days. He was 35 when it was released and identified completely with a teenager.","Matthew Broderick has said he still gets this line shouted at him more than anything else from his career."], cat:"Profound"},
+  {q:"Bueller?... Bueller?... Bueller?", src:"Ferris Bueller's Day Off", year:1986, type:"movie", char:"Economics Teacher", actors:[{name:"Ben Stein",role:"Economics Teacher"}], desc:"The flat drone of institutionalised boredom — a teacher reading off a register into an indifferent void. Ben Stein played himself, essentially.", trivia:["Ben Stein is a speechwriter turned actor. He ad-libbed most of the economics lecture.","The droning delivery was specifically directed — John Hughes wanted it to feel like a sedative."], cat:"Classic"},
+  {q:"I'm not bad. I'm just drawn that way.", src:"Who Framed Roger Rabbit", year:1988, type:"movie", char:"Jessica Rabbit", actors:[{name:"Kathleen Turner",role:"Jessica Rabbit (voice)"}], desc:"A cartoon femme fatale offering the most concise nature vs. nurture argument in cinema. She didn't choose to be a stereotype.", trivia:["Kathleen Turner voiced Jessica uncredited — she preferred to keep the role mysterious.","The film required entirely new compositing technology — developing techniques used in every subsequent live-action/animation hybrid."], cat:"Classic"},
+  {q:"We're on a mission from God.", src:"The Blues Brothers", year:1980, type:"movie", char:"Jake Blues", actors:[{name:"John Belushi",role:"Jake Blues"}], desc:"Said with complete earnestness by a man in a suit leaving prison. The film commits to the absurdity with deadpan sincerity.", trivia:["John Belushi died of a drug overdose on March 5, 1982, two years after the film's release.","The Blues Brothers holds the record for most vehicles destroyed in a film — 103 cars written off."], cat:"Classic"},
+  {q:"I see you.", src:"Avatar", year:2009, type:"movie", char:"Neytiri", actors:[{name:"Zoe Saldana",role:"Neytiri"}], desc:"The Na'vi phrase for ultimate recognition — to see someone's soul, not merely their face. A concept of love without equivalent in English.", trivia:["James Cameron developed the Na'vi language with linguist Paul Frommer, creating over a thousand words.","Avatar became the highest-grossing film of all time — twice — each time recaptured by a re-release."], cat:"Profound"},
+  {q:"My mama always said life was like a box of chocolates.", src:"Forrest Gump", year:1994, type:"movie", char:"Forrest Gump", actors:[{name:"Tom Hanks",role:"Forrest Gump"}], desc:"Forrest sitting on a bench, sharing wisdom with a stranger while waiting for a bus. Simplicity as philosophy.", trivia:["Tom Hanks was not director Robert Zemeckis's first choice. Bill Murray, John Travolta and Chevy Chase all passed on the role.","The film won six Academy Awards including Best Picture and Best Actor."], cat:"Classic"},
+  {q:"They may take our lives, but they'll never take our freedom!", src:"Braveheart", year:1995, type:"movie", char:"William Wallace", actors:[{name:"Mel Gibson",role:"William Wallace"}], desc:"The battle cry before Stirling. Historically completely inaccurate. Emotionally completely irresistible. That's cinema.", trivia:["The film's Battle of Stirling was filmed in Ireland — Scotland refused to provide military extras.","Mel Gibson prepared for the role by studying Celtic mythology and the actual historical records, then ignored most of them."], cat:"Action"},
+  {q:"You is kind, you is smart, you is important.", src:"The Help", year:2011, type:"movie", char:"Aibileen Clark", actors:[{name:"Viola Davis",role:"Aibileen Clark"}], desc:"Aibileen telling a white child the things her own community was never told. The most quietly devastating line in recent American cinema.", trivia:["Viola Davis received an Academy Award nomination for Best Actress for this role.","Octavia Spencer won the Academy Award for Best Supporting Actress — the first Black woman to win in a decade."], cat:"Drama"},
+
+  // ── SUCCESSION ──
+  {q:"I'm not going to get hurt. I don't get hurt.", src:"Succession", year:2018, type:"tv", char:"Logan Roy", actors:[{name:"Brian Cox",role:"Logan Roy"}], desc:"Logan Roy's operating principle — a man who survived a brutal childhood by deciding vulnerability wasn't an option. It defines his relationships with everyone, including his children.", trivia:["Brian Cox said Logan was the most exhausting role of his career because the character never relaxes, never lets his guard down, even for a moment.","Jesse Armstrong modelled Logan Roy partly on Rupert Murdoch and Robert Maxwell."], cat:"TV"},
+  {q:"I am a cog in a wheel that was built by idiots.", src:"Succession", year:2019, type:"tv", char:"Kendall Roy", actors:[{name:"Jeremy Strong",role:"Kendall Roy"}], desc:"Kendall's self-aware despair — he knows the machine is broken, knows his role in it, and still can't leave.", trivia:["Jeremy Strong researched narcissistic family systems and succession dynamics in real business dynasties before filming.","Strong stayed in character between takes throughout the entire series — his co-stars found this occasionally alarming."], cat:"TV"},
+  {q:"You are not serious people.", src:"Succession", year:2021, type:"tv", char:"Logan Roy", actors:[{name:"Brian Cox",role:"Logan Roy"}], desc:"Logan's nuclear dismissal of his own children's bid to run his empire. Six words that end a family.", trivia:["Jesse Armstrong said this line was written as the emotional climax of the entire show — not the finale.","The scene was filmed in a single take. Brian Cox improvised 'You are not serious people' on the second pass."], cat:"TV"},
+  {q:"I love you but you are not serious people.", src:"Succession", year:2021, type:"tv", char:"Logan Roy", actors:[{name:"Brian Cox",role:"Logan Roy"}], desc:"The full version — the 'I love you' makes it worse, not better. Logan Roy's love has always been conditional and weaponised.", trivia:["Brian Cox said the 'I love you' was the hardest part to deliver genuinely because the character rarely means it.","Succession won the Emmy for Outstanding Drama Series in all four of its eligible seasons."], cat:"TV"},
+  {q:"Make the case for me. I'm listening.", src:"Succession", year:2019, type:"tv", char:"Logan Roy", actors:[{name:"Brian Cox",role:"Logan Roy"}], desc:"Logan forcing his children to audition for his approval in real time. The cruelty is that he's genuinely curious, not just sadistic.", trivia:["The dinner scene this comes from was cited by critics as one of the finest single scenes in TV history.","Jesse Armstrong wrote all four seasons before filming began — an unusual approach in American TV."], cat:"TV"},
+  {q:"Kendall, what do you think?", src:"Succession", year:2021, type:"tv", char:"Logan Roy", actors:[{name:"Brian Cox",role:"Logan Roy"}], desc:"Often Logan's most devastating line — not when he attacks, but when he turns to Kendall and waits. The power of expectation as cruelty.", trivia:["Jeremy Strong won the Emmy for Outstanding Lead Actor in a Drama Series for Succession.","The show's writers room spent weeks on the question of who Logan truly loved, if anyone."], cat:"TV"},
+
+  // ── MAD MEN ──
+  {q:"What you call love was invented by guys like me, to sell nylons.", src:"Mad Men", year:2007, type:"tv", char:"Don Draper", actors:[{name:"Jon Hamm",role:"Don Draper"}], desc:"Don Draper's cynical diagnosis of romantic love — a feeling manufactured for commercial purposes. He believes it because he built his life on manufactured feelings.", trivia:["Matthew Weiner, who created Mad Men, spent years trying to get it made after AMC was the fourth network to read the script.","Jon Hamm was relatively unknown before Mad Men — he had been working as a waiter a year before casting."], cat:"TV"},
+  {q:"People tell you who they are, but we ignore it because we want them to be who we want them to be.", src:"Mad Men", year:2010, type:"tv", char:"Don Draper", actors:[{name:"Jon Hamm",role:"Don Draper"}], desc:"Don on self-deception in relationships — and on himself, since he has been lying about his identity for twenty years.", trivia:["Mad Men won the Emmy for Outstanding Drama Series four consecutive years — a record at the time.","Jon Hamm said this line was the one that most resonated with him personally."], cat:"TV"},
+  {q:"This never happened. It will shock you how much it never happened.", src:"Mad Men", year:2007, type:"tv", char:"Don Draper", actors:[{name:"Jon Hamm",role:"Don Draper"}], desc:"Don advising a mistress on how to live with a secret. He is an expert. His entire life is built on this principle.", trivia:["Matthew Weiner based Don Draper's identity theft partly on a real post-WWII phenomenon of men who reinvented themselves.","The show shot entirely in Los Angeles while being set in New York — every exterior was recreated on stage."], cat:"TV"},
+  {q:"I have a life, and it only goes in one direction — forward.", src:"Mad Men", year:2012, type:"tv", char:"Don Draper", actors:[{name:"Jon Hamm",role:"Don Draper"}], desc:"Don's refusal to reckon with his past. By the final season, the audience knows this is exactly what destroys him.", trivia:["Jon Hamm did not win an Emmy for Mad Men until the show's final season — despite seven previous nominations.","The show's finale remains one of the most debated in television history."], cat:"TV"},
+
+  // ── FLEABAG ──
+  {q:"Hair is everything. We wish it wasn't so we could actually think about something else occasionally, but it is.", src:"Fleabag", year:2019, type:"tv", char:"Fleabag", actors:[{name:"Phoebe Waller-Bridge",role:"Fleabag"}], desc:"Fleabag on vanity, grief, and the absurdity of still caring about hair when your life is falling apart. Funny and devastating simultaneously.", trivia:["Phoebe Waller-Bridge wrote, starred in, and produced Fleabag — initially as a one-woman stage show at the Edinburgh Fringe.","The series won six Emmy Awards including Outstanding Comedy Series, Lead Actress, Writing and Directing."], cat:"TV"},
+  {q:"I want someone to tell me what to wear every morning. I want someone to tell me what to eat. I want someone to tell me what to do. I just don't want to have to make any decisions anymore.", src:"Fleabag", year:2016, type:"tv", char:"Fleabag", actors:[{name:"Phoebe Waller-Bridge",role:"Fleabag"}], desc:"Fleabag's most honest speech — not asking for love, but for relief from consciousness. The comedy of the series contains real grief.", trivia:["Waller-Bridge based much of Fleabag's psychology on conversations with friends about grief and female shame.","The 'fourth wall breaks' — Fleabag looking at camera — were used to show her only real intimacy is with the audience."], cat:"TV"},
+  {q:"I think you know how to love better than any of us. That's why you find it all so painful.", src:"Fleabag", year:2019, type:"tv", char:"The Priest", actors:[{name:"Andrew Scott",role:"The Priest"}], desc:"The Priest's diagnosis of Fleabag — love as wound, sensitivity as both gift and curse.", trivia:["Andrew Scott and Phoebe Waller-Bridge reportedly spent weeks developing the chemistry before shooting began.","Andrew Scott won the BAFTA for Best Supporting Actor for the role."], cat:"TV"},
+  {q:"Kneel.", src:"Fleabag", year:2019, type:"tv", char:"The Priest", actors:[{name:"Andrew Scott",role:"The Priest"}], desc:"A single word that ends the most electric scene in the series. Context makes it everything.", trivia:["The confession booth scene was filmed in one continuous twelve-minute take.","Waller-Bridge said writing the Priest was the hardest character she has ever attempted because he had to be genuinely good."], cat:"TV"},
+
+  // ── THE CROWN / BRITISH ──
+  {q:"Grief is the price we pay for love.", src:"The Crown", year:2017, type:"tv", char:"Queen Elizabeth II", actors:[{name:"Claire Foy",role:"Queen Elizabeth II"}], desc:"The Queen's message to America after 9/11 — attributed in the show to Elizabeth II, it resonated globally as a simple truth about loss.", trivia:["The line is adapted from a real message sent by Queen Elizabeth II to the American people after September 11, 2001.","Claire Foy won the Emmy and Golden Globe for her portrayal of the Queen in Seasons 1 and 2."], cat:"TV"},
+  {q:"Duty first, self second. That is the deal.", src:"The Crown", year:2016, type:"tv", char:"King George VI", actors:[{name:"Jared Harris",role:"King George VI"}], desc:"The royal compact — personal sacrifice as constitutional obligation. It defines and destroys every member of the family.", trivia:["Jared Harris said this speech was the one that made him understand the show wasn't about royalty but about obligation.","Peter Morgan spent three years researching the Royal Family before writing a single page of The Crown."], cat:"TV"},
+
+  // ── CHERNOBYL ──
+  {q:"Every lie we tell incurs a debt to the truth. Sooner or later, that debt is paid.", src:"Chernobyl", year:2019, type:"tv", char:"Valery Legasov", actors:[{name:"Jared Harris",role:"Valery Legasov"}], desc:"The opening and closing thesis of the miniseries — and the entire Soviet failure in one sentence. Institutional lying as slow-motion catastrophe.", trivia:["Jared Harris researched the real Legasov's taped confessions, which were discovered after his suicide and helped expose the cover-up.","Craig Mazin wrote the miniseries after five years of research. He said Legasov's tapes were the emotional core of the project."], cat:"TV"},
+  {q:"What is the cost of lies? It's not that we'll mistake them for the truth. The real danger is that if we hear enough lies, then we no longer recognise the truth at all.", src:"Chernobyl", year:2019, type:"tv", char:"Valery Legasov", actors:[{name:"Jared Harris",role:"Valery Legasov"}], desc:"Legasov's opening monologue — a statement about Soviet disinformation that became uncomfortably relevant to contemporary politics.", trivia:["The monologue is spoken by Legasov from a tape he recorded before his death — Mazin used the real tapes as source material.","Chernobyl received 19 Emmy nominations and won 10 — the most for a limited series at that point."], cat:"TV"},
+  {q:"You'll do it because it must be done. That is all.", src:"Chernobyl", year:2019, type:"tv", char:"Boris Shcherbina", actors:[{name:"Stellan Skarsgård",role:"Boris Shcherbina"}], desc:"A Soviet bureaucrat who transforms across the series into a man of conscience. This line is his pivot — bureaucratic language used for a moral act.", trivia:["Stellan Skarsgård won the Emmy for Outstanding Supporting Actor in a Limited Series.","The character of Shcherbina was based on a real Soviet Deputy Prime Minister who directed the liquidation effort."], cat:"TV"},
+
+  // ── FARGO ──
+  {q:"You're a part of an ongoing criminal enterprise. That means you will be held responsible for all of it.", src:"Fargo", year:1996, type:"movie", char:"Marge Gunderson", actors:[{name:"Frances McDormand",role:"Marge Gunderson"}], desc:"Marge delivering justice to a murderer she's just arrested, with a pregnant belly and total calm. The contrast is the point.", trivia:["Frances McDormand won the Academy Award for Best Actress — she was actually pregnant during filming.","The Coen Brothers wrote the role of Marge specifically for McDormand, who is married to Joel Coen."], cat:"Crime"},
+  {q:"There's more to life than a little money, you know. Don'tcha know that?", src:"Fargo", year:1996, type:"movie", char:"Marge Gunderson", actors:[{name:"Frances McDormand",role:"Marge Gunderson"}], desc:"Marge's final speech to Grimsrud in the police car — a meditation on decency versus greed from one of cinema's most moral characters.", trivia:["The film was based on real events, according to the Coens' opening title card — this is entirely false, a deliberate artistic choice.","Fargo won the Academy Award for Best Original Screenplay and Best Actress."], cat:"Crime"},
+
+  // ── NO COUNTRY FOR OLD MEN ──
+  {q:"What's the most you ever lost on a coin toss?", src:"No Country for Old Men", year:2007, type:"movie", char:"Anton Chigurh", actors:[{name:"Javier Bardem",role:"Anton Chigurh"}], desc:"Chigurh forcing a gas station owner to gamble for his life on a coin he didn't know was in the air. Pure terror through mundane conversation.", trivia:["Javier Bardem won the Academy Award for Best Supporting Actor. He did not watch any of his scenes during production.","Cormac McCarthy sold the novel rights to the Coens for a very small sum because he trusted them completely."], cat:"Crime"},
+  {q:"You can't stop what's coming. It ain't all waiting on you. That's vanity.", src:"No Country for Old Men", year:2007, type:"movie", char:"Ellis", actors:[{name:"Barry Corbin",role:"Ellis"}], desc:"An old man telling Sheriff Bell that his generation's sense of responsibility for the world is itself a form of pride.", trivia:["The Coen Brothers adapted the novel almost word-for-word. McCarthy said their script was the most faithful adaptation of his work.","The film's ending — Bell's dream — is one of the most discussed in American cinema for its ambiguity."], cat:"Crime"},
+  {q:"If the rule you followed brought you to this, of what use was the rule?", src:"No Country for Old Men", year:2007, type:"movie", char:"Anton Chigurh", actors:[{name:"Javier Bardem",role:"Anton Chigurh"}], desc:"Chigurh's nihilist philosophy — systems of morality that produce suffering aren't morality at all. He's wrong and he's consistent.", trivia:["Javier Bardem learned English specifically for this role. He spoke no English before auditioning.","The film won four Academy Awards including Best Picture."], cat:"Crime"},
+
+  // ── THERE WILL BE BLOOD ──
+  {q:"I'm finished!", src:"There Will Be Blood", year:2007, type:"movie", char:"Daniel Plainview", actors:[{name:"Daniel Day-Lewis",role:"Daniel Plainview"}], desc:"The last line of the film, after Plainview has murdered Eli Sunday in his bowling alley. Delivered with exhausted contempt. Magnificent and disturbing.", trivia:["Daniel Day-Lewis won his second Academy Award for Best Actor for this role.","Paul Thomas Anderson wrote the script specifically for Day-Lewis after sending him a handwritten letter."], cat:"Drama"},
+  {q:"I have a competition in me. I want no one else to succeed. I hate most people.", src:"There Will Be Blood", year:2007, type:"movie", char:"Daniel Plainview", actors:[{name:"Daniel Day-Lewis",role:"Daniel Plainview"}], desc:"The most honest thing Plainview says in the entire film — and he says it to a man he's about to betray. He means every word.", trivia:["Day-Lewis spent months developing Plainview's voice — partly inspired by John Huston.","The film is loosely based on Upton Sinclair's 1927 novel Oil!"], cat:"Drama"},
+
+  // ── WHIPLASH ──
+  {q:"There are no two words in the English language more harmful than 'good job.'", src:"Whiplash", year:2014, type:"movie", char:"Terence Fletcher", actors:[{name:"J.K. Simmons",role:"Terence Fletcher"}], desc:"Fletcher's operating principle — excellence cannot coexist with comfort. He's a monster who produces greatness and destroys people. The film refuses to decide which matters more.", trivia:["J.K. Simmons won the Academy Award for Best Supporting Actor. He trained with a real drum instructor for months.","Director Damien Chazelle based the film on his own experience in a brutal high school jazz program."], cat:"Drama"},
+  {q:"The next Charlie Parker would never be discouraged. That's what I'm trying to do. I'm trying to push people beyond what's expected of them.", src:"Whiplash", year:2014, type:"movie", char:"Terence Fletcher", actors:[{name:"J.K. Simmons",role:"Terence Fletcher"}], desc:"Fletcher's rationalisation — the abuse as necessary catalyst for genius. The film never fully disproves him, which makes it unsettling.", trivia:["Damien Chazelle deliberately left the ending ambiguous — Andrew's final performance could be seen as either a triumph or a surrender to Fletcher.","The film was shot in 19 days on a $3.3 million budget."], cat:"Drama"},
+
+  // ── MOONLIGHT ──
+  {q:"Who is you, Chiron?", src:"Moonlight", year:2016, type:"movie", char:"Juan", actors:[{name:"Mahershala Ali",role:"Juan"}], desc:"A drug dealer asking a boy a question that defines the entire film. Identity, self-knowledge, and the people who plant the seed of it in unlikely places.", trivia:["Mahershala Ali won the Academy Award for Best Supporting Actor — the first Muslim actor to win an Oscar.","Barry Jenkins shot Moonlight using a specific palette for each of the film's three chapters, reflecting Chiron's changing psychology."], cat:"Drama"},
+  {q:"At some point, you gotta decide for yourself who you gonna be. Can't let nobody make that decision for you.", src:"Moonlight", year:2016, type:"movie", char:"Juan", actors:[{name:"Mahershala Ali",role:"Juan"}], desc:"Juan's wisdom — the most important gift he gives Chiron is permission to exist. Coming from a man who's also destroying the boy's community, it's complicated.", trivia:["Moonlight won the Academy Award for Best Picture — in a ceremony where La La Land was incorrectly announced first.","The film cost $1.5 million and grossed $65 million worldwide."], cat:"Drama"},
+
+  // ── PARASITE ──
+  {q:"You know what kind of plan never fails? No plan at all. No plan. You know why? If you make a plan, life never works out that way.", src:"Parasite", year:2019, type:"movie", char:"Ki-woo Kim", actors:[{name:"Choi Woo-shik",role:"Ki-woo Kim"}], desc:"The film's central irony — a family that plans meticulously and is destroyed by events no plan could anticipate. Bong Joon-ho's thesis on class and fate.", trivia:["Parasite was the first non-English language film to win the Academy Award for Best Picture.","Bong Joon-ho spent two years developing the script's architecture — every object and room carries symbolic weight."], cat:"Drama"},
+  {q:"You know, I've been rich and I've been poor. Believe me, rich is better.", src:"Parasite", year:2019, type:"movie", char:"Park Yeon-kyo", actors:[{name:"Cho Yeo-jeong",role:"Park Yeon-kyo"}], desc:"The rich wife's casual honesty — a line that lands differently after everything the Kims do to reach her world.", trivia:["Bong Joon-ho said this line was inspired by a quote from Sophie Tucker, the American comedian.","Parasite grossed over $260 million worldwide on a $11 million budget."], cat:"Drama"},
+
+  // ── GOOD WILL HUNTING ──
+  {q:"It's not your fault.", src:"Good Will Hunting", year:1997, type:"movie", char:"Sean Maguire", actors:[{name:"Robin Williams",role:"Sean Maguire"}], desc:"Sean repeating it, again and again, until Will finally breaks. Trauma recognised and named in the simplest possible language.", trivia:["Matt Damon and Ben Affleck wrote the script while at Harvard. Robin Williams improvised the entire park scene.","Robin Williams won the Academy Award for Best Supporting Actor — his only competitive Oscar win."], cat:"Drama"},
+  {q:"You don't know about real loss, 'cause it only occurs when you've loved something more than you love yourself.", src:"Good Will Hunting", year:1997, type:"movie", char:"Sean Maguire", actors:[{name:"Robin Williams",role:"Sean Maguire"}], desc:"Sean's rebuke of Will's cleverness — you can read about loss, but you don't understand it until you've lived it.", trivia:["The script was sold to Castle Rock but they demanded a happy ending — Miramax bought it and let the writers keep the original.","Ben Affleck and Matt Damon won the Academy Award for Best Original Screenplay."], cat:"Drama"},
+  {q:"Real loss is only possible when you love something more than you love yourself.", src:"Good Will Hunting", year:1997, type:"movie", char:"Sean Maguire", actors:[{name:"Robin Williams",role:"Sean Maguire"}], desc:"The companion to 'it's not your fault' — Sean explaining what genuine grief costs. He lost his wife. Will has never let himself love that much.", trivia:["Robin Williams ad-libbed the story about his wife farting in her sleep — it's completely genuine.","Gus Van Sant directed the film with minimal intervention in the script, which was essentially complete before he joined."], cat:"Drama"},
+
+  // ── AMERICAN BEAUTY ──
+  {q:"It's a great thing when you realise you still have the ability to surprise yourself.", src:"American Beauty", year:1999, type:"movie", char:"Lester Burnham", actors:[{name:"Kevin Spacey",role:"Lester Burnham"}], desc:"Lester's late-life awakening — not wisdom exactly, but a spark of self-reclamation in a life of quiet deadness.", trivia:["Kevin Spacey won the Academy Award for Best Actor. He said it was the most autobiographical role he'd ever played.","American Beauty won five Academy Awards including Best Picture and Best Director."], cat:"Drama"},
+  {q:"I guess I could be pretty pissed off about what happened to me, but it's hard to stay mad when there's so much beauty in the world.", src:"American Beauty", year:1999, type:"movie", char:"Lester Burnham", actors:[{name:"Kevin Spacey",role:"Lester Burnham"}], desc:"Lester's final voiceover — dead, looking back on the beauty he almost missed. Sam Mendes called it the film's emotional purpose.", trivia:["The plastic bag scene was created using CGI — though director Sam Mendes originally wanted a real bag.","Alan Ball wrote the screenplay after processing a traumatic period in his own life."], cat:"Drama"},
+
+  // ── CASINO ROYALE / BOND ──
+  {q:"I've got a little itch, down there. Would you mind?", src:"Casino Royale", year:2006, type:"movie", char:"James Bond", actors:[{name:"Daniel Craig",role:"James Bond"}], desc:"Bond, naked, being tortured by Le Chiffre. He cracks a joke. The line redefined Bond's stoicism as dark humour under impossible pressure.", trivia:["Daniel Craig was heavily criticised when cast as Bond — fans petitioned against him as 'too blonde and brutish.'","Martin Campbell directed both GoldenEye and Casino Royale — the two most critically acclaimed Bond debuts."], cat:"Action"},
+  {q:"You're not my type.", src:"Casino Royale", year:2006, type:"movie", char:"James Bond", actors:[{name:"Daniel Craig",role:"James Bond"}], desc:"Said to a beautiful woman in a hospital bed while barely alive. The original Bond composure — nothing dents it.", trivia:["The film is based on Ian Fleming's first Bond novel, published in 1953.","Daniel Craig worked with a personal trainer for eight months to achieve the famous beach scene physique."], cat:"Action"},
+
+  // ── SPORTS / INSPIRATIONAL FILMS ──
+  {q:"You play for the name on the front of the jersey, not the name on the back.", src:"Miracle", year:2004, type:"movie", char:"Herb Brooks", actors:[{name:"Kurt Russell",role:"Herb Brooks"}], desc:"Brooks's philosophy for the 1980 US Olympic hockey team — team identity above personal glory. They beat the Soviet Union. The miracle was real.", trivia:["Kurt Russell said this was the most emotionally demanding sports film he had ever made because the events were real and the players were still alive.","The 1980 US Olympic hockey team's victory over the Soviet Union is considered one of the greatest upsets in sports history."], cat:"Drama"},
+  {q:"The hay is in the barn.", src:"Moneyball", year:2011, type:"movie", char:"Billy Beane", actors:[{name:"Brad Pitt",role:"Billy Beane"}], desc:"Billy's phrase for preparation complete — whatever happens now, the work is done. Preparation as the only thing you can control.", trivia:["Brad Pitt spent months with the real Billy Beane to develop the role.","Michael Lewis's book was considered unfilmable — Steven Soderbergh was attached for years before Aaron Sorkin rewrote the script."], cat:"Drama"},
+  {q:"Winning isn't everything, but wanting to win is.", src:"Any Given Sunday", year:1999, type:"movie", char:"Tony D'Amato", actors:[{name:"Al Pacino",role:"Tony D'Amato"}], desc:"The distinction between outcome and drive — Lombardi's maxim reframed as psychology rather than pressure.", trivia:["Al Pacino's motivational speech in Any Given Sunday is one of the most viewed sports film clips online.","Oliver Stone based the film partly on conversations with real NFL coaches and players."], cat:"Drama"},
+  {q:"On any given Sunday you're gonna win or you're gonna lose. The point is can you win or lose like a man?", src:"Any Given Sunday", year:1999, type:"movie", char:"Tony D'Amato", actors:[{name:"Al Pacino",role:"Tony D'Amato"}], desc:"The pre-game speech's thesis — character defined by how you carry either outcome.", trivia:["The film features dozens of real NFL players and coaches in cameo roles.","The speech has been used in real NFL locker rooms before actual games."], cat:"Drama"},
+
+  // ── SILENCE OF THE LAMBS / THRILLER ──
+  {q:"Clarice, doesn't this random violence comfort you? Of the meaninglessness? Is it not a relief to find that not everything can be explained?", src:"The Silence of the Lambs", year:1991, type:"movie", char:"Hannibal Lecter", actors:[{name:"Anthony Hopkins",role:"Hannibal Lecter"}], desc:"Lecter as philosopher — probing for Clarice's faith in the rational mind while being the living proof that it fails.", trivia:["Anthony Hopkins appeared on screen for only 16 minutes in the film — and won the Academy Award for Best Actor.","Jonathan Demme insisted on shooting Lecter's scenes with the camera directly on Hopkins's eyes — unprecedented at the time."], cat:"Crime"},
+  {q:"First principles, Clarice. Simplicity. Read Marcus Aurelius.", src:"The Silence of the Lambs", year:1991, type:"movie", char:"Hannibal Lecter", actors:[{name:"Anthony Hopkins",role:"Hannibal Lecter"}], desc:"Lecter directing Clarice's investigation through classical philosophy while simultaneously manipulating everyone around him.", trivia:["Thomas Harris based Hannibal Lecter partly on a real Mexican surgeon he met while visiting a prison in 1962.","The Silence of the Lambs is one of only three films to sweep the five major Academy Awards."], cat:"Crime"},
+
+  // ── HEAT ──
+  {q:"Don't let yourself get attached to anything you are not willing to walk out on in 30 seconds flat if you feel the heat around the corner.", src:"Heat", year:1995, type:"movie", char:"Neil McCauley", actors:[{name:"Robert De Niro",role:"Neil McCauley"}], desc:"The professional criminal's code of living — freedom through non-attachment. And the tragedy is McCauley eventually breaks this rule.", trivia:["Michael Mann spent over a decade developing the characters in Heat — it began as a 1989 TV movie called L.A. Takedown.","The coffee shop scene between De Niro and Pacino was their first scene together despite appearing in The Godfather Part II."], cat:"Crime"},
+  {q:"I'm double-parked with a case of the ass, there's nothin' stoppin' us from walkin'.", src:"Heat", year:1995, type:"movie", char:"Chris Shiherlis", actors:[{name:"Val Kilmer",role:"Chris Shiherlis"}], desc:"Val Kilmer's funniest and most human line — criminal philosophy delivered like a parking complaint. Heat's genius was finding human moments inside crime.", trivia:["Val Kilmer improvised this line — Michael Mann kept it because it perfectly captured Shiherlis's reckless humour.","The bank heist sequence in Heat is studied in film schools as the definitive action shootout."], cat:"Crime"},
+
+  // ── PRISONER / BRITISH CLASSICS ──
+  {q:"I am not a number. I am a free man.", src:"The Prisoner", year:1967, type:"tv", char:"Number Six", actors:[{name:"Patrick McGoohan",role:"Number Six"}], desc:"The defiant weekly declaration of a secret agent imprisoned in a mysterious village. A Cold War statement about individuality versus the state.", trivia:["Patrick McGoohan created, wrote, and directed much of The Prisoner in addition to starring in it.","The show ran for 17 episodes and has never been satisfactorily explained — McGoohan took many secrets to his grave."], cat:"TV"},
+
+  // ── APOCALYPSE NOW EXTENDED ──
+  {q:"The horror. The horror.", src:"Apocalypse Now", year:1979, type:"movie", char:"Colonel Kurtz", actors:[{name:"Marlon Brando",role:"Colonel Kurtz"}], desc:"Kurtz's dying words — the full weight of what he's seen and done and become. Borrowed from Conrad's Heart of Darkness. The most economical summary of war.", trivia:["Marlon Brando arrived on set overweight and refused to be filmed in full light — all his scenes are in shadow or close-up.","Francis Ford Coppola based the script on Joseph Conrad's 1899 novella Heart of Darkness."], cat:"Classic"},
+  {q:"I love the smell of napalm in the morning. It smells like victory.", src:"Apocalypse Now", year:1979, type:"movie", char:"Lt. Col. Kilgore", actors:[{name:"Robert Duvall",role:"Lt. Col. Kilgore"}], desc:"The complete Kilgore speech — he's describing a battle he won, surrounded by the evidence of mass death, completely at peace. The film's darkest comedy.", trivia:["Robert Duvall was nominated for the Academy Award for Best Supporting Actor for only eleven minutes of screen time.","The film's production was legendarily chaotic — documented in the companion film Hearts of Darkness: A Filmmaker's Apocalypse."], cat:"Classic"},
+
+  // ── ALIENS / SCI-FI ──
+  {q:"In space, no one can hear you scream.", src:"Alien", year:1979, type:"movie", char:"Tagline", actors:[{name:"Ridley Scott",role:"Director"}], desc:"Not actually said in the film — the tagline. But it distilled the horror of Alien's premise so precisely it became the most famous movie tagline ever written.", trivia:["The tagline was written by Barbara Gips, a copywriter at ad agency Foote, Cone & Belding.","Ridley Scott said the tagline captured exactly what the film was about and wished he'd thought of it himself."], cat:"Action"},
+  {q:"We're all going to die, the only question is how you check out.", src:"Alien 3", year:1992, type:"movie", char:"Dillon", actors:[{name:"Charles S. Dutton",role:"Dillon"}], desc:"Dillon's prisoners choosing to fight rather than accept a passive death. In Alien 3's bleakest vision, dignity is the only victory available.", trivia:["David Fincher's directorial debut — he has since disowned the film due to studio interference.","The film killed off Newt and Hicks in the opening sequence — a decision that outraged fans of Aliens."], cat:"Action"},
+  {q:"I've made a huge mistake.", src:"Arrested Development", year:2003, type:"tv", char:"G.O.B. Bluth", actors:[{name:"Will Arnett",role:"G.O.B. Bluth"}], desc:"G.O.B.'s catchphrase — delivered with magnificent self-awareness and zero actual self-reflection. The entire character in four words.", trivia:["Will Arnett said the line became a cultural shorthand because everyone has felt it and nobody says it that honestly.","Arrested Development was cancelled by Fox after three seasons, then revived by Netflix — a first for a major TV series."], cat:"TV"},
+
+  // ── OFFICE ──
+  {q:"That's what she said.", src:"The Office", year:2005, type:"tv", char:"Michael Scott", actors:[{name:"Steve Carell",role:"Michael Scott"}], desc:"Michael's reflexive weaponisation of innuendo — deployed at every possible moment, usually at the worst one. Steve Carell's timing made it an art form.", trivia:["The joke predates The Office — it was a popular phrase in the early 2000s, but Michael Scott made it his signature.","Steve Carell said he never got tired of the line because the contexts were always new."], cat:"TV"},
+  {q:"Would I rather be feared or loved? Easy. Both. I want people to be afraid of how much they love me.", src:"The Office", year:2005, type:"tv", char:"Michael Scott", actors:[{name:"Steve Carell",role:"Michael Scott"}], desc:"Michael's management philosophy — absurd and yet containing a tiny grain of human truth about the desire to be both powerful and liked.", trivia:["The Office US was adapted from the British original by Ricky Gervais and Stephen Merchant, who approved the American version.","Steve Carell was initially not the studio's first choice — they wanted an American version of Gervais's David Brent."], cat:"TV"},
+  {q:"I am Beyoncé, always.", src:"The Office", year:2009, type:"tv", char:"Michael Scott", actors:[{name:"Steve Carell",role:"Michael Scott"}], desc:"Michael's self-affirmation without logic or justification — confidence as religion.", trivia:["The line was partly improvised by Carell. The writers kept it because it perfectly encapsulated Michael's delusion.","Beyoncé has publicly referenced the line at concerts and interviews."], cat:"TV"},
+
+  // ── WIRE EXTRA ──
+  {q:"All in the game, yo. All in the game.", src:"The Wire", year:2002, type:"tv", char:"Omar Little", actors:[{name:"Michael K. Williams",role:"Omar Little"}], desc:"Omar's philosophy of the street — everyone in the game has accepted its terms, including the risk of dying by them.", trivia:["Michael K. Williams died in September 2021. David Simon wrote a long tribute calling him the most important actor in The Wire.","Omar Little never carries a gun indoors — a personal code the character maintains throughout the series."], cat:"TV"},
+  {q:"The wire always got to be there.", src:"The Wire", year:2004, type:"tv", char:"Clay Davis", actors:[{name:"Isiah Whitlock Jr.",role:"Clay Davis"}], desc:"Clay Davis, corrupt politician, on the necessity of surveillance as power. The show's title is literal and metaphorical simultaneously.", trivia:["Isiah Whitlock Jr. improvised much of Clay Davis's distinctive vocal delivery.","David Simon spent a year embedded with the Baltimore Police Department before writing the first season."], cat:"TV"},
+  {q:"We used to make shit in this country. Build shit. Now we just put our hand in the next guy's pocket.", src:"The Wire", year:2004, type:"tv", char:"Frank Sobotka", actors:[{name:"Chris Bauer",role:"Frank Sobotka"}], desc:"Season 2's thesis — industrial decline, deindustrialisation, and the desperation it creates. As relevant now as when written.", trivia:["Season 2 of The Wire is the most criminally underrated TV season ever made, according to David Simon.","Chris Bauer based Frank Sobotka's physicality on working-class men he knew growing up in Baltimore."], cat:"TV"},
+
+  // ── SOPRANOS EXTRA ──
+  {q:"A wrong decision is better than indecision.", src:"The Sopranos", year:2002, type:"tv", char:"Tony Soprano", actors:[{name:"James Gandolfini",role:"Tony Soprano"}], desc:"Tony's management operating system — paralysis is the only true failure. He lives this and it destroys him.", trivia:["James Gandolfini was reportedly offered the role by David Chase after a single meeting in a New York restaurant.","The Sopranos ran for 86 episodes — Chase said it was exactly the right length."], cat:"TV"},
+  {q:"You got any idea what my life would be worth if certain people thought I was informing?", src:"The Sopranos", year:1999, type:"tv", char:"Tony Soprano", actors:[{name:"James Gandolfini",role:"Tony Soprano"}], desc:"Tony explaining to his therapist why the therapy itself is dangerous. The premise of the show is inherently self-destructive.", trivia:["The therapy scenes were suggested by David Chase's own experience in therapy.","Lorraine Bracco, who plays Dr. Melfi, was originally asked to audition for the role of Carmela."], cat:"TV"},
+
+  // ── BREAKING BAD EXTRA ──
+  {q:"No more half measures, Walter.", src:"Breaking Bad", year:2010, type:"tv", char:"Mike Ehrmantraut", actors:[{name:"Jonathan Banks",role:"Mike Ehrmantraut"}], desc:"Mike's parable about a domestic abuser — the story of why he stopped trying to handle things gently. Full commitment or none.", trivia:["Jonathan Banks said this was the speech that defined Mike Ehrmantraut's entire psychology.","The monologue is entirely in one take — Banks insisted on it."], cat:"TV"},
+  {q:"Tread lightly.", src:"Breaking Bad", year:2013, type:"tv", char:"Walter White", actors:[{name:"Bryan Cranston",role:"Walter White"}], desc:"Heisenberg's final warning to Hank — delivered quietly, without raising his voice, in a garage. The most chilling moment of the series.", trivia:["The scene was the cold open of Season 5B — shown at the beginning before flashing back in time.","Bryan Cranston said this was the scene in which Walter White completed his transformation."], cat:"TV"},
+  {q:"I'm the danger. I'm the one who knocks.", src:"Breaking Bad", year:2011, type:"tv", char:"Walter White", actors:[{name:"Bryan Cranston",role:"Walter White"}], desc:"The complete declaration — a chemistry teacher who has become the thing that frightens criminals. The show's most quoted moment.", trivia:["The episode title is 'Cornered.' Vince Gilligan said the title referred to Skyler, not Walter.","The speech was written in a single afternoon. Gilligan said it arrived almost fully formed."], cat:"TV"},
+  {q:"Jesse, you asked me if I was in the meth business or the money business. Neither. I'm in the empire business.", src:"Breaking Bad", year:2012, type:"tv", char:"Walter White", actors:[{name:"Bryan Cranston",role:"Walter White"}], desc:"Walter's confession of true motive — it was never about money or survival. It was about scale, dominance, legacy.", trivia:["Vince Gilligan said this was the line that revealed Walt's real character had always been there, waiting.","The 'empire' speech was delivered against the backdrop of a $70 million methylamine deal."], cat:"TV"},
+
+  // ── GAME OF THRONES EXTRA ──
+  {q:"Chaos isn't a pit. Chaos is a ladder.", src:"Game of Thrones", year:2013, type:"tv", char:"Petyr 'Littlefinger' Baelish", actors:[{name:"Aidan Gillen",role:"Petyr Baelish"}], desc:"Littlefinger's entire worldview — where others see disorder as threat, he sees opportunity. The philosophy of every opportunist in history.", trivia:["The monologue is delivered partially in voiceover while Ros is being killed — Benioff and Weiss designed the contrast deliberately.","Aidan Gillen said he played Littlefinger as a man who had loved once and never recovered from its failure."], cat:"TV"},
+  {q:"Hold the door!", src:"Game of Thrones", year:2016, type:"tv", char:"Hodor / Wylis", actors:[{name:"Kristian Nairn",role:"Hodor"}], desc:"The most devastating etymology in television history — 'Hodor' is a corruption of 'hold the door.' A man's entire life reduced to a single tragic command.", trivia:["George R.R. Martin told showrunners Benioff and Weiss this origin in their very first meeting — years before it aired.","Kristian Nairn (Hodor) said he cried when he found out the meaning. He'd been playing the character for six years without knowing."], cat:"TV"},
+  {q:"The man who passes the sentence should swing the sword.", src:"Game of Thrones", year:2011, type:"tv", char:"Ned Stark", actors:[{name:"Sean Bean",role:"Ned Stark"}], desc:"Ned's code of honour — those who order death should witness it personally. He teaches this to Bran. It's also what gets him killed.", trivia:["Sean Bean's Ned Stark was killed at the end of season 1 — the first major subversion of the 'hero lives' convention in prestige TV.","GRRM inserted Ned's death into the novel to signal that no character was safe — a radical choice in 1996."], cat:"TV"},
+  {q:"Power resides where men believe it resides. It's a trick, a shadow on the wall.", src:"Game of Thrones", year:2012, type:"tv", char:"Varys", actors:[{name:"Conleth Hill",role:"Varys"}], desc:"Varys's riddle about power — the most political speech in the show. Power is a shared fiction. Those who see through it have more of it.", trivia:["Conleth Hill said Varys was the most carefully written character in the show because George R.R. Martin kept his motivations hidden even from the writers.","The 'riddle of power' speech is studied in political science courses as a statement of soft power theory."], cat:"TV"},
+
+  // ── FILMS — MISC PROFOUND ──
+  {q:"Why do we fall, sir? So we might learn to pick ourselves up.", src:"Batman Begins", year:2005, type:"movie", char:"Alfred Pennyworth", actors:[{name:"Michael Caine",role:"Alfred Pennyworth"}], desc:"Thomas Wayne's words, quoted by Alfred. The ethical foundation of the entire Nolan trilogy — Bruce doesn't avenge his parents, he learns from the fall.", trivia:["Michael Caine said he based Alfred on the best butlers he had ever met — men of absolute discretion and genuine love.","The line is repeated in The Dark Knight Rises in a pivotal scene."], cat:"Profound"},
+  {q:"The only way to get what you want in this world is through hard work.", src:"The Princess and the Frog", year:2009, type:"movie", char:"Tiana", actors:[{name:"Anika Noni Rose",role:"Tiana"}], desc:"Disney's first Black princess — and her philosophy is work ethic, not wishing on stars. A deliberate counter-narrative from the studio that invented wishing.", trivia:["Tiana was Disney's first Black princess in 72 years of animated features.","The film's New Orleans setting was researched through months of location visits and consultation with local musicians."], cat:"Profound"},
+  {q:"The truth is, everyone is going to hurt you. You just got to find the ones worth suffering for.", src:"Various", year:1999, type:"movie", char:"Multiple characters", actors:[{name:"Various actors",role:"Various"}], desc:"Attributed to Bob Marley but widely quoted in film — the idea that vulnerability to pain is the price of connection.", trivia:["The quote's true origin is disputed — it appears in several films and is widely attributed to Marley without clear source.","The sentiment appears in different forms across 20th century literature and has been adopted across cultures."], cat:"Profound"},
+  {q:"You have to believe me. I am not the man I was.", src:"A Christmas Carol", year:1984, type:"movie", char:"Ebenezer Scrooge", actors:[{name:"George C. Scott",role:"Ebenezer Scrooge"}], desc:"Scrooge's complete transformation — not a plan or a resolution, but an identity statement. He has been changed by seeing himself clearly.", trivia:["Charles Dickens published A Christmas Carol in 1843. It sold out its first edition of 6,000 copies in five days.","The story has been adapted for film and television over 135 times — more than any other Christmas story."], cat:"Classic"},
+  {q:"Don't dream it. Be it.", src:"The Rocky Horror Picture Show", year:1975, type:"movie", char:"Dr. Frank-N-Furter", actors:[{name:"Tim Curry",role:"Dr. Frank-N-Furter"}], desc:"Frank-N-Furter's liberation theology — the transposition of dreaming and being is the whole film's philosophy.", trivia:["Rocky Horror ran for only one week in its initial US release before being pulled. Its midnight screening revival began in 1976 and never stopped.","Tim Curry said Frank-N-Furter was the most liberating and terrifying character he has ever played simultaneously."], cat:"Profound"},
+  {q:"Certifiably, ridiculously, inconveniently in love with you.", src:"Crazy, Stupid, Love", year:2011, type:"movie", char:"Jacob Palmer", actors:[{name:"Ryan Gosling",role:"Jacob Palmer"}], desc:"The manosphere Casanova reduced to honesty by a woman he didn't expect. Love as vulnerability accepted.", trivia:["The film's twist — that Jacob is dating Hannah, who is Cal's daughter — was kept secret from cast members until the scene was shot.","Emma Stone improvised much of her first scene with Ryan Gosling."], cat:"Romance"},
+  {q:"Just keep swimming.", src:"Finding Nemo", year:2003, type:"movie", char:"Dory", actors:[{name:"Ellen DeGeneres",role:"Dory (voice)"}], desc:"Dory's philosophy of persistence — with no memory and no plan, she still moves forward. The most useful advice in any children's film.", trivia:["Ellen DeGeneres improvised the 'Just keep swimming' song entirely — it was not in the original script.","Finding Nemo spent twelve weeks at #1 at the box office and became the best-selling DVD of all time at that point."], cat:"Profound"},
+  {q:"Ohana means family. Family means nobody gets left behind or forgotten.", src:"Lilo & Stitch", year:2002, type:"movie", char:"Lilo", actors:[{name:"Daveigh Chase",role:"Lilo (voice)"}], desc:"A little girl and a dangerous alien discovering what family means — not blood, but commitment. Disney at its most genuinely affecting.", trivia:["The film was almost entirely written and animated in the Florida studio — away from the main California production.","The relationship between Lilo and her sister Nani was praised by critics as the most realistic sibling bond in animation."], cat:"Profound"},
+  {q:"The flower that blooms in adversity is the most rare and beautiful of all.", src:"Mulan", year:1998, type:"movie", char:"The Emperor of China", actors:[{name:"Pat Morita",role:"The Emperor (voice)"}], desc:"The Emperor's final assessment of Mulan — not despite her struggles but because of them. The standard Western narrative reversed.", trivia:["Mulan is based on the Chinese legend of Hua Mulan, which dates back to a 5th or 6th century poem called The Ballad of Mulan.","Pat Morita, famous as Mr. Miyagi, was the only non-Asian actor in the principal voice cast."], cat:"Profound"},
+  {q:"To infinity and beyond isn't just a phrase — it's a challenge to never stop exploring.", src:"Buzz Lightyear of Star Command", year:2000, type:"tv", char:"Buzz Lightyear", actors:[{name:"Patrick Warburton",role:"Buzz Lightyear (voice)"}], desc:"Buzz's philosophy expanded — the original phrase from Toy Story transformed into a statement about the nature of curiosity.", trivia:["Patrick Warburton replaced Tim Allen in the TV series — Allen only voiced Buzz in the feature films.","NASA has used the phrase 'to infinity and beyond' in multiple mission communications as a tribute."], cat:"Profound"},
+  {q:"I'm flying, Jack!", src:"Titanic", year:1997, type:"movie", char:"Rose DeWitt Bukater", actors:[{name:"Kate Winslet",role:"Rose DeWitt Bukater"}], desc:"Rose at the bow, Jack's arms around her, the world ahead — pure joy before the ice. James Cameron's most unguarded romantic image.", trivia:["Kate Winslet said this scene took three days to film due to weather and technical challenges.","The bow scene was filmed at the edge of a specially constructed tank — the ocean visible beyond the edge of the set."], cat:"Romance"},
+  {q:"You make me want to be a better man.", src:"As Good as It Gets", year:1997, type:"movie", char:"Melvin Udall", actors:[{name:"Jack Nicholson",role:"Melvin Udall"}], desc:"A misanthrope's greatest compliment — not 'I love you' but 'you've changed what I aim for.' Perhaps the most meaningful romantic declaration in comedy.", trivia:["Jack Nicholson won his third Academy Award for Best Actor for this role.","Helen Hunt and Jack Nicholson won the lead acting awards — one of very few times a romantic film swept both categories."], cat:"Romance"},
+  {q:"Love actually is all around.", src:"Love Actually", year:2003, type:"movie", char:"David (PM)", actors:[{name:"Hugh Grant",role:"David the Prime Minister"}], desc:"The film's thesis stated simply — in airports, in offices, in ordinary moments. Richard Curtis's unashamed optimism about human connection.", trivia:["Love Actually was Richard Curtis's directorial debut and has become the defining British Christmas film.","The airport arrival scenes were filmed at Heathrow with real passengers giving consent — many of the reactions are genuine."], cat:"Romance"},
+  {q:"Gentlemen, you can't fight in here. This is the War Room!", src:"Dr. Strangelove", year:1964, type:"movie", char:"President Merkin Muffley", actors:[{name:"Peter Sellers",role:"President Merkin Muffley"}], desc:"Stanley Kubrick's blackest joke — the absurdity of polite protocol during nuclear annihilation. The whole film is in this line.", trivia:["Peter Sellers played three roles in the film. A fourth role, Major Kong, was recast to Slim Pickens after Sellers broke his ankle.","Stanley Kubrick researched nuclear strategy so thoroughly that the Pentagon investigated whether he had classified sources."], cat:"Classic"},
+  {q:"The greatest trick the devil ever pulled was convincing the world he didn't exist — and like that, he is gone.", src:"The Usual Suspects", year:1995, type:"movie", char:"Verbal Kint", actors:[{name:"Kevin Spacey",role:"Verbal Kint"}], desc:"The complete quote — the film's final reveal compressed into the last seconds. Verbal has been Keyser Söze all along.", trivia:["Bryan Singer's direction was to never let the audience suspect Verbal — so his performance is calibrated to seem victimised.","The line is adapted from a Charles Baudelaire poem about the nature of evil."], cat:"Crime"},
+  {q:"I want you to get mad. I want you to say: I'm a human being, goddammit! My life has value!", src:"Network", year:1976, type:"movie", char:"Howard Beale", actors:[{name:"Peter Finch",role:"Howard Beale"}], desc:"Beale's full call to action — not politics, not policy, but a demand for basic human dignity. Fifty years on, it still sounds contemporary.", trivia:["Paddy Chayefsky's script predicted 24-hour news, reality TV, and outrage media thirty years before they existed.","The film is included in the United States National Film Registry as culturally significant."], cat:"Classic"},
+  {q:"I'd like to make her look a little more attractive. How far can you pull back?", src:"Network", year:1976, type:"movie", char:"Network executive", actors:[{name:"Various",role:"Network executives"}], desc:"The darkest comedy in Network — the TV business aestheticising human pain. Paddy Chayefsky's satire of media has only aged into warning.", trivia:["Paddy Chayefsky won the Academy Award for Best Original Screenplay for Network.","Sidney Lumet said Network was the most prescient script he ever read."], cat:"Classic"},
+  {q:"I'm going to give you a little advice. There's a force in the universe that makes things happen; all you have to do is get in touch with it, stop thinking, let things happen, and be the ball.", src:"Caddyshack", year:1980, type:"movie", char:"Ty Webb", actors:[{name:"Chevy Chase",role:"Ty Webb"}], desc:"Absurdist Zen masquerading as golf advice. Chevy Chase improvised most of Ty's dialogue, producing the film's most quotable comic philosophy.", trivia:["Chevy Chase and Bill Murray did not share any scripted scenes — their famous improvised exchange was shot in one afternoon.","Caddyshack was a critical failure but a massive box office success — it is now regarded as one of the greatest comedies ever made."], cat:"Classic"},
+  {q:"Leave the gun, take the cannoli.", src:"The Godfather", year:1972, type:"movie", char:"Peter Clemenza", actors:[{name:"Richard Castellano",role:"Peter Clemenza"}], desc:"After a mob execution, Peter has his priorities. The mundane persistence of appetite alongside violence — the Godfather's dark comedy in one image.", trivia:["Entirely improvised by Richard Castellano — not in the script.","Francis Ford Coppola has said this is his favourite improvisation in all three Godfather films."], cat:"Crime"},
+  {q:"Keep your friends close, but your enemies closer.", src:"The Godfather Part II", year:1974, type:"movie", char:"Michael Corleone", actors:[{name:"Al Pacino",role:"Michael Corleone"}], desc:"Michael's operational philosophy for survival — often misattributed to Sun Tzu, it appears in no classical text. It is pure Corleone.", trivia:["The line doesn't appear in Mario Puzo's novel — it was added to the screenplay by Coppola and Puzo.","Al Pacino was not nominated for an Academy Award for the role — a decision that is still considered a major oversight."], cat:"Crime"},
+  {q:"Revenge is a dish best served cold.", src:"Star Trek II: The Wrath of Khan", year:1982, type:"movie", char:"Khan", actors:[{name:"Ricardo Montalbán",role:"Khan Noonien Singh"}], desc:"Khan misattributing a Klingon proverb as he prepares his revenge against Kirk. The line predates Star Trek — it appears in a 19th century French novel.", trivia:["Ricardo Montalbán filmed his scenes without ever being on the same set as William Shatner — they were in different cities.","The Wrath of Khan reversed the fortunes of the Star Trek franchise after the disappointing first film."], cat:"Action"},
+  {q:"Live long and prosper.", src:"Star Trek", year:1967, type:"tv", char:"Spock", actors:[{name:"Leonard Nimoy",role:"Spock"}], desc:"The Vulcan salutation — logic and longevity as the highest values. Leonard Nimoy created the gesture himself, based on a Jewish priestly blessing.", trivia:["Leonard Nimoy took the hand gesture from the Priestly Blessing used in Jewish synagogue services.","Nimoy fought to keep the gesture — the producers initially felt it was too unusual for mainstream audiences."], cat:"TV"},
+  {q:"He's not the Messiah. He's a very naughty boy.", src:"Monty Python's Life of Brian", year:1979, type:"movie", char:"Brian's Mother", actors:[{name:"Terry Jones",role:"Brian's Mother"}], desc:"The punchline to the entire film's theological argument — false messiahs require credulous followers. British satire at its most irreverent and most logical.", trivia:["The film was banned in Ireland and Norway on release. Norway's ban inspired the marketing tagline 'So funny it was banned in Norway.'","George Harrison financed the film through his production company HandMade Films — because he 'wanted to see it.'"], cat:"Classic"},
+  {q:"Nobody expects the Spanish Inquisition!", src:"Monty Python's Flying Circus", year:1970, type:"tv", char:"Cardinal Ximénez", actors:[{name:"Michael Palin",role:"Cardinal Ximénez"}], desc:"The recurring sketch's punchline — surprise as the Inquisition's chief weapon, announced with total confidence by people who just burst through a door.", trivia:["Michael Palin said they used the line three times in the sketch because once would be funny and twice would be expected — three times is absurd.","The phrase has entered the language as shorthand for any unexpected development."], cat:"TV"},
+  {q:"What is your favourite colour?", src:"Monty Python and the Holy Grail", year:1975, type:"movie", char:"Bridgekeeper", actors:[{name:"Terry Gilliam",role:"Bridgekeeper"}], desc:"The simplest question as the most dangerous trap. The film's entire comic genius is the collision of epic stakes with mundane bureaucracy.", trivia:["The film was shot in Scotland for £229,000 — the Pythons used coconuts instead of horses because they couldn't afford real ones.","Terry Gilliam and Terry Jones co-directed because neither could direct independently at that point."], cat:"Classic"},
+  {q:"Strange women lying in ponds distributing swords is no basis for a system of government.", src:"Monty Python and the Holy Grail", year:1975, type:"movie", char:"Dennis", actors:[{name:"Michael Palin",role:"Dennis"}], desc:"The film's sharpest political joke — Dennis the anarchist-communist peasant offers the most coherent critique of monarchy in cinema.", trivia:["Michael Palin said this speech was his favourite in the entire Python canon.","The film has been adapted into the West End / Broadway musical Spamalot, which ran for years."], cat:"Classic"},
+  {q:"Never give up! Never surrender!", src:"Galaxy Quest", year:1999, type:"movie", char:"Jason Nesmith / Commander Taggart", actors:[{name:"Tim Allen",role:"Jason Nesmith"}], desc:"A washed-up actor's catchphrase taken literally by aliens who believe his fictional show is a historical documentary. Meta-heroism at its finest.", trivia:["Galaxy Quest is consistently ranked by critics and fans as one of the best Star Trek films, despite not being a Star Trek film.","The film is beloved by the actual Star Trek cast — many have called it the most accurate depiction of the franchise's culture."], cat:"Action"},
+
+  // ── FINAL BATCH ──
+  {q:"Every passing minute is another chance to turn it all around.", src:"Vanilla Sky", year:2001, type:"movie", char:"Sofia Serrano", actors:[{name:"Penélope Cruz",role:"Sofia Serrano"}], desc:"A simple reframe of time — not diminishing resource but renewable chance. Cameron Crowe buried his warmest line in one of his strangest films.", trivia:["Vanilla Sky is a remake of the Spanish film Abre los ojos (Open Your Eyes) — Penélope Cruz played the same role in both.","Cameron Crowe said this line was the one he was most proud of writing in his career."], cat:"Profound"},
+  {q:"I don't want to be a product of my environment. I want my environment to be a product of me.", src:"The Departed", year:2006, type:"movie", char:"Frank Costello", actors:[{name:"Jack Nicholson",role:"Frank Costello"}], desc:"Costello's opening philosophy — agency versus determinism stated as pure will. The line that defines his character before a single crime is shown.", trivia:["Jack Nicholson improvised the butter scene and most of his opening monologue.","The Departed won Martin Scorsese his first Academy Award for Best Director after multiple previous nominations."], cat:"Crime"},
+  {q:"I smell a rat.", src:"The Departed", year:2006, type:"movie", char:"Frank Costello", actors:[{name:"Jack Nicholson",role:"Frank Costello"}], desc:"Costello's instinct — precise, dangerous, usually correct. The entire film is about competing rats in competing organisations.", trivia:["The Departed is a remake of the Hong Kong film Infernal Affairs (2002).","Martin Scorsese said the film was his attempt to make a straightforward genre picture — it became one of his most acclaimed."], cat:"Crime"},
+  {q:"Your scientists were so preoccupied with whether or not they could, they didn't stop to think if they should.", src:"Jurassic Park", year:1993, type:"movie", char:"Dr. Ian Malcolm", actors:[{name:"Jeff Goldblum",role:"Dr. Ian Malcolm"}], desc:"The film's moral in one sentence — a standing rebuke to any technology developed without ethical framework. Applies to AI, genetic engineering, and nuclear weapons.", trivia:["Jeff Goldblum largely improvised the delivery and pacing of this line — the script gave him the words, he gave it the rhythm.","Steven Spielberg said this was the line he kept coming back to while making the film — it was the entire reason for the story."], cat:"Profound"},
+  {q:"Life finds a way.", src:"Jurassic Park", year:1993, type:"movie", char:"Dr. Ian Malcolm", actors:[{name:"Jeff Goldblum",role:"Dr. Ian Malcolm"}], desc:"Malcolm's elegant chaos theory — nature's persistence against any attempt to contain or control it. Three words that also describe evolution itself.", trivia:["Jeff Goldblum said he ad-libbed the specific delivery — the pause before 'way' was entirely his choice.","The line has been adopted in biology papers and ecological studies as shorthand for evolutionary resilience."], cat:"Profound"},
+  {q:"Hasta la vista, baby.", src:"Terminator 2: Judgment Day", year:1991, type:"movie", char:"The T-800", actors:[{name:"Arnold Schwarzenegger",role:"The T-800"}], desc:"Learnt from John Connor, deployed at the perfect moment to shatter a liquid-metal killer. Human slang repurposed by a machine for maximum effect.", trivia:["Schwarzenegger practised the line hundreds of times to get the delivery exactly flat and deadpan.","The German release changed it to 'Auf Wiedersehen, Baby' — in Norwegian it became 'Ha det bra, baby.'"], cat:"Action"},
+  {q:"You're a wizard, Harry.", src:"Harry Potter and the Philosopher's Stone", year:2001, type:"movie", char:"Rubeus Hagrid", actors:[{name:"Robbie Coltrane",role:"Rubeus Hagrid"}], desc:"The revelation that changes Harry's life — and the line that launched a billion children's imaginations. Simple, declarative, world-altering.", trivia:["Robbie Coltrane said the line more than forty times across different takes.","J.K. Rowling said the moment Harry is told he's a wizard was the first scene she conceived — the whole series grew outward from it."], cat:"Classic"},
+  {q:"It does not do to dwell on dreams and forget to live.", src:"Harry Potter and the Philosopher's Stone", year:2001, type:"movie", char:"Albus Dumbledore", actors:[{name:"Richard Harris",role:"Albus Dumbledore"}], desc:"Dumbledore warning Harry away from the Mirror of Erised — the mirror that shows the deepest desire of your heart, and will drive you mad.", trivia:["Richard Harris died during production of Chamber of Secrets — Michael Gambon took over the role from Prisoner of Azkaban onwards.","J.K. Rowling based the Mirror of Erised on the concept of nostalgia and unhealthy attachment."], cat:"Profound"},
+  {q:"It is our choices, Harry, that show what we truly are, far more than our abilities.", src:"Harry Potter and the Chamber of Secrets", year:2002, type:"movie", char:"Albus Dumbledore", actors:[{name:"Richard Harris",role:"Albus Dumbledore"}], desc:"Dumbledore's answer to Harry's fear that the Sorting Hat nearly put him in Slytherin. Character through decision, not destiny.", trivia:["This is the thesis of the entire Harry Potter series — choice versus fate.","J.K. Rowling has said this is the line she is most proud of writing."], cat:"Profound"},
+  {q:"We are only as strong as we are united, as weak as we are divided.", src:"Harry Potter and the Goblet of Fire", year:2005, type:"movie", char:"Albus Dumbledore", actors:[{name:"Michael Gambon",role:"Albus Dumbledore"}], desc:"Dumbledore's end-of-year speech after Cedric Diggory's murder — unity as survival principle when genuine evil returns.", trivia:["Michael Gambon said delivering Dumbledore's serious speeches was the most demanding aspect of the role.","The line is quoted in schools, military academies, and political speeches around the world."], cat:"Profound"},
+  {q:"The stuff of legend.", src:"Master and Commander: The Far Side of the World", year:2003, type:"movie", char:"Dr. Stephen Maturin", actors:[{name:"Paul Bettany",role:"Dr. Stephen Maturin"}], desc:"A naturalist on the Galapagos, seeing evolution's evidence before Darwin. Awe without category.", trivia:["The film is based on Patrick O'Brian's twenty-volume Aubrey–Maturin series — one of the greatest series in English literature.","Director Peter Weir spent three years in pre-production building historically accurate replicas of the HMS Surprise."], cat:"Drama"},
+  {q:"It's a funny thing about mothers and fathers. Even when their own child is the most disgusting little blister you could ever imagine, they still think that he or she is wonderful.", src:"Matilda", year:1996, type:"movie", char:"Miss Honey", actors:[{name:"Embeth Davidtz",role:"Miss Honey"}], desc:"Miss Honey on parental love — and its catastrophic absence in Matilda's case. Roald Dahl's darkest observation given tenderness by the film.", trivia:["Mara Wilson, who played Matilda, lost her mother to breast cancer during filming — the cast and crew quietly supported her throughout.","Danny DeVito directed and produced the film while playing Mr. Wormwood."], cat:"Drama"},
+  {q:"A person's a person, no matter how small.", src:"Horton Hears a Who!", year:2008, type:"movie", char:"Horton the Elephant", actors:[{name:"Jim Carrey",role:"Horton (voice)"}], desc:"Dr. Seuss's founding principle — the moral weight of existence is not proportional to size, power, or visibility.", trivia:["Dr. Seuss wrote the book in 1954 — it was widely interpreted as a statement about post-war pacifism and the rights of smaller nations.","Jim Carrey said voicing Horton was one of the most morally uncomplicated roles of his career."], cat:"Profound"},
+  {q:"With the right kind of eyes you can almost see the high-water mark — that place where the wave finally broke and rolled back.", src:"Fear and Loathing in Las Vegas", year:1998, type:"movie", char:"Raoul Duke", actors:[{name:"Johnny Depp",role:"Raoul Duke"}], desc:"Hunter S. Thompson's elegy for the 1960s counterculture — the moment idealism peaked before corporate reality absorbed it.", trivia:["Johnny Depp spent months with the real Hunter S. Thompson preparing for the role.","Terry Gilliam insisted on practical effects for most of the drug sequences — achieved through light and camera technique."], cat:"Profound"},
+  {q:"We were somewhere around Barstow on the edge of the desert when the drugs began to take hold.", src:"Fear and Loathing in Las Vegas", year:1998, type:"movie", char:"Raoul Duke", actors:[{name:"Johnny Depp",role:"Raoul Duke"}], desc:"One of the great opening lines — Thompson's novel begins identically. The reader/viewer is thrown into chaos from the first word.", trivia:["Thompson's novel was based on a real assignment to cover the Mint 400 motorcycle race for Sports Illustrated in 1971.","The book was rejected by multiple publishers before Rolling Stone ran it as a two-part serial."], cat:"Profound"},
+  {q:"All work and no play makes Jack a dull boy.", src:"The Shining", year:1980, type:"movie", char:"Jack Torrance", actors:[{name:"Jack Nicholson",role:"Jack Torrance"}], desc:"The manuscript that Wendy finds — hundreds of pages of this single line. The banal familiar phrase made sinister by obsessive repetition.", trivia:["For the French, German, Italian and Spanish releases, the line was translated into each language so the meaning of the scene remained intact.","Kubrick had Shelley Duvall shoot the baseball bat scene over 127 takes — her genuine distress was intentional."], cat:"Classic"},
+  {q:"Here's Johnny!", src:"The Shining", year:1980, type:"movie", char:"Jack Torrance", actors:[{name:"Jack Nicholson",role:"Jack Torrance"}], desc:"Improvised by Nicholson — lifted from Ed McMahon's introduction of Johnny Carson on The Tonight Show. Terror through the familiar.", trivia:["Jack Nicholson improvised the line completely — Stanley Kubrick kept it after the crew laughed on set.","Nicholson had previously turned down the role twice before agreeing, concerned about playing a character who goes mad."], cat:"Classic"},
+  {q:"I am serious. And don't call me Shirley.", src:"Airplane!", year:1980, type:"movie", char:"Dr. Rumack", actors:[{name:"Leslie Nielsen",role:"Dr. Rumack"}], desc:"The deadpan non-sequitur that redefined comedy. Nielsen's complete absence of self-awareness is the joke — and the straight face makes it immortal.", trivia:["Leslie Nielsen was known as a dramatic actor before Airplane! — his deadpan was entirely genuine.","Airplane! was the first spoof film to receive an Academy Award nomination for Best Original Screenplay."], cat:"Classic"},
+  {q:"Surely you can't be serious.", src:"Airplane!", year:1980, type:"movie", char:"Ted Striker", actors:[{name:"Robert Hays",role:"Ted Striker"}], desc:"The straight man setting up Nielsen's most famous line. The joke works because Striker is completely sincere.", trivia:["The entire film is a parody of the 1957 film Zero Hour — the filmmakers bought the rights and essentially recreated scenes.","The Zucker, Abrahams and Zucker team introduced four jokes per minute — more than any comedy film before it."], cat:"Classic"},
+  {q:"You can't sit with us.", src:"Mean Girls", year:2004, type:"movie", char:"Gretchen Wieners", actors:[{name:"Lacey Chabert",role:"Gretchen Wieners"}], desc:"The definitive social exclusion line — simple, total, devastating. Tina Fey distilled high school hierarchy into four syllables.", trivia:["Mean Girls is based on the non-fiction book Queen Bees and Wannabes by Rosalind Wiseman.","The film has become a generation-defining cultural touchstone — October 3rd is celebrated as 'Mean Girls Day.'"], cat:"Classic"},
+  {q:"On Wednesdays we wear pink.", src:"Mean Girls", year:2004, type:"movie", char:"Karen Smith", actors:[{name:"Amanda Seyfried",role:"Karen Smith"}], desc:"The arbitrary rule delivered with total conviction — the comedy of social conformity. Karen doesn't question it because she made it.", trivia:["Amanda Seyfried's deadpan delivery of Karen's lines was entirely unscripted — she improvised the character's vacant sincerity.","Tina Fey appears in the film as Ms. Norbury — she wrote the script and gave herself a supporting role."], cat:"Classic"},
+  {q:"It's not who you are underneath, it's what you do that defines you.", src:"Batman Begins", year:2005, type:"movie", char:"Rachel Dawes", actors:[{name:"Katie Holmes",role:"Rachel Dawes"}], desc:"Rachel's challenge to Bruce — and the line he later echoes back to her after becoming Batman. Character proved through action, not origin.", trivia:["Christopher Nolan said this was the moral thesis of the entire trilogy, planted in the first film and completed in the third.","The Nolan Batman trilogy is the highest-grossing superhero trilogy ever made."], cat:"Profound"},
+  {q:"Everything is negotiable. Whether or not the negotiation is easy is a different story.", src:"Carrie Fisher", year:1999, type:"tv", char:"Various", actors:[{name:"Various",role:"Various"}], desc:"Fisher's pragmatic wisdom — deployed in interviews, memoirs, and speeches across her career. Power through refusal to accept fixed terms.", trivia:["Carrie Fisher was one of the most quotable public figures of her generation — her wit survived everything Hollywood put her through.","Fisher wrote candidly about mental health and addiction decades before it became culturally acceptable to do so."], cat:"Profound"},
+  {q:"The truth is rarely pure and never simple.", src:"The Importance of Being Earnest", year:2002, type:"movie", char:"Algernon Moncrieff", actors:[{name:"Rupert Everett",role:"Algernon Moncrieff"}], desc:"Oscar Wilde via the cinema — a line that earns its wit by being genuinely correct. Applies to every film that tries to simplify experience.", trivia:["Oscar Wilde wrote The Importance of Being Earnest in 1895. He was arrested for 'gross indecency' the same year.","Rupert Everett is the only actor who played the role of Algernon on stage and then again on film."], cat:"Classic"},
+  {q:"I can't go back to yesterday because I was a different person then.", src:"Alice in Wonderland", year:2010, type:"movie", char:"Alice", actors:[{name:"Mia Wasikowska",role:"Alice"}], desc:"Lewis Carroll's original wisdom — you cannot go home to a self that no longer exists. Identity as accumulated change.", trivia:["Lewis Carroll's original Alice's Adventures in Wonderland was published in 1865 and never went out of print.","Tim Burton's 2010 adaptation grossed over $1 billion worldwide."], cat:"Profound"},
+  {q:"We accept the love we think we deserve.", src:"The Perks of Being a Wallflower", year:2012, type:"movie", char:"Bill", actors:[{name:"Paul Rudd",role:"Bill"}], desc:"A high school English teacher's quiet truth about self-worth. The entire film builds to the moment Charlie understands it applies to him.", trivia:["The film was written and directed by Stephen Chbosky — the same person who wrote the novel.","The film was shot entirely in Pittsburgh, where the novel is set."], cat:"Profound"},
+  {q:"If you're good at something, never do it for free.", src:"The Dark Knight", year:2008, type:"movie", char:"The Joker", actors:[{name:"Heath Ledger",role:"The Joker"}], desc:"Said while burning his half of the mob's money — the Joker doesn't want money, so his advice is pure philosophy, not greed.", trivia:["Heath Ledger's Joker is consistently ranked the greatest villain performance in cinema history in polls.","Christopher Nolan said he wrote the Joker with no plan — the character was intentionally unknowable."], cat:"Crime"},
+  {q:"I'm just one stomach flu away from my goal weight.", src:"The Devil Wears Prada", year:2006, type:"movie", char:"Emily Charlton", actors:[{name:"Emily Blunt",role:"Emily Charlton"}], desc:"Fashion industry body image horror delivered as a throwaway joke. Emily Blunt in her breakout role, making a dark observation unforgettable.", trivia:["Emily Blunt said this was the line that got her the role — she delivered it in the audition with perfect dead-seriousness.","The Devil Wears Prada was based on Lauren Weisberger's thinly veiled memoir of working for Anna Wintour at Vogue."], cat:"Classic"},
+  {q:"Details of your incompetence do not interest me.", src:"The Devil Wears Prada", year:2006, type:"movie", char:"Miranda Priestly", actors:[{name:"Meryl Streep",role:"Miranda Priestly"}], desc:"Miranda Priestly's management philosophy in seven words — results, never excuses. Streep plays it so quietly it's more frightening than any shout.", trivia:["Meryl Streep won the Golden Globe and received the Academy Award nomination for this role.","Streep said she modelled Miranda's voice on Clint Eastwood — quiet authority that never raises itself."], cat:"Classic"},
+  {q:"I'm not the hero type, clearly. With this laundry list of character defects, all the mistakes I've made, largely... self-involved...", src:"Iron Man", year:2008, type:"movie", char:"Tony Stark", actors:[{name:"Robert Downey Jr.",role:"Tony Stark"}], desc:"Tony's self-aware confession — and the line that made Iron Man feel real. RDJ brought his own recovery story to the character's journey.", trivia:["Robert Downey Jr. improvised approximately 70% of Tony Stark's dialogue throughout the MCU.","Iron Man launched the Marvel Cinematic Universe — which became the highest-grossing film franchise in history."], cat:"Action"},
+  {q:"Part of the journey is the end.", src:"Avengers: Endgame", year:2019, type:"movie", char:"Tony Stark", actors:[{name:"Robert Downey Jr.",role:"Tony Stark"}], desc:"Tony's final recorded message — and the thesis of his entire arc. From the selfish man in the cave to the one who saves everyone.", trivia:["Avengers: Endgame is the second highest-grossing film of all time.","Robert Downey Jr. improvised 'I am Iron Man' in the final battle — the writers had not written those words."], cat:"Action"},
+  {q:"I am Iron Man.", src:"Avengers: Endgame", year:2019, type:"movie", char:"Tony Stark", actors:[{name:"Robert Downey Jr.",role:"Tony Stark"}], desc:"The words that started the MCU in 2008 become its closing act in 2019. Tony uses the Infinity Stones and snaps Thanos out of existence — at the cost of his own life.", trivia:["Entirely improvised by Robert Downey Jr. — the scripted line was simply 'I am inevitable... and you're not.'","The line bookends the entire MCU across 22 films and 11 years of storytelling."], cat:"Action"},
+];
+
+
+// ── State ──
+let currentIndex = 0;
+let liked = new Set();
+let touchStartX = 0, touchStartY = 0, touchCurrentX = 0;
+let isDragging = false;
+let activeCategory = 'All';
+
+const allCategories = ['All', ...new Set(QUOTES.map(q => q.cat))];
+
+// ── DOM refs ──
+const cardStack   = document.getElementById('cardStack');
+const counterEl   = document.getElementById('counterEl');
+const progressDots= document.getElementById('progressDots');
+const infoDrawer  = document.getElementById('infoDrawer');
+const drawerSheet = document.getElementById('drawerSheet');
+const drawerBackdrop = document.getElementById('drawerBackdrop');
+const drawerTabTitle = document.getElementById('drawerTabTitle');
+const searchOverlay = document.getElementById('search-overlay');
+const searchInput = document.getElementById('searchInput');
+
+let filteredQuotes = QUOTES.slice();
+
+function applyCategory(cat) {
+  activeCategory = cat;
+  filteredQuotes = cat === 'All' ? QUOTES.slice() : QUOTES.filter(q => q.cat === cat);
+  currentIndex = 0;
+  renderCard();
+}
+
+// ── Render ──
+function renderCard() {
+  cardStack.innerHTML = '';
+  counterEl.textContent = `${currentIndex + 1} / ${filteredQuotes.length}`;
+  renderDots();
+
+  const positions = [2, 1, 0]; // back to front
+  positions.forEach((offset, i) => {
+    const idx = (currentIndex + offset) % filteredQuotes.length;
+    if (!filteredQuotes[idx]) return;
+    const d = filteredQuotes[idx];
+    const card = buildCard(d, idx);
+    if (offset === 0) {
+      card.classList.add('active');
+      card.style.zIndex = 10;
+      card.style.transform = 'scale(1) translateY(0)';
+      card.style.opacity = 1;
+      if (i === 2) card.classList.add('card-incoming');
+    } else if (offset === 1) {
+      card.classList.add('card-ghost-1');
+    } else {
+      card.classList.add('card-ghost-2');
+    }
+    cardStack.appendChild(card);
+  });
+
+  setupSwipe();
+}
+
+function buildCard(d, idx) {
+  const card = document.createElement('div');
+  card.className = 'quote-card';
+  const isLiked = liked.has(idx);
+
+  const actors = d.actors.map(a => a.name).join(', ');
+  const badge = `<span class="source-type-badge badge-${d.type}">${d.type === 'movie' ? 'Film' : 'TV'}</span>`;
+
+  card.innerHTML = `
+    <span class="quote-mark">"</span>
+    <p class="quote-text">${d.q}</p>
+    <div class="quote-source">
+      <div class="source-icon">${d.type === 'movie' ? '🎬' : '📺'}</div>
+      <div class="source-details">
+        <div class="source-title">${d.src}</div>
+        <div class="source-meta">${d.char} · ${actors} · ${d.year}</div>
+      </div>
+      ${badge}
+    </div>
+    <div class="info-pills">
+      <button class="pill" data-drawer="film">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        Film Info
+      </button>
+      <button class="pill" data-drawer="actors">
+        <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+        Cast
+      </button>
+      <button class="pill" data-drawer="trivia">
+        <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        Trivia
+      </button>
+    </div>
+  `;
+
+  // pill clicks
+  card.querySelectorAll('.pill').forEach(pill => {
+    pill.addEventListener('click', e => {
+      e.stopPropagation();
+      openDrawer(d, pill.dataset.drawer);
+    });
+  });
+
+  return card;
+}
+
+function renderDots() {
+  progressDots.innerHTML = '';
+  const total = Math.min(filteredQuotes.length, 9);
+  let start = Math.max(0, Math.min(currentIndex - 4, filteredQuotes.length - total));
+  for (let i = 0; i < total; i++) {
+    const dot = document.createElement('div');
+    dot.className = 'progress-dot' + (start + i === currentIndex ? ' current' : '');
+    progressDots.appendChild(dot);
+  }
+}
+
+// ── Drawer ──
+function openDrawer(d, tab) {
+  // film
+  document.getElementById('drawerFilmTitle').textContent = d.src;
+  document.getElementById('drawerFilmYear').textContent = `${d.year} · ${d.type === 'movie' ? 'Film' : 'TV Series'}`;
+  document.getElementById('drawerFilmDesc').textContent = d.desc;
+
+  // actors
+  const actorList = document.getElementById('drawerActorList');
+  actorList.innerHTML = d.actors.map(a => {
+    const initials = a.name.split(' ').map(n => n[0]).join('');
+    return `<div class="actor-row">
+      <div class="actor-avatar">${initials}</div>
+      <div class="actor-info">
+        <div class="actor-name">${a.name}</div>
+        <div class="actor-role">as ${a.role}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // trivia
+  const triviaEl = document.getElementById('drawerTriviaContent');
+  triviaEl.innerHTML = d.trivia.map(t => `<div class="trivia-item">${t}</div>`).join('');
+
+  const tabs = ['film', 'actors', 'trivia'];
+  const labels = ['Film Info', 'Cast', 'Trivia'];
+  const ti = tabs.indexOf(tab);
+  drawerTabTitle.textContent = labels[ti];
+  tabs.forEach((t, i) => {
+    const el = document.getElementById(`drawerContent${t.charAt(0).toUpperCase() + t.slice(1)}`);
+    el.className = 'drawer-content' + (i === ti ? ' active' : '');
+  });
+
+  infoDrawer.classList.add('open');
+}
+
+function closeDrawer() { infoDrawer.classList.remove('open'); }
+drawerBackdrop.addEventListener('click', closeDrawer);
+
+// ── Navigation ──
+function goNext() {
+  if (filteredQuotes.length === 0) return;
+  const activeCard = cardStack.querySelector('.active');
+  if (activeCard) {
+    activeCard.classList.add('flying-left');
+    setTimeout(() => {
+      currentIndex = (currentIndex + 1) % filteredQuotes.length;
+      renderCard();
+    }, 300);
+  }
+}
+
+function goPrev() {
+  if (filteredQuotes.length === 0) return;
+  const activeCard = cardStack.querySelector('.active');
+  if (activeCard) {
+    activeCard.classList.add('flying-right');
+    setTimeout(() => {
+      currentIndex = (currentIndex - 1 + filteredQuotes.length) % filteredQuotes.length;
+      renderCard();
+    }, 300);
+  }
+}
+
+document.getElementById('btnNext').addEventListener('click', goNext);
+document.getElementById('btnPrev').addEventListener('click', goPrev);
+document.getElementById('btnLike').addEventListener('click', () => {
+  const btn = document.getElementById('btnLike');
+  if (liked.has(currentIndex)) {
+    liked.delete(currentIndex);
+    btn.classList.remove('liked');
+  } else {
+    liked.add(currentIndex);
+    btn.classList.add('liked');
+  }
+});
+
+// ── Touch/swipe ──
+function setupSwipe() {
+  const activeCard = cardStack.querySelector('.active');
+  if (!activeCard) return;
+
+  activeCard.addEventListener('touchstart', onTouchStart, { passive: true });
+  activeCard.addEventListener('touchmove', onTouchMove, { passive: false });
+  activeCard.addEventListener('touchend', onTouchEnd);
+
+  // mouse drag
+  activeCard.addEventListener('mousedown', onMouseDown);
+}
+
+function onTouchStart(e) {
+  touchStartX = e.touches[0].clientX;
+  touchStartY = e.touches[0].clientY;
+  touchCurrentX = touchStartX;
+  isDragging = false;
+}
+
+function onTouchMove(e) {
+  touchCurrentX = e.touches[0].clientX;
+  const dx = touchCurrentX - touchStartX;
+  const dy = e.touches[0].clientY - touchStartY;
+  if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 8) {
+    e.preventDefault();
+    isDragging = true;
+    const card = e.currentTarget;
+    card.classList.add('dragging');
+    const rotate = dx * 0.04;
+    const opacity = 1 - Math.abs(dx) / 400;
+    card.style.transform = `translateX(${dx}px) rotate(${rotate}deg)`;
+    card.style.opacity = Math.max(opacity, 0.3);
+  }
+}
+
+function onTouchEnd(e) {
+  const dx = touchCurrentX - touchStartX;
+  const card = e.currentTarget;
+  card.classList.remove('dragging');
+  if (isDragging && Math.abs(dx) > 80) {
+    dx < 0 ? goNext() : goPrev();
+  } else {
+    card.style.transform = '';
+    card.style.opacity = '';
+  }
+  isDragging = false;
+}
+
+// mouse
+let mouseStartX = 0, mouseDragging = false;
+function onMouseDown(e) {
+  mouseStartX = e.clientX;
+  mouseDragging = false;
+  document.addEventListener('mousemove', onMouseMove);
+  document.addEventListener('mouseup', onMouseUp);
+}
+function onMouseMove(e) {
+  const dx = e.clientX - mouseStartX;
+  if (Math.abs(dx) > 8) {
+    mouseDragging = true;
+    const card = cardStack.querySelector('.active');
+    if (card) {
+      card.style.transform = `translateX(${dx}px) rotate(${dx*0.04}deg)`;
+      card.style.opacity = Math.max(1 - Math.abs(dx)/400, 0.3);
+    }
+  }
+}
+function onMouseUp(e) {
+  document.removeEventListener('mousemove', onMouseMove);
+  document.removeEventListener('mouseup', onMouseUp);
+  const dx = e.clientX - mouseStartX;
+  if (mouseDragging && Math.abs(dx) > 80) {
+    dx < 0 ? goNext() : goPrev();
+  } else {
+    const card = cardStack.querySelector('.active');
+    if (card) { card.style.transform = ''; card.style.opacity = ''; }
+  }
+  mouseDragging = false;
+}
+
+// keyboard
+document.addEventListener('keydown', e => {
+  if (searchOverlay.classList.contains('open')) return;
+  if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); goNext(); }
+  if (e.key === 'ArrowLeft') { e.preventDefault(); goPrev(); }
+  if (e.key === 'Escape') closeDrawer();
+});
+
+// ── Search ──
+document.getElementById('btnSearch').addEventListener('click', openSearch);
+document.getElementById('searchClose').addEventListener('click', closeSearch);
+
+function openSearch() {
+  searchOverlay.classList.add('open');
+  buildCategoryFilters();
+  renderSearchResults('');
+  setTimeout(() => searchInput.focus(), 100);
+}
+
+function closeSearch() {
+  searchOverlay.classList.remove('open');
+  searchInput.value = '';
+}
+
+function buildCategoryFilters() {
+  const cf = document.getElementById('categoryFilter');
+  cf.innerHTML = allCategories.map(cat =>
+    `<button class="cat-btn${cat === activeCategory ? ' active' : ''}" data-cat="${cat}">${cat}</button>`
+  ).join('');
+  cf.querySelectorAll('.cat-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      cf.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      applyCategory(btn.dataset.cat);
+      renderSearchResults(searchInput.value);
+    });
+  });
+}
+
+searchInput.addEventListener('input', () => renderSearchResults(searchInput.value));
+
+function renderSearchResults(query) {
+  const q = query.toLowerCase().trim();
+  const pool = activeCategory === 'All' ? QUOTES : QUOTES.filter(x => x.cat === activeCategory);
+  const results = q ? pool.filter(x =>
+    x.q.toLowerCase().includes(q) ||
+    x.src.toLowerCase().includes(q) ||
+    x.char.toLowerCase().includes(q) ||
+    x.actors.some(a => a.name.toLowerCase().includes(q))
+  ) : pool.slice(0, 30);
+
+  const el = document.getElementById('searchResults');
+  if (results.length === 0) {
+    el.innerHTML = `<div class="search-empty">No quotes found for "${query}"</div>`;
+    return;
+  }
+  el.innerHTML = results.slice(0, 40).map((r, i) => {
+    const origIdx = QUOTES.indexOf(r);
+    return `<div class="search-result-item" data-idx="${origIdx}">
+      <div class="sri-quote">${r.q}</div>
+      <div class="sri-meta">${r.src} · ${r.char} · ${r.year}</div>
+    </div>`;
+  }).join('');
+
+  el.querySelectorAll('.search-result-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const origIdx = parseInt(item.dataset.idx);
+      filteredQuotes = activeCategory === 'All' ? QUOTES.slice() : QUOTES.filter(x => x.cat === activeCategory);
+      const newIdx = filteredQuotes.indexOf(QUOTES[origIdx]);
+      currentIndex = newIdx >= 0 ? newIdx : 0;
+      renderCard();
+      closeSearch();
+    });
+  });
+}
+
+// ── Init ──
+renderCard();
+</script>
+
+</body>
+</html>
