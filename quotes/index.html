@@ -260,6 +260,85 @@ outline: none;
 
 .pill svg { width: 11px; height: 11px; stroke: #c8a96e; fill: none; }
 
+/* IMDb pill — slightly warmer tint */
+.pill-imdb {
+background: rgba(245,197,24,0.12);
+border-color: rgba(245,197,24,0.3);
+color: #f5c518;
+}
+.pill-imdb svg { stroke: #f5c518; }
+.pill-imdb:active { background: rgba(245,197,24,0.22); }
+
+/* ── Transition themes ── */
+/* Default: slide */
+:root { –theme-name: ‘slide’; }
+
+/* Fade theme */
+body.theme-fade .card-incoming {
+animation: fadeIn 0.4s ease forwards;
+}
+@keyframes fadeIn {
+from { opacity: 0; transform: scale(1); }
+to   { opacity: 1; transform: scale(1); }
+}
+
+/* Rise theme */
+body.theme-rise .card-incoming {
+animation: riseIn 0.45s cubic-bezier(0.22,1,0.36,1) forwards;
+}
+@keyframes riseIn {
+from { opacity: 0; transform: translateY(40px) scale(0.97); }
+to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Flip theme */
+body.theme-flip .card-incoming {
+animation: flipIn 0.5s cubic-bezier(0.22,1,0.36,1) forwards;
+transform-origin: center top;
+}
+@keyframes flipIn {
+from { opacity: 0; transform: perspective(800px) rotateX(-18deg) translateY(20px); }
+to   { opacity: 1; transform: perspective(800px) rotateX(0deg) translateY(0); }
+}
+
+/* Zoom theme */
+body.theme-zoom .card-incoming {
+animation: zoomIn 0.38s cubic-bezier(0.22,1,0.36,1) forwards;
+}
+@keyframes zoomIn {
+from { opacity: 0; transform: scale(0.78); }
+to   { opacity: 1; transform: scale(1); }
+}
+
+/* Theme picker */
+.theme-picker {
+display: flex;
+gap: 6px;
+justify-content: center;
+margin-top: 10px;
+}
+.theme-btn {
+padding: 5px 11px;
+border-radius: 20px;
+background: rgba(255,255,255,0.05);
+border: 1px solid rgba(255,255,255,0.09);
+color: #6b6878;
+font-size: 10px;
+font-family: ‘DM Sans’, sans-serif;
+font-weight: 500;
+letter-spacing: 0.05em;
+text-transform: uppercase;
+cursor: pointer;
+-webkit-appearance: none;
+appearance: none;
+transition: all 0.15s ease;
+}
+.theme-btn.active {
+background: rgba(200,169,110,0.15);
+border-color: rgba(200,169,110,0.35);
+color: #c8a96e;
+}
+
 /* ── Drawer panel ── */
 .info-drawer {
 position: fixed;
@@ -673,6 +752,13 @@ border-radius: 3px;
         <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
       </button>
     </div>
+    <div class="theme-picker">
+      <button class="theme-btn active" data-theme="">Slide</button>
+      <button class="theme-btn" data-theme="theme-fade">Fade</button>
+      <button class="theme-btn" data-theme="theme-rise">Rise</button>
+      <button class="theme-btn" data-theme="theme-flip">Flip</button>
+      <button class="theme-btn" data-theme="theme-zoom">Zoom</button>
+    </div>
   </div>
 </div>
 
@@ -716,6 +802,119 @@ border-radius: 3px;
 </div>
 
 <script>
+const IMDB_IDS = {
+  "On the Waterfront":                       "tt0047296",
+  "Schindler's List":                        "tt0108052",
+  "Fight Club":                              "tt0137523",
+  "Breaking Bad":                            "tt0903747",
+  "Moonlight":                               "tt4975722",
+  "Mad Men":                                 "tt0804503",
+  "Chernobyl":                               "tt7366338",
+  "The Usual Suspects":                      "tt0114814",
+  "Blade Runner":                            "tt0083658",
+  "Dead Poets Society":                      "tt0097165",
+  "Ferris Bueller's Day Off":                "tt0091042",
+  "Somewhere in Time":                       "tt0081534",
+  "The Princess Diaries":                    "tt0247638",
+  "The Godfather":                           "tt0068646",
+  "The Shawshank Redemption":                "tt0111161",
+  "Harry Potter and the Philosopher's Stone":"tt0241527",
+  "Good Will Hunting":                       "tt0119217",
+  "The Crown":                               "tt4786824",
+  "Fleabag":                                 "tt5687612",
+  "Into the Wild":                           "tt0758758",
+  "The Perks of Being a Wallflower":         "tt1659337",
+  "Jerry Maguire":                           "tt0116695",
+  "Notting Hill":                            "tt0182753",
+  "As Good as It Gets":                      "tt0119822",
+  "Grey's Anatomy":                          "tt0413573",
+  "Batman Begins":                           "tt0372784",
+  "Rocky Balboa":                            "tt0479143",
+  "The Dark Knight":                         "tt0468569",
+  "Harry Potter and the Chamber of Secrets": "tt0295297",
+  "Vanilla Sky":                             "tt0259711",
+  "Jurassic Park":                           "tt0107290",
+  "There Will Be Blood":                     "tt0469494",
+  "Whiplash":                                "tt2582802",
+  "Iron Man":                                "tt0371746",
+  "The Lion King":                           "tt0110357",
+  "Avengers: Endgame":                       "tt4154796",
+  "The Sopranos":                            "tt0141842",
+  "The Wire":                                "tt0306414",
+  "Succession":                              "tt7660850",
+  "Parasite":                                "tt6751668",
+  "True Detective":                          "tt2356777",
+  "American Beauty":                         "tt0169547",
+  "Network":                                 "tt0074958",
+  "Forrest Gump":                            "tt0109830",
+  "Hamlet":                                  "tt0116477",
+  "The Rocky Horror Picture Show":           "tt0073629",
+  "12 Years a Slave":                        "tt2024544",
+  "Star Wars: Episode I – The Phantom Menace":"tt0120915",
+  "The Phantom Menace":                      "tt0120915",
+  "Ratatouille":                             "tt0382932",
+  "Hitch":                                   "tt0386140",
+  "The Godfather Part III":                  "tt0099674",
+  "The Godfather Part II":                   "tt0071562",
+  "We Bought a Zoo":                         "tt1588173",
+  "A Christmas Carol (various adaptations)": "tt0085028",
+  "Matilda":                                 "tt0117008",
+  "Lilo & Stitch":                           "tt0275847",
+  "Fear and Loathing in Las Vegas":          "tt0120669",
+  "Crazy, Stupid, Love":                     "tt1570728",
+  "Harry Potter and the Goblet of Fire":     "tt0330373",
+  "Avatar":                                  "tt0499549",
+  "No Country for Old Men":                  "tt0477348",
+  "Arrival":                                 "tt2543164",
+  "Her":                                     "tt2134196",
+  "Lost in Translation":                     "tt0335266",
+  "Eternal Sunshine of the Spotless Mind":   "tt0338013",
+  "Six Feet Under":                          "tt0248654",
+  "The Prestige":                            "tt0482571",
+  "Before Sunrise":                          "tt0112471",
+  "Inglourious Basterds":                    "tt0361748",
+  "Phantom Thread":                          "tt5776858",
+  "Ordinary People":                         "tt0081283",
+  "Everything Everywhere All at Once":       "tt6710474",
+  "The Leftovers":                           "tt2699128",
+  "Blue Is the Warmest Colour":              "tt2278871",
+  "Boyhood":                                 "tt1065073",
+  "Manchester by the Sea":                   "tt4034228",
+  "Inside Llewyn Davis":                     "tt2494384",
+  "Mulholland Drive":                        "tt0166924",
+  "The Father":                              "tt10272386",
+  "Still Alice":                             "tt3316960",
+  "Before Sunset":                           "tt0381681",
+  "American History X":                      "tt0120586",
+  "Zero Dark Thirty":                        "tt1790885",
+  "Almost Famous":                           "tt0181875",
+  "Field of Dreams":                         "tt0097351",
+  "Barbie":                                  "tt1517268",
+  "Oppenheimer":                             "tt15398776",
+  "Stand by Me":                             "tt0092005",
+  "Annie Hall":                              "tt0075686",
+  "Glengarry Glen Ross":                     "tt0104348",
+  "V for Vendetta":                          "tt0434409",
+  "The Royal Tenenbaums":                    "tt0265666",
+  "Ikiru":                                   "tt0044741",
+  "Inside Out":                              "tt2096673",
+  "The Breakfast Club":                      "tt0088847",
+  "To Kill a Mockingbird":                   "tt0056592",
+  "Cast Away":                               "tt0162222",
+  "The Curious Case of Benjamin Button":     "tt0421715",
+  "Wild":                                    "tt2305051",
+  "Soul":                                    "tt2948372",
+  "Mary and Max":                            "tt0978762",
+  "Black Hawk Down":                         "tt0265086",
+  "Apocalypse Now":                          "tt0078788",
+  "Platoon":                                 "tt0091763",
+  "Slaughterhouse-Five":                     "tt0069281",
+  "Full Metal Jacket":                       "tt0093058",
+  "Jarhead":                                 "tt0418763",
+  "We Were Soldiers":                        "tt0277434",
+  "Casualties of War":                       "tt0097027",
+  "Band of Brothers":                        "tt0185906",
+};
 const QUOTES = [
 
   // ── REGRET & WASTED POTENTIAL ──
@@ -1276,6 +1475,10 @@ function buildCard(d) {
         <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
         Trivia
       </button>
+      <button class="pill pill-imdb" data-imdb="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M7 9v6M12 9v6M17 9v6M7 12h5"/></svg>
+        IMDb
+      </button>
     </div>
   `;
 
@@ -1283,7 +1486,15 @@ function buildCard(d) {
   card.querySelectorAll('.pill').forEach(pill => {
     pill.addEventListener('click', e => {
       e.stopPropagation();
-      openDrawer(d, pill.dataset.drawer);
+      if (pill.dataset.imdb !== undefined) {
+        const imdbId = IMDB_IDS[d.src];
+        const url = imdbId
+          ? `https://www.imdb.com/title/${imdbId}/`
+          : `https://www.imdb.com/find/?q=${encodeURIComponent(d.src + ' ' + d.year)}&s=tt`;
+        window.open(url, '_blank');
+      } else {
+        openDrawer(d, pill.dataset.drawer);
+      }
     });
   });
 
@@ -1380,6 +1591,17 @@ function goPrev() {
 document.getElementById('btnNext').addEventListener('click', goNext);
 document.getElementById('btnPrev').addEventListener('click', goPrev);
 document.getElementById('btnShuffle').addEventListener('click', goRandom);
+
+// ── Transition theme picker ──
+document.querySelectorAll('.theme-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    // Remove all theme classes from body
+    document.body.classList.remove('theme-fade','theme-rise','theme-flip','theme-zoom');
+    if (btn.dataset.theme) document.body.classList.add(btn.dataset.theme);
+    document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
 
 function goRandom() {
   if (_navigating || filteredQuotes.length <= 1) return;
