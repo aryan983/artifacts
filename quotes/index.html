@@ -649,6 +649,7 @@ color: #0a0a0c;
 
 .nav-btn svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 2; }
 .nav-btn.primary svg { width: 24px; height: 24px; stroke: #0a0a0c; }
+.nav-btn.speaking { background: rgba(200,169,110,0.15); border-color: rgba(200,169,110,0.4); color: #c8a96e; }
 
 /* search overlay */
 #search-overlay {
@@ -842,6 +843,9 @@ border-radius: 3px;
       </button>
       <button class="nav-btn" id="btnSearch" title="Search">
         <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      </button>
+      <button class="nav-btn" id="btnRead" title="Read aloud">
+        <svg viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
       </button>
     </div>
     <div class="theme-picker">
@@ -1712,6 +1716,49 @@ function goPrev() {
 document.getElementById('btnNext').addEventListener('click', goNext);
 document.getElementById('btnPrev').addEventListener('click', goPrev);
 document.getElementById('btnShuffle').addEventListener('click', goRandom);
+
+// ── Read aloud ──
+(function() {
+  const btn = document.getElementById('btnRead');
+  let utterance = null;
+
+  function stopSpeaking() {
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+    btn.classList.remove('speaking');
+    // Restore default speaker icon
+    btn.querySelector('svg').innerHTML = '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>';
+  }
+
+  btn.addEventListener('click', () => {
+    if (!window.speechSynthesis) return;
+    if (window.speechSynthesis.speaking) { stopSpeaking(); return; }
+
+    const d = filteredQuotes[currentIndex];
+    if (!d) return;
+
+    const text = `${d.q} — ${d.char}, ${d.src}, ${d.year}`;
+    utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 0.92;
+    utterance.pitch = 1;
+
+    btn.classList.add('speaking');
+    // Switch to stop icon while speaking
+    btn.querySelector('svg').innerHTML = '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/>';
+
+    utterance.onend = stopSpeaking;
+    utterance.onerror = stopSpeaking;
+    window.speechSynthesis.speak(utterance);
+  });
+
+  // Stop speech when navigating to a new card
+  const _origGoNext = goNext, _origGoPrev = goPrev, _origGoRandom = goRandom;
+  goNext   = function() { stopSpeaking(); _origGoNext(); };
+  goPrev   = function() { stopSpeaking(); _origGoPrev(); };
+  goRandom = function() { stopSpeaking(); _origGoRandom(); };
+  document.getElementById('btnNext').onclick    = goNext;
+  document.getElementById('btnPrev').onclick    = goPrev;
+  document.getElementById('btnShuffle').onclick = goRandom;
+})();
 
 // ── Transition theme picker ──
 document.querySelectorAll('.theme-btn').forEach(btn => {
