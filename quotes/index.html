@@ -181,12 +181,17 @@ to   { transform: scale(1) translateY(0); opacity: 1; }
 /* ── Quote text ── */
 .quote-mark {
 font-family: ‘Playfair Display’, serif;
-font-size: 52px;
-line-height: 0.5;
+font-size: clamp(160px, 38vw, 220px);
+line-height: 1;
 color: #c8a96e;
-opacity: 0.35;
-display: block;
-margin-bottom: 12px;
+opacity: 0.055;
+position: absolute;
+top: 8px;
+left: 20px;
+pointer-events: none;
+user-select: none;
+z-index: 0;
+letter-spacing: -0.05em;
 }
 
 .quote-text {
@@ -197,6 +202,9 @@ line-height: 1.55;
 color: #e8e4dc;
 font-weight: 400;
 margin-bottom: 28px;
+padding-top: 8px;
+position: relative;
+z-index: 1;
 }
 
 .quote-source {
@@ -256,7 +264,58 @@ align-self: center;
 .badge-movie  { background: rgba(200,169,110,0.15); color: #c8a96e; }
 .badge-tv     { background: rgba(123,104,238,0.15); color: #7b68ee; }
 
-/* ── Info pills ── */
+/* Per-category badge colours */
+.cat-Regret      { background: rgba(180,100,100,0.15); color: #c47a7a; }
+.cat-Freedom     { background: rgba(100,180,140,0.15); color: #6fbf9a; }
+.cat-Identity    { background: rgba(140,110,200,0.15); color: #a07ecc; }
+.cat-Truth       { background: rgba(180,160,80,0.15);  color: #c8b44e; }
+.cat-Mortality   { background: rgba(100,110,140,0.15); color: #7a8aaa; }
+.cat-Courage     { background: rgba(200,130,60,0.15);  color: #c87840; }
+.cat-Grief       { background: rgba(80,110,180,0.15);  color: #6080c8; }
+.cat-Relationships { background: rgba(180,90,130,0.15); color: #c4607a; }
+.cat-Purpose     { background: rgba(80,160,180,0.15);  color: #50a8c0; }
+.cat-Choices     { background: rgba(160,160,80,0.15);  color: #aaaa50; }
+.cat-Self-Knowledge { background: rgba(120,160,120,0.15); color: #7aaa7a; }
+.cat-War         { background: rgba(160,80,80,0.15);   color: #aa4444; }
+
+/* ── Category ambient tint (injected via inline style on ::before override) ── */
+.quote-card.tinted::before {
+background: radial-gradient(ellipse at 50% 50%, var(–cat-tint, transparent) 0%, transparent 70%),
+radial-gradient(ellipse at 50% 50%, transparent 55%, rgba(0,0,0,0.22) 100%);
+}
+
+/* ── Word-by-word reveal ── */
+@keyframes wordIn {
+from { opacity: 0; transform: translateY(6px); }
+to   { opacity: 1; transform: translateY(0); }
+}
+.word {
+display: inline-block;
+opacity: 0;
+animation: wordIn 0.3s ease forwards;
+}
+
+/* ── Letterbox bars ── */
+.letterbox-bar {
+position: fixed;
+left: 0; right: 0;
+height: 0;
+background: #000;
+z-index: 200;
+transition: height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+pointer-events: none;
+}
+.letterbox-bar.top    { top: 0; }
+.letterbox-bar.bottom { bottom: 0; }
+body.letterbox .letterbox-bar { height: 44px; }
+
+/* ── Swipe particle canvas ── */
+#swipeCanvas {
+position: fixed;
+inset: 0;
+pointer-events: none;
+z-index: 50;
+}
 .info-pills {
 display: flex;
 gap: 8px;
@@ -752,6 +811,9 @@ border-radius: 3px;
 
 </head>
 <body>
+<div class="letterbox-bar top"></div>
+<div class="letterbox-bar bottom"></div>
+<canvas id="swipeCanvas"></canvas>
 
 <header>
   <div class="logo">Lines That Matter</div>
@@ -1469,6 +1531,11 @@ function renderCard() {
   if (old) old.remove();
   cardStack.appendChild(newCard);
   setupSwipe();
+
+  // Letterbox — fade in after card settles, remove on next swipe
+  clearTimeout(_letterboxTimer);
+  document.body.classList.remove('letterbox');
+  _letterboxTimer = setTimeout(() => document.body.classList.add('letterbox'), 600);
 }
 
 function updateCounter() {
@@ -1478,19 +1545,43 @@ function updateCounter() {
 function buildCard(d) {
   const card = document.createElement('div');
   card.className = 'quote-card';
+
+  // Category ambient tint
+  const catTints = {
+    Regret: 'rgba(160,60,60,0.07)', Freedom: 'rgba(60,160,100,0.06)',
+    Identity: 'rgba(120,80,200,0.07)', Truth: 'rgba(180,160,60,0.06)',
+    Mortality: 'rgba(80,90,130,0.07)', Courage: 'rgba(200,110,40,0.07)',
+    Grief: 'rgba(50,80,180,0.08)', Relationships: 'rgba(180,60,110,0.07)',
+    Purpose: 'rgba(50,150,180,0.07)', Choices: 'rgba(150,150,50,0.06)',
+    'Self-Knowledge': 'rgba(90,150,90,0.07)', War: 'rgba(150,50,50,0.09)'
+  };
+  if (catTints[d.cat]) {
+    card.classList.add('tinted');
+    card.style.setProperty('--cat-tint', catTints[d.cat]);
+  }
+
   const actors = d.actors.map(a => a.name).join(', ');
   const badge = `<span class="source-type-badge badge-${d.type}">${d.type === 'movie' ? 'Film' : 'TV'}</span>`;
+  const catBadge = `<span class="source-type-badge cat-${d.cat.replace(/\s+/g,'-')}">${d.cat}</span>`;
+
+  // Word-by-word reveal
+  const words = d.q.split(' ').map((w, i) =>
+    `<span class="word" style="animation-delay:${i * 38}ms">${w}</span>`
+  ).join(' ');
 
   card.innerHTML = `
     <span class="quote-mark">"</span>
-    <p class="quote-text">${d.q}</p>
+    <p class="quote-text">${words}</p>
     <div class="quote-source">
       <div class="source-icon">${d.type === 'movie' ? '🎬' : '📺'}</div>
       <div class="source-details">
         <div class="source-title">${d.src}</div>
         <div class="source-meta">${d.char} · ${actors} · ${d.year}</div>
       </div>
-      ${badge}
+      <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
+        ${badge}
+        ${catBadge}
+      </div>
     </div>
     <div class="info-pills">
       <button class="pill" data-drawer="film">
@@ -1694,6 +1785,7 @@ function onTouchMove(e) {
     isDragging = true;
     const card = e.currentTarget;
     card.classList.add('dragging');
+    document.body.classList.remove('letterbox');
     // Resistance curve — feels more physical
     const resist = Math.sign(dx) * Math.min(Math.abs(dx) * 0.85, window.innerWidth * 0.6);
     const rotate = resist * 0.045;
@@ -1855,6 +1947,94 @@ function renderSearchResults(query) {
 
 // ── Init ──
 currentIndex = Math.floor(Math.random() * QUOTES.length);
+
+// Letterbox timer
+let _letterboxTimer = null;
+
+// ── Ghost card warm tint — second ghost slightly cooler ──
+(function applyGhostTints() {
+  const g1 = document.getElementById('ghost1');
+  const g2 = document.getElementById('ghost2');
+  if (g1) g1.style.filter = 'brightness(0.92) sepia(0.06)';
+  if (g2) g2.style.filter = 'brightness(0.80) sepia(0.12) hue-rotate(-8deg)';
+})();
+
+// ── Swipe particle trail ──
+(function initParticles() {
+  const canvas = document.getElementById('swipeCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  let particles = [];
+  let animId = null;
+
+  function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  function spawnAt(x, y, dx) {
+    const hue = dx > 0 ? '160' : '0'; // green right, red left
+    for (let i = 0; i < 3; i++) {
+      particles.push({
+        x: x + (Math.random() - 0.5) * 16,
+        y: y + (Math.random() - 0.5) * 16,
+        r: Math.random() * 3 + 1.5,
+        alpha: 0.55 + Math.random() * 0.2,
+        vx: (Math.random() - 0.5) * 0.8,
+        vy: -Math.random() * 1.2 - 0.4,
+        hue,
+        life: 1
+      });
+    }
+    if (!animId) animId = requestAnimationFrame(tick);
+  }
+
+  function tick() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    particles = particles.filter(p => p.life > 0.02);
+    for (const p of particles) {
+      p.life -= 0.045;
+      p.x += p.vx;
+      p.y += p.vy;
+      p.alpha = p.life * 0.6;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r * p.life, 0, Math.PI * 2);
+      ctx.fillStyle = `hsla(${p.hue}, 60%, 65%, ${p.alpha})`;
+      ctx.fill();
+    }
+    if (particles.length > 0) {
+      animId = requestAnimationFrame(tick);
+    } else {
+      animId = null;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+  }
+
+  // Hook into touch and mouse move during drag
+  let _lastSpawn = 0;
+  function maybeSpawn(x, y, dx) {
+    const now = Date.now();
+    if (now - _lastSpawn < 35) return; // throttle
+    _lastSpawn = now;
+    spawnAt(x, y, dx);
+  }
+
+  document.addEventListener('touchmove', e => {
+    if (!isDragging) return;
+    const t = e.touches[0];
+    const dx = t.clientX - touchStartX;
+    if (Math.abs(dx) > 10) maybeSpawn(t.clientX, t.clientY, dx);
+  }, { passive: true });
+
+  document.addEventListener('mousemove', e => {
+    if (!mouseDragging) return;
+    const dx = e.clientX - mouseStartX;
+    if (Math.abs(dx) > 10) maybeSpawn(e.clientX, e.clientY, dx);
+  });
+})();
+
 initStack();
 </script>
 
