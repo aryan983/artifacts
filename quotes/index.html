@@ -87,7 +87,7 @@ height: 100%;
 display: flex;
 align-items: center;
 justify-content: center;
-padding: 0 20px;
+padding: 0;
 ```
 
 }
@@ -95,11 +95,12 @@ padding: 0 20px;
 /* wrapper — stacking context, no 3D transforms */
 .quote-card {
 position: absolute;
-width: 100%;
+width: calc(100% - 40px);
+left: 20px;
 user-select: none;
 cursor: grab;
 will-change: transform;
-/* No filter/shadow on wrapper — drop-shadow also affects canvas layer */
+overflow: hidden;
 }
 
 /* shared face base */
@@ -1502,11 +1503,11 @@ const QUOTES = [
 
   {"q":"I could die right now, Clem. I'm just... happy. I've never felt that before. I'm just exactly where I want to be.","src":"Eternal Sunshine of the Spotless Mind","year":2004,"type":"movie","char":"Joel Barish","actors":[{"name":"Jim Carrey","role":"Joel Barish"}],"desc":"Joel, just before the memory is erased. The tragedy is the timing — he finds the feeling at the moment he's losing it. The question: are you present for the moments you'll one day grieve losing?","trivia":["Jim Carrey said this was the most emotionally demanding role of his career.","Michel Gondry and Charlie Kaufman wrote the script together over several years."],"cat":"Mortality","retort":"Joel says this lying on a frozen lake with Clementine at the beginning of their relationship. The memory is the last one he tries to protect."},
 
-  {"q":"The game is out there, and it's either play or get played.","src":"The Wire","year":2002,"type":"tv","char":"Slim Charles","actors":[{"name":"Michael K. Williams","role":"Omar Little"}],"desc":"Omar's cold realism. He has no illusions about the system he lives in. The line asks the harder question: what game are you in, and do you know the rules?","trivia":["David Simon has said Omar was the character who most surprised him — he was meant to be a minor figure.","Michael K. Williams said Omar was the role he was born to play."],"cat":"Truth","retort":"Slim Charles says this. Everyone in The Wire is playing and getting played simultaneously. There is no outside."},
+  {"q":"The game is out there, and it's either play or get played.","src":"The Wire","year":2002,"type":"tv","char":"Slim Charles","actors":[{"name":"Anwan Glover","role":"Slim Charles"}],"desc":"Slim Charles's cold realism. He has no illusions about the system he lives in. The line asks the harder question: what game are you in, and do you know the rules?","trivia":["David Simon has said Omar was the character who most surprised him — he was meant to be a minor figure.","Michael K. Williams said Omar was the role he was born to play."],"cat":"Truth","retort":"Slim Charles says this. Everyone in The Wire is playing and getting played simultaneously. There is no outside."},
 
-  {"q":"All in the game, yo.","src":"The Wire","year":2002,"type":"tv","char":"Wallace","actors":[{"name":"Michael K. Williams","role":"Omar Little"}],"desc":"Omar's fatalism — acceptance not of injustice but of consequence. If you participate in something, the outcomes belong to you too. A disturbing piece of personal accountability.","trivia":["The phrase became so culturally embedded it was used by Barack Obama in an interview about the show.","David Simon based the drug game's internal logic on years of reporting for the Baltimore Sun."],"cat":"Truth","retort":"Wallace says this after a murder. He is fifteen. He already knows the game's rules better than he wants to."},
+  {"q":"All in the game, yo.","src":"The Wire","year":2002,"type":"tv","char":"Wallace","actors":[{"name":"Michael B. Jordan","role":"Wallace"}],"desc":"Wallace's fatalism — acceptance not of injustice but of consequence. If you participate in something, the outcomes belong to you too. A disturbing piece of personal accountability.","trivia":["The phrase became so culturally embedded it was used by Barack Obama in an interview about the show.","David Simon based the drug game's internal logic on years of reporting for the Baltimore Sun."],"cat":"Truth","retort":"Wallace says this after a murder. He is fifteen. He already knows the game's rules better than he wants to."},
 
-  {"q":"A man's got to have a code.","src":"The Wire","year":2002,"type":"tv","char":"Omar Little","actors":[{"name":"Michael K. Williams","role":"Omar Little"}],"desc":"Omar's ethics are rigid within moral chaos — he doesn't harm civilians, keeps his word, operates with consistency. His code is more reliable than most of the show's 'legitimate' characters.","trivia":["David Simon based Omar's code on the real Baltimore stick-up artist Donnie Andrews.","The Wire was famously passed over for Emmy nominations its entire run."],"cat":"Identity","retort":"Omar says this across five seasons and lives by it in ways most people only talk about. The code is the man."},
+  
 
   {"q":"You can't take a picture of this. It's already gone.","src":"Six Feet Under","year":2005,"type":"tv","char":"Nate Fisher","actors":[{"name":"Peter Krause","role":"Nate Fisher"}],"desc":"Said in the final season — an acknowledgment that presence is the only real thing, and the attempt to capture it is always too late. One of the most quietly devastating lines in the whole run.","trivia":["Six Feet Under's finale is consistently rated the greatest series finale in television history.","Alan Ball said the show was fundamentally about learning to face death in order to live."],"cat":"Mortality","retort":"David says this in the final season, watching something ordinary and beautiful. The show spent five years building to this observation."},
 
@@ -1542,7 +1543,7 @@ const QUOTES = [
 
   {"q":"I miss you. I feel your absence.","src":"Blue Is the Warmest Colour","year":2013,"type":"movie","char":"Adèle","actors":[{"name":"Adèle Exarchopoulos","role":"Adèle"}],"desc":"The simplest and most complete statement of grief. Not nostalgia or longing, just the physical presence of absence.","trivia":["The film won the Palme d'Or at Cannes — awarded jointly to the director and both lead actresses, an unprecedented decision.","Adèle Exarchopoulos was 17 when filming began."],"cat":"Grief","retort":"Adèle says this to Emma years after their relationship ended. The film is three hours of building to this sentence."},
 
-  {"q":"I just thought there would be more.","src":"Boyhood","year":2014,"type":"movie","char":"Olivia","actors":[{"name":"Ethan Hawke","role":"Mason Sr."}],"desc":"A father on a road trip with his grown son, summing up the gap between what he expected from life and what he got. Not bitterness — just the quiet recognition of ordinary disappointment.","trivia":["Richard Linklater filmed Boyhood over twelve years with the same cast.","Ethan Hawke was nominated for the Academy Award for Best Supporting Actor."],"cat":"Regret","retort":"Olivia says this as her son leaves for college, having survived an abusive marriage and raised two children largely alone. The grief is not ingratitude. It's the gap between the life imagined and the life lived."},
+  {"q":"I just thought there would be more.","src":"Boyhood","year":2014,"type":"movie","char":"Olivia","actors":[{"name":"Patricia Arquette","role":"Olivia"}],"desc":"Olivia — having raised two children largely alone, survived an abusive marriage — with his grown son, summing up the gap between what he expected from life and what he got. Not bitterness — just the quiet recognition of ordinary disappointment.","trivia":["Richard Linklater filmed Boyhood over twelve years with the same cast.","Ethan Hawke was nominated for the Academy Award for Best Supporting Actor."],"cat":"Regret","retort":"Olivia says this as her son leaves for college, having survived an abusive marriage and raised two children largely alone. The grief is not ingratitude. It's the gap between the life imagined and the life lived."},
 
   {"q":"You know how everyone's always saying seize the moment? I don't know, I'm kind of thinking it's the other way around. You know, like the moment seizes us.","src":"Boyhood","year":2014,"type":"movie","char":"Mason Jr.","actors":[{"name":"Ellar Coltrane","role":"Mason Jr."}],"desc":"The final lines of the film — a young man reframing agency and presence. Maybe we don't capture moments. Maybe we're just available when they arrive.","trivia":["Ellar Coltrane was six years old when filming began and eighteen when it ended.","Boyhood is considered one of the greatest achievements in film production history."],"cat":"Mortality","retort":"Mason says this on the last day of the film's twelve years. The moments seize you. That's Linklater's argument across the entire trilogy."},
 
@@ -1602,7 +1603,7 @@ const QUOTES = [
 
   {"q":"When I was young, I wanted to be anybody but myself.","src":"Mary and Max","year":2009,"type":"movie","char":"Max Jerry Horovitz","actors":[{"name":"Philip Seymour Hoffman","role":"Max Jerry Horovitz (voice)"}],"desc":"Max's admission — and the film shows what happens when you finally accept yourself: not happiness exactly, but something more durable. Peace.","trivia":["Adam Elliot wrote the film based on a real twenty-year pen-pal friendship he had.","The film is entirely in clay — every object was handmade over seven years."],"cat":"Identity","retort":"Max writes this to Mary. He was diagnosed with Asperger's at 44 and says it was the best day of his life, because he finally understood himself."},
 
-  {"q":"Most days I wish I never met you. Because then I could sleep at night, and I wouldn't have to walk around with the knowledge there was someone like you out there.","src":"Breaking Bad","year":1997,"type":"movie","char":"Skylar White","actors":[{"name":"Robin Williams","role":"Sean Maguire"}],"desc":"Sean confessing that knowing Will has made everything harder. The highest compliment possible — someone who makes you incapable of settling for less. The cost of contact with real potential.","trivia":["Robin Williams was not Gus Van Sant's first choice — he auditioned because he loved the script.","Matt Damon has said these speeches are the writing he's proudest of."],"cat":"Relationships","retort":"Skylar says this to Walt. It is both an expression of love and a completely accurate description of what loving someone dangerous costs."},
+  {"q":"Most days I wish I never met you. Because then I could sleep at night, and I wouldn't have to walk around with the knowledge there was someone like you out there.","src":"Good Will Hunting","year":1997,"type":"movie","char":"Sean Maguire","actors":[{"name":"Robin Williams","role":"Sean Maguire"}],"desc":"Sean confessing that knowing Will has made everything harder. The highest compliment possible — someone who makes you incapable of settling for less. The cost of contact with real potential.","trivia":["Robin Williams was not Gus Van Sant's first choice — he auditioned because he loved the script.","Matt Damon has said these speeches are the writing he's proudest of."],"cat":"Relationships","retort":"Skylar says this to Walt. It is both an expression of love and a completely accurate description of what loving someone dangerous costs."},
 
   {"q":"Every man I kill, the farther away from home I feel.","src":"Black Hawk Down","year":2001,"type":"movie","char":"John Grimes","actors":[{"name":"Ewan McGregor","role":"John Grimes"}],"desc":"Said quietly, almost to himself, by a desk clerk who ended up in the worst firefight of the Somalia mission. Not about glory or duty — just the creeping realisation that violence is its own kind of exile. Each act of it puts distance between you and who you were.","trivia":["Ewan McGregor based Grimes on the real John Grimes, who became a Ranger specifically because he felt he was missing the action from a desk job.","Ridley Scott filmed in Morocco with real Black Hawk helicopters — the production was one of the most logistically complex in history."],"cat":"War","retort":"John Grimes says this. The line between distance and home keeps moving the further in he goes."},
 
@@ -1720,7 +1721,7 @@ const QUOTES = [
 
   {"q":"The cave you fear to enter holds the treasure you seek.","src":"The Power of Myth","year":1988,"type":"tv","char":"Joseph Campbell","actors":[{"name":"Joseph Campbell","role":"Himself"}],"desc":"Campbell's distillation of the hero's journey into a single sentence. Whatever you are most avoiding is almost certainly what you most need to face.","trivia":["The Power of Myth was filmed at George Lucas's Skywalker Ranch — Lucas credited Campbell's work as foundational to Star Wars.","The series aired on PBS in 1988 and introduced Campbell's ideas to a mass audience."],"cat":"Courage","retort":"Campbell said this at Skywalker Ranch. George Lucas built a franchise on the idea. Campbell spent fifty years in the cave. The treasure was myth itself."},
 
-  {"q":"Every passing minute is another chance to turn it all around.","src":"Vanilla Sky","year":2001,"type":"movie","char":"Sofia Serrano","actors":[{"name":"Penélope Cruz","role":"Sofia Serrano"}],"desc":"Said lightly, almost in passing — but it's the thesis of the whole film. The possibility of revision is always present. The question is whether you believe it.","trivia":["Vanilla Sky is a remake of the Spanish film Abre los ojos, also starring Penélope Cruz as the same character.","Cameron Crowe said this was the most optimistic line he had ever written."],"cat":"Choices","retort":"Sofia says this like a throwaway observation. It is the thesis of the entire film. She doesn't know it. He doesn't hear it until much later."},
+  
 
   {"q":"The moment you make a mistake in chess, you're dead. But in the game of life, you can undo your mistakes — if you have the courage.","src":"Searching for Bobby Fischer","year":1993,"type":"movie","char":"Bruce Pandolfini","actors":[{"name":"Ben Kingsley","role":"Bruce Pandolfini"}],"desc":"The chess teacher articulating what separates the game from living — in life, unlike chess, the board can be rearranged. But you have to be willing to admit the mistake first.","trivia":["Ben Kingsley prepared by spending time with real chess coaches.","The real Josh Waitzkin went on to become a tai chi champion after his chess career."],"cat":"Choices","retort":"The chess mistake ends the game instantly and completely. The life mistake keeps going, and the board looks different, and you have to keep playing."},
 
@@ -1738,7 +1739,7 @@ const QUOTES = [
 
   {"q":"The mystery of human existence lies not in just staying alive, but in finding something to live for.","src":"The Brothers Karamazov","year":2008,"type":"movie","char":"Ivan Karamazov","actors":[{"name":"Sergei Nikonenko","role":"Ivan Karamazov"}],"desc":"Dostoevsky's Ivan — the intellectual brother who can demolish every argument for God and still cannot find a reason to continue. The mystery isn't death. It's meaning.","trivia":["The Brothers Karamazov was Dostoevsky's final novel, completed months before his death in 1881.","Dostoevsky considered it his masterwork."],"cat":"Purpose","retort":"Ivan Karamazov can articulate the mystery with complete precision. He cannot find an answer for himself. He hands the question to Alyosha, who carries it differently."},
 
-  {"q":"I don't want to survive. I want to live.","src":"12 Years a Slave","year":2013,"type":"movie","char":"Solomon Northup","actors":[{"name":"Chiwetel Ejiofor","role":"Solomon Northup"}],"desc":"Solomon — who has been doing only what is necessary to stay alive — making the distinction that transforms survival into something else entirely. The refusal to reduce yourself to a body that persists.","trivia":["Chiwetel Ejiofor spent months reading slave narratives before filming.","Steve McQueen shot in chronological order so the cast would carry the accumulated weight of each scene."],"cat":"Purpose","retort":"Solomon Northup says this having spent years doing only what was necessary to stay alive. The distinction finally has a name and he can finally say it."},
+  
 
   {"q":"The purpose of life is to be defeated by greater and greater things.","src":"Rilke on Love and Other Difficulties","year":1975,"type":"movie","char":"Rainer Maria Rilke","actors":[{"name":"Bruno Ganz","role":"Narrator"}],"desc":"Rilke's letter to a young poet — saying that the point isn't to win, it's to keep encountering things large enough to require your full self. Defeat by worthy things is a form of growth.","trivia":["Rilke's Letters to a Young Poet has never been out of print since its publication in 1929.","The letters were written between 1902 and 1908 to Franz Xaver Kappus, a young military officer."],"cat":"Purpose","retort":"Rilke wrote this to a 19-year-old soldier. Rilke died at 51. He kept encountering larger things until the largest one arrived."},
 
@@ -2657,14 +2658,11 @@ function _peelFrame() {
           back2.style.overflowY = 'auto';
         }, 370);
       }
-      // Fade canvas flap out
+      // Kill canvas immediately — fade+restore causes ghost crease line on back card
       const cv = card.querySelector('#peelCanvas');
       if (cv) {
-        cv.style.transition = 'opacity 0.35s ease';
-        cv.style.opacity = '0';
-        setTimeout(() => {
-          if (cv) { cv.getContext('2d').clearRect(0, 0, cv.width, cv.height); cv.style.opacity = '1'; cv.style.transition = ''; }
-        }, 360);
+        cv.getContext('2d').clearRect(0, 0, cv.width, cv.height);
+        cv.style.display = 'none';
       }
     } else {
       const front = card.querySelector('.card-front');
@@ -3225,6 +3223,10 @@ window._peelBack = function(card) {
   const back  = card.querySelector('.card-back');
   const W = front ? front.offsetWidth  : 360;
   const H = front ? front.offsetHeight : 400;
+
+  // Restore canvas so peel animation plays back
+  const cv = card.querySelector('#peelCanvas');
+  if (cv) { cv.style.display = ''; cv.style.opacity = '1'; cv.style.transition = ''; }
 
   // Restore front visibility immediately (it's behind the peel)
   if (front) {
