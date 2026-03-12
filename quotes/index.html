@@ -58,11 +58,14 @@ opacity: 0.9;
 }
 
 .counter {
-font-size: 12px;
+font-size: 11px;
 color: #6b6878;
-letter-spacing: 0.08em;
+letter-spacing: 0.12em;
 font-weight: 300;
+opacity: 0;
+transition: opacity 0.8s ease;
 }
+.counter.visible { opacity: 1; }
 
 /* ── Main card area ── */
 #stage {
@@ -75,6 +78,7 @@ padding: 72px 0 160px;
 overflow: hidden;
 }
 
+```
 .card-stack {
 position: relative;
 width: 100%;
@@ -84,36 +88,140 @@ display: flex;
 align-items: center;
 justify-content: center;
 padding: 0 20px;
+```
+
 }
 
+/* wrapper — stacking context, no 3D transforms */
 .quote-card {
 position: absolute;
 width: 100%;
-max-height: calc(100vh - 260px);
-overflow-y: auto;
-overflow-x: hidden;
-scrollbar-width: none;
-background-color: #1e1e28;
+user-select: none;
+cursor: grab;
+will-change: transform;
+/* No filter/shadow on wrapper — drop-shadow also affects canvas layer */
+}
+
+/* shared face base */
+.card-face {
+width: 100%;
+border-radius: 20px;
 background-image:
 url(“data:image/svg+xml,%3Csvg xmlns=‘http://www.w3.org/2000/svg’ width=‘250’ height=‘250’%3E%3Cfilter id=‘n’%3E%3CfeTurbulence type=‘fractalNoise’ baseFrequency=‘0.85’ numOctaves=‘4’ stitchTiles=‘stitch’/%3E%3CfeColorMatrix type=‘saturate’ values=‘0’/%3E%3C/filter%3E%3Crect width=‘250’ height=‘250’ filter=‘url(%23n)’ opacity=‘0.055’/%3E%3C/svg%3E”);
 background-repeat: repeat;
 background-size: 180px 180px;
-border: 1px solid rgba(255,255,255,0.10);
-border-radius: 20px;
 padding: 32px 28px 28px;
-transition: transform 0.08s ease, opacity 0.08s ease;
-touch-action: pan-y;
+overflow: hidden;
+}
+
+/* back face — hidden until peel reveals it */
+.card-back {
+background-color: #15151c;
+position: absolute;
+top: 0px; left: -1px; right: -1px; bottom: -1px;
+border-radius: 21px;
+pointer-events: none;
+user-select: none;
+overflow: hidden;
+z-index: 1;
+visibility: hidden;
+opacity: 0;
+clip-path: polygon(0px 0px, 0px 0px, 0px 0px);
+}
+.card-back::-webkit-scrollbar { display: none; }
+/* Sticky depth overlay inside back card scroll — sticks to visible viewport edges */
+.card-back-depth {
+position: sticky;
+top: 0;
+width: 100%;
+height: 0;
+overflow: visible;
+pointer-events: none;
+z-index: 50;
+}
+.card-back-depth::before {
+content: ‘’;
+position: absolute;
+top: 0; left: -1px; right: -1px;
+height: 100vh; /* covers full visible area */
+max-height: 800px;
+border-radius: 20px;
+pointer-events: none;
+box-shadow:
+inset  0   3px 10px rgba(0,0,0,0.30),
+inset  0  -3px 10px rgba(0,0,0,0.45),
+inset  3px  0  10px rgba(0,0,0,0.22),
+inset -3px  0  10px rgba(0,0,0,0.38),
+inset  1px  1px 0 rgba(0,0,0,0.12),
+inset -1px -1px 0 rgba(0,0,0,0.55);
+}
+
+/* depth moved to quote-card::after so it doesn’t scroll */
+/* Soft peel edges via canvas shadow trick */
+#peelCanvas { /* no filter — drop-shadow causes ghost artifacts on departing cards */ }
+
+/* Thin scrollbar track on back card */
+.card-back {
+scrollbar-width: thin;
+scrollbar-color: rgba(200,169,110,0.35) transparent;
+}
+.card-back::-webkit-scrollbar { width: 3px; display: block; }
+.card-back::-webkit-scrollbar-track { background: transparent; }
+.card-back::-webkit-scrollbar-thumb {
+background: rgba(200,169,110,0.35); border-radius: 2px;
+}
+/* Fade overlay at bottom hinting scroll */
+.back-scroll-hint {
+position: sticky; bottom: 0; left: 0; right: 0;
+height: 36px; margin: 0 -20px -20px;
+background: linear-gradient(to bottom, transparent, rgba(21,21,28,0.85));
+pointer-events: none; opacity: 1; transition: opacity 0.4s;
+}
+.back-scroll-hint.hidden { opacity: 0; }
+
+.back-close-btn {
+display: inline-flex; align-items: center; gap: 6px;
+background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12);
+color: rgba(232,228,220,0.6); font-size: 11px; letter-spacing: 0.08em;
+padding: 6px 14px; border-radius: 20px; cursor: pointer;
+margin-bottom: 18px; transition: background 0.2s;
+}
+.back-close-btn:hover { background: rgba(255,255,255,0.12); color: #e8e4dc; }
+.card-back * { user-select: none; }
+
+/* front face — sits above back, touch-action none to allow peel intercept */
+.card-front {
+background-color: #1e1e28;
+box-shadow:
+0 1px 0 rgba(255,255,255,0.04) inset,
+inset  0   3px 10px rgba(0,0,0,0.30),
+inset  0  -3px 10px rgba(0,0,0,0.45),
+inset  3px  0  10px rgba(0,0,0,0.22),
+inset -3px  0  10px rgba(0,0,0,0.38),
+inset  1px  1px 0 rgba(0,0,0,0.12),
+inset -1px -1px 0 rgba(0,0,0,0.55);
+position: relative;
+z-index: 2;
+will-change: clip-path;
+touch-action: none;
 user-select: none;
 cursor: grab;
-will-change: transform;
-box-shadow: 0 8px 48px rgba(0,0,0,0.6), 0 1px 0 rgba(255,255,255,0.04) inset;
-overflow: hidden;
+}
+.card-front * { user-select: none; }
+
+/* peel canvas — draws the curling flap + shadow, sits above everything */
+#peelCanvas {
+position: absolute;
+top: 0; left: 0;
+pointer-events: none;
+z-index: 4;
+overflow: visible;
 }
 
 .quote-card::-webkit-scrollbar { display: none; }
 
 /* Inner vignette — darkens edges, draws eye to text centre */
-.quote-card::before {
+.card-front::before {
 content: ‘’;
 position: absolute;
 inset: 0;
@@ -123,8 +231,8 @@ pointer-events: none;
 z-index: 0;
 }
 
-/* Faint warm top-left light catch — like paper held to light */
-.quote-card::after {
+/* Faint warm top-left light catch */
+.card-front::after {
 content: ‘’;
 position: absolute;
 inset: 0;
@@ -135,49 +243,13 @@ z-index: 0;
 }
 
 /* Ensure card content sits above pseudo-elements */
-.quote-card > * { position: relative; z-index: 1; }
+.card-front > * { position: relative; z-index: 1; }
 
 /* Ghost next-quote — bleeds through beneath active text */
-.ghost-next {
-position: absolute;
-top: 44px;
-left: 32px;
-right: 32px;
-font-family: ‘Playfair Display’, serif;
-font-size: clamp(15px, 4vw, 19px);
-font-style: italic;
-line-height: 1.55;
-color: #e8e4dc;
-opacity: 0;
-z-index: 0;
-pointer-events: none;
-user-select: none;
-animation: ghostFadeIn 1.8s ease 1.2s forwards;
-}
-
-@keyframes ghostFadeIn {
-from { opacity: 0; }
-to   { opacity: 0.045; }
-}
-
-.card-ghost-1 {
-transform: scale(0.94) translateY(14px);
-opacity: 0.6;
-pointer-events: none;
-z-index: 2;
-}
-
-.card-ghost-2 {
-transform: scale(0.88) translateY(28px);
-opacity: 0.35;
-pointer-events: none;
-z-index: 1;
-}
 
 .quote-card.active {
 z-index: 10;
 cursor: grab;
-animation: cardBreathe 4s ease-in-out infinite;
 }
 
 @keyframes cardBreathe {
@@ -193,15 +265,15 @@ animation: none;
 }
 
 .quote-card.flying-left {
-transition: transform 0.38s cubic-bezier(0.55, 0, 0.8, 0.45), opacity 0.3s ease !important;
-transform: translateX(-115%) rotate(-10deg) scale(0.95) !important;
+transition: transform 0.55s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease !important;
+transform: translateX(-120%) rotate(-6deg) scale(0.92) !important;
 opacity: 0 !important;
 pointer-events: none;
 }
 
 .quote-card.flying-right {
-transition: transform 0.38s cubic-bezier(0.55, 0, 0.8, 0.45), opacity 0.3s ease !important;
-transform: translateX(115%) rotate(10deg) scale(0.95) !important;
+transition: transform 0.55s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease !important;
+transform: translateX(120%) rotate(6deg) scale(0.92) !important;
 opacity: 0 !important;
 pointer-events: none;
 }
@@ -245,78 +317,23 @@ z-index: 1;
 }
 
 .quote-source {
-display: flex;
-align-items: flex-start;
-gap: 12px;
-padding-top: 20px;
-border-top: 1px solid rgba(255,255,255,0.09);
+margin-top: 28px;
+padding-top: 0;
+border-top: none;
 }
 
-.source-icon {
-width: 36px;
-height: 36px;
-border-radius: 8px;
-background: #1e1e26;
-display: flex;
-align-items: center;
-justify-content: center;
-font-size: 16px;
-flex-shrink: 0;
-border: 1px solid rgba(255,255,255,0.09);
-}
-
-.source-details {
-flex: 1;
-min-width: 0;
-}
-
-.source-title {
-font-size: 13px;
-font-weight: 500;
-color: #e8e4dc;
-opacity: 0.9;
-white-space: nowrap;
-overflow: hidden;
-text-overflow: ellipsis;
-}
-
-.source-meta {
+.source-caption {
+font-family: ‘DM Sans’, sans-serif;
 font-size: 11px;
-color: #6b6878;
-margin-top: 2px;
 font-weight: 300;
-letter-spacing: 0.04em;
-}
-
-.source-type-badge {
-font-size: 10px;
-padding: 3px 8px;
-border-radius: 20px;
-font-weight: 500;
-letter-spacing: 0.06em;
+color: rgba(232,228,220,0.35);
+letter-spacing: 0.10em;
 text-transform: uppercase;
-flex-shrink: 0;
-align-self: center;
+line-height: 1.8;
 }
-.badge-movie  { background: rgba(200,169,110,0.15); color: #c8a96e; }
-.badge-tv     { background: rgba(123,104,238,0.15); color: #7b68ee; }
 
-/* Per-category badge colours */
-.cat-Regret      { background: rgba(180,100,100,0.15); color: #c47a7a; }
-.cat-Freedom     { background: rgba(100,180,140,0.15); color: #6fbf9a; }
-.cat-Identity    { background: rgba(140,110,200,0.15); color: #a07ecc; }
-.cat-Truth       { background: rgba(180,160,80,0.15);  color: #c8b44e; }
-.cat-Mortality   { background: rgba(100,110,140,0.15); color: #7a8aaa; }
-.cat-Courage     { background: rgba(200,130,60,0.15);  color: #c87840; }
-.cat-Grief       { background: rgba(80,110,180,0.15);  color: #6080c8; }
-.cat-Relationships { background: rgba(180,90,130,0.15); color: #c4607a; }
-.cat-Purpose     { background: rgba(80,160,180,0.15);  color: #50a8c0; }
-.cat-Choices     { background: rgba(160,160,80,0.15);  color: #aaaa50; }
-.cat-Self-Knowledge { background: rgba(120,160,120,0.15); color: #7aaa7a; }
-.cat-War         { background: rgba(160,80,80,0.15);   color: #aa4444; }
-
-/* ── Category ambient tint (injected via inline style on ::before override) ── */
-.quote-card.tinted::before {
+/* ── Category ambient tint ── */
+.card-front.tinted::before {
 background: radial-gradient(ellipse at 50% 50%, var(–cat-tint, transparent) 0%, transparent 70%),
 radial-gradient(ellipse at 50% 50%, transparent 55%, rgba(0,0,0,0.22) 100%);
 }
@@ -346,54 +363,173 @@ pointer-events: none;
 .letterbox-bar.bottom { bottom: 0; }
 body.letterbox .letterbox-bar { height: 44px; }
 
-/* ── Swipe particle canvas ── */
-#swipeCanvas {
-position: fixed;
-inset: 0;
-pointer-events: none;
-z-index: 50;
+/* Back surface content */
+.back-film-title {
+font-family: ‘Playfair Display’, serif;
+font-size: clamp(22px, 5.5vw, 28px);
+font-weight: 700;
+color: #e8e4dc;
+line-height: 1.2;
+letter-spacing: -0.01em;
+margin-bottom: 4px;
 }
-.info-pills {
-display: flex;
-gap: 8px;
+.back-film-year {
+font-family: ‘DM Sans’, sans-serif;
+font-size: 12px;
+font-weight: 300;
+color: rgba(232,228,220,0.35);
+letter-spacing: 0.12em;
+margin-bottom: 20px;
+}
+.back-character {
+font-family: ‘DM Sans’, sans-serif;
+font-size: 13px;
+font-weight: 400;
+color: rgba(232,228,220,0.55);
+margin-bottom: 24px;
+letter-spacing: 0.02em;
+}
+.back-divider {
+display: none;
+}
+.back-trivia {
+font-family: ‘DM Sans’, sans-serif;
+font-size: 12px;
+font-weight: 300;
+line-height: 1.75;
+color: rgba(232,228,220,0.5);
+margin-bottom: 14px;
+display: -webkit-box;
+-webkit-line-clamp: 3;
+-webkit-box-orient: vertical;
+overflow: hidden;
+}
+.back-cast {
 margin-top: 20px;
-flex-wrap: wrap;
+display: flex;
+flex-direction: column;
+gap: 10px;
 }
-
-.pill {
+.back-actor-row {
 display: flex;
 align-items: center;
-gap: 5px;
-padding: 7px 13px;
-border-radius: 30px;
-background: rgba(200,169,110,0.13);
-border: 1px solid rgba(200,169,110,0.25);
+gap: 10px;
+}
+.back-actor-avatar {
+width: 30px;
+height: 30px;
+border-radius: 50%;
+background: rgba(255,255,255,0.06);
+border: 1px solid rgba(255,255,255,0.08);
+display: flex;
+align-items: center;
+justify-content: center;
+font-size: 10px;
+font-weight: 500;
+color: rgba(232,228,220,0.5);
+font-family: ‘DM Sans’, sans-serif;
+flex-shrink: 0;
+letter-spacing: 0.04em;
+}
+.back-actor-name {
+font-family: ‘DM Sans’, sans-serif;
+font-size: 12px;
+font-weight: 400;
+color: rgba(232,228,220,0.65);
+}
+.back-actor-role {
+font-family: ‘DM Sans’, sans-serif;
+font-size: 11px;
+font-weight: 300;
+color: rgba(232,228,220,0.3);
+margin-top: 1px;
+}
+.back-imdb {
+display: block;
+margin-top: 24px;
+font-family: ‘DM Sans’, sans-serif;
 font-size: 11px;
 font-weight: 500;
-color: #c8a96e;
-cursor: pointer;
-letter-spacing: 0.05em;
+color: rgba(245,197,24,0.7);
+letter-spacing: 0.10em;
 text-transform: uppercase;
-transition: background 0.15s ease, transform 0.1s ease;
+text-decoration: none;
+text-align: right;
 -webkit-tap-highlight-color: transparent;
-font-family: ‘DM Sans’, sans-serif;
--webkit-appearance: none;
-appearance: none;
-outline: none;
+transition: color 0.2s ease;
+}
+.back-imdb:active { color: #f5c518; }
+.back-desc {
+font-size: 13px; line-height: 1.65; color: rgba(232,228,220,0.55);
+margin: 10px 0 8px; font-style: italic;
+}
+.back-section-label {
+font-size: 9px; letter-spacing: 0.18em; color: rgba(200,169,110,0.5);
+margin: 22px 0 8px; font-weight: 500;
+}
+.back-retort {
+font-size: 13px; line-height: 1.6; color: rgba(232,228,220,0.6);
+font-style: italic; padding: 8px 0;
+}
+.back-related-label {
+font-size: 10px; color: rgba(200,169,110,0.45); margin-bottom: 6px; letter-spacing: 0.06em;
+}
+.back-related-chip {
+display: block; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+border-radius: 10px; padding: 10px 14px; margin-bottom: 8px; cursor: pointer;
+font-size: 12px; color: rgba(232,228,220,0.7); line-height: 1.45;
+transition: background 0.15s;
+}
+.back-related-chip:hover { background: rgba(255,255,255,0.09); color: #e8e4dc; }
+.back-related-meta {
+display: block; font-size: 10px; color: rgba(200,169,110,0.5);
+margin-top: 4px; letter-spacing: 0.05em;
 }
 
-.pill:active { transform: scale(0.96); background: rgba(200,169,110,0.24); }
-
-.pill svg { width: 11px; height: 11px; stroke: #c8a96e; fill: none; }
-
-/* IMDb pill — slightly warmer tint */
-.pill-imdb {
-background: rgba(245,197,24,0.12);
-border-color: rgba(245,197,24,0.3);
-color: #f5c518;
+/* Peel shadow — appears under the lifted card edge */
+.peel-shadow {
+position: absolute;
+bottom: 0; left: 0; right: 0;
+height: 60px;
+border-radius: 0 0 20px 20px;
+background: linear-gradient(to top, rgba(0,0,0,0.5), transparent);
+pointer-events: none;
+z-index: 11;
+opacity: 0;
+transition: opacity 0.1s ease;
 }
-.pill-imdb svg { stroke: #f5c518; }
-.pill-imdb:active { background: rgba(245,197,24,0.22); }
+
+/* ── Peel corner hint ── */
+.peel-corner {
+position: absolute;
+bottom: 0;
+right: 0;
+width: 56px;
+height: 56px;
+pointer-events: none;
+z-index: 12;
+transform-origin: 100% 100%;
+opacity: 0;
+animation: peelPulse 4s ease-in-out 1.8s infinite;
+overflow: hidden;
+border-radius: 0 0 20px 0;
+}
+.peel-corner svg {
+position: absolute;
+bottom: 0;
+right: 0;
+width: 56px;
+height: 56px;
+filter: drop-shadow(-2px -2px 4px rgba(0,0,0,0.5));
+}
+@keyframes peelPulse {
+0%   { opacity: 0;   transform: scale(0.6) rotate(-8deg); }
+12%  { opacity: 1;   transform: scale(1)   rotate(0deg); }
+30%  { opacity: 1;   transform: scale(1.2) rotate(-7deg); }
+42%  { opacity: 0.9; transform: scale(1.24) rotate(-9deg); }
+58%  { opacity: 1;   transform: scale(1)   rotate(0deg); }
+100% { opacity: 1;   transform: scale(1)   rotate(0deg); }
+}
 
 /* ── Transition themes ── */
 /* Default: slide */
@@ -858,20 +994,19 @@ opacity: 1;
 
 /* ── Typewriter reveal ── */
 @keyframes charIn {
-from { opacity: 0; filter: blur(4px); }
+from { opacity: 0; filter: blur(6px); }
 to   { opacity: 1; filter: blur(0); }
 }
 .char {
 display: inline;
 opacity: 0;
-animation: charIn 0.04s ease forwards;
+animation: charIn 0.25s ease forwards;
 }
 
 /* ── Related quotes in drawer ── */
 .related-section {
 margin-top: 24px;
 padding-top: 20px;
-border-top: 1px solid rgba(255,255,255,0.07);
 }
 .related-label {
 font-size: 10px;
@@ -917,7 +1052,6 @@ letter-spacing: 0.04em;
 <div class="letterbox-bar top"></div>
 <div class="letterbox-bar bottom"></div>
 <canvas id="ambientCanvas"></canvas>
-<canvas id="swipeCanvas"></canvas>
 
 <header>
   <div class="logo">Lines That Matter</div>
@@ -1386,7 +1520,7 @@ const QUOTES = [
 
   {"q":"I think this just might be my masterpiece.","src":"Inglourious Basterds","year":2009,"type":"movie","char":"Lt. Aldo Raine","actors":[{"name":"Brad Pitt","role":"Lt. Aldo Raine"}],"desc":"The last line of the film — Aldo carving a swastika into a Nazi's forehead. Tarantino breaking the fourth wall to announce his own satisfaction. The audacity is the point: sometimes you should be proud of what you made.","trivia":["Quentin Tarantino spent a decade writing the script in various forms before filming.","Christoph Waltz won the Academy Award for Best Supporting Actor for his role as Hans Landa."],"cat":"Purpose","retort":"Aldo Raine says this having just carved a swastika into a Nazi's forehead. He means it completely. That's the joke and the horror simultaneously."},
 
-  {"q":"I'm not going to tell you my whole goddamn autobiography or anything. I'll just tell you about this madman stuff that happened.","src":"The Perks of Being a Wallflower","year":2012,"type":"movie","char":"Charlie","actors":[{"name":"Logan Lerman","role":"Charlie"}],"desc":"An opening that immediately establishes withholding — a narrator who isn't ready to tell you everything, which is the truth about most of us in therapy, in relationships, in life.","trivia":["Stephen Chbosky wrote the novel while working as a screenwriter — it was rejected by publishers for years.","Logan Lerman said the role required him to access memories he had never previously examined."],"cat":"Identity","retort":"Charlie is about to tell us his whole autobiography. The deflection is the narrator protecting himself before he's ready."},
+  
 
   {"q":"Whatever I do, I do it with conviction.","src":"Phantom Thread","year":2017,"type":"movie","char":"Reynolds Woodcock","actors":[{"name":"Daniel Day-Lewis","role":"Reynolds Woodcock"}],"desc":"Woodcock's credo — not a moral statement but a statement about commitment. His conviction is the most admirable and most destructive thing about him simultaneously.","trivia":["Daniel Day-Lewis announced his retirement from acting after completing this film.","Paul Thomas Anderson wrote the role specifically for Day-Lewis after a conversation about control and obsession."],"cat":"Identity","retort":"Reynolds Woodcock says this. He is also a controlling, obsessive man who makes the people around him miserable with the same conviction."},
 
@@ -1476,7 +1610,7 @@ const QUOTES = [
 
   {"q":"Someday this war's gonna end.","src":"Apocalypse Now","year":1979,"type":"movie","char":"Lt. Col. Kilgore","actors":[{"name":"Robert Duvall","role":"Lt. Col. Kilgore"}],"desc":"Said with something close to sadness. Kilgore doesn't want it to end — the war has given him everything: purpose, permission, the perfect wave. The line is the film's darkest joke about what war does to the people it suits.","trivia":["Coppola has said Kilgore was the most purely American character he ever put on screen.","The surfing sequence was filmed during an actual military operation — the cooperation of the Philippine army was essential."],"cat":"War","retort":"Kilgore says this like a lament. He has built his entire identity around the war. Its ending would destroy him more than any enemy."},
 
-  {"q":"Charlie don't surf.","src":"Apocalypse Now","year":1979,"type":"movie","char":"Lt. Col. Kilgore","actors":[{"name":"Robert Duvall","role":"Lt. Col. Kilgore"}],"desc":"Kilgore's justification for attacking a beach village — so his men can surf. The absurdity is the point. The war has become so unreal that a man can order an assault because of the waves. Coppola's Vietnam is a place where American logic has eaten itself.","trivia":["The line was improvised on set.","Apocalypse Now spent 238 days in production, during which the director nearly had a breakdown and a typhoon destroyed the sets."],"cat":"War","retort":"Kilgore says this having just ordered a village bombed so he could use the beach. The incongruity is the horror."},
+  {"q":"I love the smell of napalm in the morning. It smells like... victory.","src":"Apocalypse Now","year":1979,"type":"movie","char":"Lt. Col. Kilgore","actors":[{"name":"Robert Duvall","role":"Lt. Col. Kilgore"}],"desc":"Kilgore's justification for attacking a beach village — so his men can surf. The absurdity is the point. The war has become so unreal that a man can order an assault because of the waves. Coppola's Vietnam is a place where American logic has eaten itself.","trivia":["The line was improvised on set.","Apocalypse Now spent 238 days in production, during which the director nearly had a breakdown and a typhoon destroyed the sets."],"cat":"War","retort":"Kilgore says this having just ordered a village bombed so he could use the beach. The incongruity is the horror."},
 
   {"q":"We were in the jungle, there were too many of us, we had access to too much money, too much equipment, and little by little we went insane.","src":"Apocalypse Now","year":1979,"type":"movie","char":"Captain Willard","actors":[{"name":"Francis Ford Coppola","role":"Himself (documentary footage)"}],"desc":"Coppola describing the making of the film — but he's also describing the film's subject. The production became the war it was depicting. The line appears in the documentary Hearts of Darkness and haunts every frame.","trivia":["Hearts of Darkness: A Filmmaker's Apocalypse (1991) documents the making of the film and is considered one of the greatest documentaries ever made.","Coppola mortgaged his house to finish the film."],"cat":"War","retort":"Willard says this in voiceover over images of exactly what he's describing. The confession doesn't stop anything."},
 
@@ -1614,6 +1748,47 @@ const QUOTES = [
 
   {"q":"You were my greatest adventure.","src":"The Incredibles","year":2004,"type":"movie","char":"Bob Parr","actors":[{"name":"Craig T. Nelson","role":"Bob Parr / Mr. Incredible"}],"desc":"Said to his family — the hero discovering that the thing he had been treating as a limitation was the whole point. The adventure wasn't out there. It was home.","trivia":["Brad Bird wrote the film based partly on his own experience of feeling overlooked.","The film was the first entirely CGI film to win the Academy Award for Best Animated Feature."],"cat":"Grief","retort":"Bob says this to his family at the end of a film where he spent the whole time trying to escape back into a bigger life. He was swimming in the adventure the whole time."},
 
+  {"q":"The unexamined life is not worth living.","src":"Socrates","year":-399,"type":"historical","char":"Socrates","person":"Socrates","born":"c. 470 BC","died":"399 BC","era":"Ancient Greece","actors":[],"desc":"Said at his trial in Athens, where he was sentenced to death for corrupting the youth and impiety. He chose death over exile rather than stop philosophising. The line is either the foundation of Western thought or the most arrogant thing anyone has ever said — possibly both.","trivia":["Socrates wrote nothing. All his words come through Plato, who was his student.","He drank hemlock voluntarily, calmly, surrounded by his students."],"cat":"Self-Knowledge"},
+
+  {"q":"In the middle of difficulty lies opportunity.","src":"Albert Einstein","year":1940,"type":"historical","char":"Albert Einstein","person":"Albert Einstein","born":"1879","died":"1955","era":"20th Century","actors":[],"desc":"Einstein spent much of his life navigating difficulty — stateless for years, Jewish in Europe in the 1930s, eventually forced to flee Germany. The line isn't optimism. It's the observation of a man who used every constraint as a forcing function.","trivia":["Einstein renounced his German citizenship in 1933 the same year Hitler came to power.","He was offered the presidency of Israel in 1952 and declined."],"cat":"Courage"},
+
+  {"q":"We are what we repeatedly do. Excellence, then, is not an act, but a habit.","src":"Aristotle","year":-330,"type":"historical","char":"Aristotle","person":"Aristotle","born":"384 BC","died":"322 BC","era":"Ancient Greece","actors":[],"desc":"From the Nicomachean Ethics. Aristotle's entire moral philosophy rests on this: character isn't what you decide in a moment, it's what you build through repetition. Who you are is the aggregate of your days, not your peak moments.","trivia":["This exact phrasing is actually a paraphrase by Will Durant — Aristotle's original is more nuanced.","Aristotle tutored Alexander the Great from age 13."],"cat":"Self-Knowledge"},
+
+  {"q":"It does not matter how slowly you go as long as you do not stop.","src":"Confucius","year":-479,"type":"historical","char":"Confucius","person":"Confucius","born":"551 BC","died":"479 BC","era":"Ancient China","actors":[],"desc":"Confucius spent his life trying to get hired by rulers who would let him implement his ideals of just governance. They never did. He kept going anyway, and died thinking he had failed. Two thousand years later, his ideas structured the largest civilisation on earth.","trivia":["The Analects — the record of his sayings — were compiled by his students after his death.","Confucius spent 13 years wandering between states seeking a ruler who would listen to him."],"cat":"Purpose"},
+
+  {"q":"Be the change you wish to see in the world.","src":"Mahatma Gandhi","year":1913,"type":"historical","char":"Mahatma Gandhi","person":"Mahatma Gandhi","born":"1869","died":"1948","era":"20th Century","actors":[],"desc":"Gandhi's actual position was more demanding: we cannot demand of others what we will not embody ourselves. He lived this — spinning his own cotton, practising poverty, submitting to violence without returning it. The quote is popular because people say it. Gandhi was remarkable because he did it.","trivia":["Gandhi was nominated for the Nobel Peace Prize five times and never received it.","He trained as a barrister in London and was initially thrown off a train in South Africa for sitting in the wrong class."],"cat":"Choices"},
+
+  {"q":"I have a dream that my four little children will one day live in a nation where they will not be judged by the colour of their skin but by the content of their character.","src":"Martin Luther King Jr.","year":1963,"type":"historical","char":"Martin Luther King Jr.","person":"Martin Luther King Jr.","born":"1929","died":"1968","era":"20th Century","actors":[],"desc":"Delivered at the March on Washington, August 28, 1963, to 250,000 people. King had used the 'dream' language before in smaller speeches — Mahalia Jackson shouted 'tell them about the dream!' from behind him and he set aside his prepared text. The speech's most famous passage was improvised.","trivia":["King was 34 years old when he delivered this speech.","He was assassinated five years later in Memphis while supporting striking sanitation workers."],"cat":"Freedom"},
+
+  {"q":"To be yourself in a world that is constantly trying to make you something else is the greatest accomplishment.","src":"Ralph Waldo Emerson","year":1841,"type":"historical","char":"Ralph Waldo Emerson","person":"Ralph Waldo Emerson","born":"1803","died":"1882","era":"19th Century","actors":[],"desc":"From Self-Reliance. Emerson's argument was that society, tradition, and consistency all conspire to make you a diminished version of yourself. Conformity is the enemy. His student Thoreau took this seriously enough to go live alone in the woods.","trivia":["Thoreau was Emerson's protégé and lived at Walden Pond on land Emerson owned.","Emerson lost his first wife to tuberculosis after 17 months of marriage. She was 20."],"cat":"Identity"},
+
+  {"q":"The only true wisdom is in knowing you know nothing.","src":"Socrates","year":-399,"type":"historical","char":"Socrates","person":"Socrates","born":"c. 470 BC","died":"399 BC","era":"Ancient Greece","actors":[],"desc":"The Oracle at Delphi called Socrates the wisest man in Athens. He went around trying to disprove this by finding someone wiser. Every expert he questioned turned out to know less than they thought. He concluded the Oracle was right — he alone knew that he knew nothing.","trivia":["The Oracle at Delphi's pronouncement is reported by Socrates in Plato's Apology.","Socrates also said he was a midwife of ideas — his job was to help others give birth to their own thoughts."],"cat":"Truth"},
+
+  {"q":"Not all those who wander are lost.","src":"J.R.R. Tolkien","year":1954,"type":"historical","char":"J.R.R. Tolkien","person":"J.R.R. Tolkien","born":"1892","died":"1973","era":"20th Century","actors":[],"desc":"From a poem about Aragorn in The Fellowship of the Ring. Tolkien wrote it as a description of a man who moves through the world without revealing his true nature or destination — which is very different from being aimless. He knew exactly where he was going. He just wasn't telling.","trivia":["Tolkien was a professor of Anglo-Saxon at Oxford and invented multiple complete languages for his fiction.","He served in the Battle of the Somme. Two of his three closest friends died there."],"cat":"Purpose"},
+
+  {"q":"In three words I can sum up everything I've learned about life: it goes on.","src":"Robert Frost","year":1936,"type":"historical","char":"Robert Frost","person":"Robert Frost","born":"1874","died":"1963","era":"20th Century","actors":[],"desc":"Frost's life was saturated with loss — a son by suicide, a daughter by puerperal fever, a wife dead young. The line could be resignation. Or it could be the most defiant thing anyone ever said: the world does not stop for your grief. And somehow, that's the thing that gets you through it.","trivia":["Frost won the Pulitzer Prize for Poetry four times — more than any other poet.","He read a poem at John F. Kennedy's inauguration in 1961. The sun was so bright he couldn't see his prepared text, so he recited a different poem from memory."],"cat":"Grief"},
+
+  {"q":"The secret of getting ahead is getting started.","src":"Mark Twain","year":1890,"type":"historical","char":"Mark Twain","person":"Mark Twain","born":"1835","died":"1910","era":"19th Century","actors":[],"desc":"Twain declared bankruptcy at 55 after a series of bad investments and spent his final years lecturing around the world to pay his debts. He paid every creditor back in full. He had no choice but to know this from the inside.","trivia":["Mark Twain is a pen name — his real name was Samuel Clemens.","He was born the year of Halley's Comet and predicted he would die when it returned. He did, in 1910."],"cat":"Choices"},
+
+  {"q":"Whatever you are, be a good one.","src":"Abraham Lincoln","year":1858,"type":"historical","char":"Abraham Lincoln","person":"Abraham Lincoln","born":"1809","died":"1865","era":"19th Century","actors":[],"desc":"Lincoln was a frontier lawyer, a failed businessman, a failed politician multiple times over before the presidency. The line is not about ambition. It's about integrity in whatever role you find yourself — which is the harder, and rarer, thing.","trivia":["Lincoln is enshrined in the Wrestling Hall of Fame — he lost only one match in 300 bouts as a young man.","He taught himself law by reading borrowed books by firelight."],"cat":"Identity"},
+
+  {"q":"It is during our darkest moments that we must focus to see the light.","src":"Aristotle","year":-330,"type":"historical","char":"Aristotle","person":"Aristotle","born":"384 BC","died":"322 BC","era":"Ancient Greece","actors":[],"desc":"Aristotle's eudaimonia — human flourishing — was never about comfort. It was about functioning well precisely when functioning is hardest. The capacity to orient toward light in darkness was not a gift. It was a trained disposition, built in better times for worse ones.","trivia":["Aristotle founded the Lyceum in Athens — the school where he lectured while walking, giving rise to the term 'peripatetic' philosophy.","He wrote on biology, physics, logic, ethics, politics, and aesthetics — most of his works are lecture notes, not polished texts."],"cat":"Courage"},
+
+  {"q":"Two things are infinite: the universe and human stupidity; and I'm not sure about the universe.","src":"Albert Einstein","year":1945,"type":"historical","char":"Albert Einstein","person":"Albert Einstein","born":"1879","died":"1955","era":"20th Century","actors":[],"desc":"Einstein said this in a letter after the atomic bomb. He had signed the letter to Roosevelt urging the Manhattan Project, and spent the rest of his life reckoning with it. The joke is funnier and more desolate when you know where he was standing.","trivia":["Einstein's letter to Roosevelt warning of German nuclear research helped launch the Manhattan Project.","He later said it was the greatest mistake of his life."],"cat":"Truth"},
+
+  {"q":"The measure of intelligence is the ability to change.","src":"Albert Einstein","year":1932,"type":"historical","char":"Albert Einstein","person":"Albert Einstein","born":"1879","died":"1955","era":"20th Century","actors":[],"desc":"Einstein overhauled his own theory of gravity when the evidence required it, and spent years trying to reconcile quantum mechanics with relativity even when the results confounded him. He never stopped revising. The quote is autobiographical.","trivia":["Einstein spent the last 30 years of his life searching for a unified field theory — and failed.","His brain was removed without consent during his autopsy."],"cat":"Self-Knowledge"},
+
+  {"q":"Life is what happens when you're busy making other plans.","src":"John Lennon","year":1980,"type":"historical","char":"John Lennon","person":"John Lennon","born":"1940","died":"1980","era":"20th Century","actors":[],"desc":"From the song Beautiful Boy, written for his son Sean. Lennon had spent five years as a house husband — baking bread, raising his son, absent from music — when he wrote it. He was killed three weeks after the album Double Fantasy was released.","trivia":["Lennon had not released an album in five years when Double Fantasy came out.","He was shot outside his apartment building, the Dakota, in New York on December 8, 1980."],"cat":"Regret"},
+
+  {"q":"The truth will set you free, but first it will make you miserable.","src":"James A. Garfield","year":1871,"type":"historical","char":"James A. Garfield","person":"James A. Garfield","born":"1831","died":"1881","era":"19th Century","actors":[],"desc":"Said at a college commencement. Garfield was a general, a scholar, and the only president elected directly from the House of Representatives. He was assassinated after just 200 days in office — shot by a disappointed office-seeker who wanted a government job. The truth set him free fast.","trivia":["Garfield could write Latin with one hand and Greek with the other simultaneously.","His assassin Charles Guiteau was found legally sane and hanged."],"cat":"Truth"},
+
+  {"q":"We shall fight on the beaches, we shall fight on the landing grounds, we shall fight in the fields and in the streets.","src":"Winston Churchill","year":1940,"type":"historical","char":"Winston Churchill","person":"Winston Churchill","born":"1874","died":"1965","era":"20th Century","actors":[],"desc":"Delivered to the House of Commons on June 4, 1940, after Dunkirk — 300,000 men evacuated but all their equipment abandoned, France about to fall. Churchill had been Prime Minister for less than a month. The speech's purpose was not optimism. It was to make surrender unthinkable.","trivia":["Churchill delivered this speech to Parliament — the general public first heard it via a recording made later.","He was paid by the word for his journalism and books, and wrote over 40 volumes."],"cat":"Courage"},
+
+  {"q":"I am not afraid of storms, for I am learning how to sail my ship.","src":"Louisa May Alcott","year":1868,"type":"historical","char":"Louisa May Alcott","person":"Louisa May Alcott","born":"1832","died":"1888","era":"19th Century","actors":[],"desc":"From Little Women — written under financial desperation when her publisher demanded a story for girls and Alcott had no interest in writing one. She wrote it in six weeks. The storm she was learning to sail was the demand to write commercially rather than what she actually wanted to write.","trivia":["Alcott published her gothic thrillers — the work she preferred — under a pseudonym.","Little Women was written in 10 weeks."],"cat":"Freedom"},
+
+  {"q":"Do not go where the path may lead. Go instead where there is no path and leave a trail.","src":"Ralph Waldo Emerson","year":1841,"type":"historical","char":"Ralph Waldo Emerson","person":"Ralph Waldo Emerson","born":"1803","died":"1882","era":"19th Century","actors":[],"desc":"From Self-Reliance — Emerson's sustained argument that genius is the enemy of imitation. The path is other people's answers to their own questions. Your question is different. Your path doesn't exist yet because no one has stood where you are standing.","trivia":["Emerson dropped out of the clergy after his first wife died, saying he could no longer administer communion because he didn't believe in it.","His essay Nature (1836) effectively launched American transcendentalism."],"cat":"Freedom"},
+
+  {"q":"Darkness cannot drive out darkness; only light can do that. Hate cannot drive out hate; only love can do that.","src":"Martin Luther King Jr.","year":1963,"type":"historical","char":"Martin Luther King Jr.","person":"Martin Luther King Jr.","born":"1929","died":"1968","era":"20th Century","actors":[],"desc":"From Strength to Love (1963). The argument is strategic, not sentimental: responding to hatred with hatred increases the total quantity of hatred in the world. King's nonviolence was not passivity. It was a calculated refusal to give opponents the kind of fight they expected.","trivia":["King wrote Strength to Love while in jail in Fulton County.","The FBI surveilled King for years and sent him an anonymous letter urging him to commit suicide."],"cat":"Truth"}
 ];
 
 
@@ -1623,9 +1798,31 @@ const QUOTES = [
 
 // ── State ──
 let currentIndex = 0;
-let touchStartX = 0, touchStartY = 0, touchCurrentX = 0;
+// ── Touch state ──
+let touchStartX = 0, touchStartY = 0, touchCurrentX = 0, touchCurrentY = 0;
 let isDragging = false;
 let _lastTouchX = 0, _lastTouchT = 0, _touchVelocity = 0;
+let _lastTouchY = 0, _touchVelocityY = 0;
+
+// ── Corner peel state ──
+// The peel is driven by a corner point (peelCx, peelCy) that follows the drag.
+// At rest: corner is at card bottom-right (W, H). Dragging moves it up/left.
+// peelCx/peelCy are in card-local pixel coords.
+let _peelCx       = 0;   // current corner x (card coords)
+let _peelCy       = 0;   // current corner y (card coords)
+let _peelTx       = 0;   // spring target x
+let _peelTy       = 0;   // spring target y
+let _peelVx       = 0;   // spring velocity x
+let _peelVy       = 0;   // spring velocity y
+let _peelOpen     = false;
+let _peelRaf      = null;
+let _peelActive   = false; // true while dragging or springing
+// Corner start offset (card-local) at drag start
+let _peelStartCx  = 0;
+let _peelStartCy  = 0;
+// Gesture state
+let _axisLocked   = false;
+let _axisIsVert   = false;
 let activeCategory = 'All';
 let _navigating = false; // prevent double-taps
 
@@ -1654,32 +1851,32 @@ function applyCategory(cat) {
 function initStack() {
   cardStack.innerHTML = '';
 
-  // Ghost shells — created once, stay in DOM
-  if (filteredQuotes.length > 2) {
-    const g2 = document.createElement('div');
-    g2.className = 'quote-card card-ghost-2';
-    g2.id = 'ghost2';
-    cardStack.appendChild(g2);
-  }
-  if (filteredQuotes.length > 1) {
-    const g1 = document.createElement('div');
-    g1.className = 'quote-card card-ghost-1';
-    g1.id = 'ghost1';
-    cardStack.appendChild(g1);
-  }
-
-  // Active card
+  // Active card (back surface is inside it)
   const card = buildCard(filteredQuotes[currentIndex]);
   card.id = 'activeCard';
   card.classList.add('quote-card', 'active');
   cardStack.appendChild(card);
+
+  _peelOpen = false;
+  _peelActive = false;
+  if (_peelRaf) { cancelAnimationFrame(_peelRaf); _peelRaf = null; }
+
+  // Init corner to card's BR — will be set properly after layout
+  requestAnimationFrame(() => {
+    const front = card.querySelector('.card-front');
+    const W = front ? front.offsetWidth  : 360;
+    const H = front ? front.offsetHeight : 400;
+    _peelCx = W; _peelCy = H;
+    _peelTx = W; _peelTy = H;
+    _peelVx = 0; _peelVy = 0;
+  });
 
   updateCounter();
   renderDots();
   setupSwipe();
 }
 
-// Just re-render the active card content without touching ghosts
+// Re-render active card
 function renderCard() {
   updateCounter();
   renderDots();
@@ -1691,13 +1888,37 @@ function renderCard() {
 
   const old = document.getElementById('activeCard');
   if (old) old.remove();
+
+  // Reset peel state on every new card
+  _peelOpen   = false;
+  _peelActive = false;
+  _axisLocked = false;
+  _mouseAxisLocked = false;
+  if (_peelRaf) { cancelAnimationFrame(_peelRaf); _peelRaf = null; }
+  _peelVx = 0; _peelVy = 0;
+
   cardStack.appendChild(newCard);
+
+  // Init corner after layout
+  requestAnimationFrame(() => {
+    const front = newCard.querySelector('.card-front');
+    const W = front ? front.offsetWidth  : 360;
+    const H = front ? front.offsetHeight : 400;
+    _peelCx = W; _peelCy = H;
+    _peelTx = W; _peelTy = H;
+  });
+
   setupSwipe();
 
   // Fire ambient colour for this category
   if (window._setAmbientCat) window._setAmbientCat(d.cat);
   // Post-swipe settle
   if (window._settleCard) window._settleCard();
+
+  // Hide counter on swipe, show after pause
+  counterEl.classList.remove('visible');
+  clearTimeout(_counterTimer);
+  _counterTimer = setTimeout(() => counterEl.classList.add('visible'), 3000);
 
   // Letterbox — fade in after card settles, remove on next swipe
   clearTimeout(_letterboxTimer);
@@ -1722,84 +1943,145 @@ function buildCard(d) {
     Purpose: 'rgba(50,150,180,0.07)', Choices: 'rgba(150,150,50,0.06)',
     'Self-Knowledge': 'rgba(90,150,90,0.07)', War: 'rgba(150,50,50,0.09)'
   };
-  if (catTints[d.cat]) {
-    card.classList.add('tinted');
-    card.style.setProperty('--cat-tint', catTints[d.cat]);
-  }
 
-  const actors = d.actors.map(a => a.name).join(', ');
-  const badge = `<span class="source-type-badge badge-${d.type}">${d.type === 'movie' ? 'Film' : 'TV'}</span>`;
-  const catBadge = `<span class="source-type-badge cat-${d.cat.replace(/\s+/g,'-')}">${d.cat}</span>`;
-
-  // Typewriter char-by-char reveal
+  // Typewriter char-by-char reveal — slow, like grain resolving
   const chars = d.q.split('').map((ch, i) =>
     ch === ' '
       ? ' '
-      : `<span class="char" style="animation-delay:${18 + i * 22}ms">${ch}</span>`
+      : `<span class="char" style="animation-delay:${i * 32}ms">${ch}</span>`
   ).join('');
 
-  // Ghost next quote — bleeds through at barely-visible opacity
+  // Ghost next quote
   const nextQ = filteredQuotes[(filteredQuotes.indexOf(d) + 1) % filteredQuotes.length];
   const ghostText = nextQ ? nextQ.q : '';
 
-  card.innerHTML = `
-    <div class="ghost-next">${ghostText}</div>
+  // Build front face
+  const front = document.createElement('div');
+  front.className = 'card-face card-front';
+  if (catTints[d.cat]) {
+    front.classList.add('tinted');
+    front.style.setProperty('--cat-tint', catTints[d.cat]);
+  }
+  front.innerHTML = `
     <span class="quote-mark">"</span>
     <p class="quote-text">${chars}</p>
     <div class="quote-source">
-      <div class="source-icon">${d.type === 'movie' ? '🎬' : '📺'}</div>
-      <div class="source-details">
-        <div class="source-title">${d.src}</div>
-        <div class="source-meta">${d.char} · ${actors} · ${d.year}</div>
-      </div>
-      <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
-        ${badge}
-        ${catBadge}
-      </div>
+      <div class="source-caption">${d.type === 'historical' ? (d.src + (d.era ? ' &nbsp;·&nbsp; ' + d.era : '')) : (d.src + ' &nbsp;·&nbsp; ' + d.char)}</div>
     </div>
-    <div class="info-pills">
-      <button class="pill" data-drawer="film">
-        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-        Film Info
-      </button>
-      <button class="pill" data-drawer="actors">
-        <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-        Cast
-      </button>
-      <button class="pill" data-drawer="trivia">
-        <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-        Trivia
-      </button>
-      <button class="pill" data-drawer="related">
-        <svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
-        Related
-      </button>
-      <button class="pill pill-imdb" data-imdb="true">
-        <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M7 9v6M12 9v6M17 9v6M7 12h5"/></svg>
-        IMDb
-      </button>
+    <div class="peel-shadow"></div>
+    <div class="peel-corner">
+      <svg viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- shadow under lifted corner -->
+        <path d="M56 56 L56 20 Q52 52 20 56 Z" fill="rgba(0,0,0,0.4)"/>
+        <!-- lifted page corner — warm parchment colour -->
+        <path d="M56 56 L56 18 Q42 42 18 56 Z" fill="#e8dfc8"/>
+        <!-- curl crease highlight -->
+        <path d="M56 18 Q40 40 18 56" stroke="rgba(255,255,255,0.6)" stroke-width="1" fill="none"/>
+        <!-- inner shadow on lifted part -->
+        <path d="M56 56 L56 26 Q46 46 26 56 Z" fill="rgba(0,0,0,0.15)"/>
+      </svg>
     </div>
   `;
 
-  // pill clicks
-  card.querySelectorAll('.pill').forEach(pill => {
-    pill.addEventListener('click', e => {
-      e.stopPropagation();
-      if (pill.dataset.imdb !== undefined) {
-        const imdbId = IMDB_IDS[d.src];
-        const url = imdbId
-          ? `https://www.imdb.com/title/${imdbId}/`
-          : `https://www.imdb.com/find/?q=${encodeURIComponent(d.src + ' ' + d.year)}&s=tt`;
-        window.open(url, '_blank');
-      } else {
-        openDrawer(d, pill.dataset.drawer);
-      }
+  // Build back face
+  const imdbId = IMDB_IDS[d.src];
+  const imdbUrl = imdbId
+    ? `https://www.imdb.com/title/${imdbId}/`
+    : `https://www.imdb.com/find/?q=${encodeURIComponent(d.src + ' ' + d.year)}&s=tt`;
+
+  const back = document.createElement('div');
+  back.className = 'card-face card-back';
+  // Related quotes: same src first, then same cat
+  const sameSrc = QUOTES.filter(q => q.src === d.src && q.q !== d.q).slice(0, 3);
+  const sameCat = QUOTES.filter(q => q.cat === d.cat && q.src !== d.src && q.q !== d.q)
+    .sort(() => Math.random() - 0.5).slice(0, 3 - sameSrc.length);
+  const related = [...sameSrc, ...sameCat];
+
+  const isHistorical = d.type === 'historical';
+  const castSection = isHistorical
+    ? `<div class="back-section-label">PERSON</div>
+       <div class="back-cast">
+         <div class="back-actor-row">
+           <div class="back-actor-avatar">${(d.person||d.src).split(' ').map(n=>n[0]).join('').slice(0,2)}</div>
+           <div>
+             <div class="back-actor-name">${d.person || d.src}</div>
+             <div class="back-actor-role">${d.born ? d.born + (d.died ? ' – ' + d.died : '') : ''}</div>
+           </div>
+         </div>
+       </div>`
+    : `<div class="back-section-label">CAST</div>
+       <div class="back-cast">
+         ${d.actors.map(a => {
+           const initials = a.name.split(' ').map(n => n[0]).join('');
+           return `<div class="back-actor-row">
+             <div class="back-actor-avatar">${initials}</div>
+             <div>
+               <div class="back-actor-name">${a.name}</div>
+               <div class="back-actor-role">as ${a.role}</div>
+             </div>
+           </div>`;
+         }).join('')}
+       </div>`;
+
+  back.innerHTML = `
+    <button class="back-close-btn" onclick="window._peelBack && window._peelBack(document.getElementById('activeCard'))">← flip back</button>
+    <div class="back-film-title">${isHistorical ? (d.person || d.src) : d.src}</div>
+    <div class="back-film-year">${d.year > 0 ? d.year : Math.abs(d.year) + ' BC'} &nbsp;·&nbsp; ${d.type === 'movie' ? 'Film' : d.type === 'tv' ? 'TV Series' : d.era || 'Historical'}</div>
+    ${!isHistorical ? `<div class="back-character">"${d.char}"</div>` : ''}
+    ${d.desc ? `<div class="back-desc">${d.desc}</div>` : ''}
+    <div class="back-divider"></div>
+    ${castSection}
+    <div class="back-divider"></div>
+    <div class="back-section-label">TRIVIA</div>
+    ${d.trivia.map(t => `<div class="back-trivia">${t}</div>`).join('')}
+    ${related.length ? `
+    <div class="back-divider"></div>
+    <div class="back-section-label">RELATED</div>
+    ${sameSrc.length ? `<div class="back-related-label">More from ${d.src}</div>` : ''}
+    ${sameSrc.map(r => `<div class="back-related-chip" data-q="${QUOTES.indexOf(r)}">${r.q}<span class="back-related-meta">${r.char}</span></div>`).join('')}
+    ${sameCat.length ? `<div class="back-related-label" style="margin-top:${sameSrc.length?'10px':'0'}">Same theme · ${d.cat}</div>` : ''}
+    ${sameCat.map(r => `<div class="back-related-chip" data-q="${QUOTES.indexOf(r)}">${r.q}<span class="back-related-meta">${r.char}</span></div>`).join('')}
+    ` : ''}
+    <div class="back-divider"></div>
+    ${isHistorical ? `<a class="back-imdb" href="https://en.wikipedia.org/wiki/${encodeURIComponent(d.person||d.src)}" target="_blank" rel="noopener">Wikipedia &nbsp;→</a>` : `<a class="back-imdb" href="${imdbUrl}" target="_blank" rel="noopener">IMDb &nbsp;→</a>`}
+    <div class="back-scroll-hint" id="backScrollHint"></div>
+  `;
+  // Hide scroll hint when scrolled to bottom
+  back.addEventListener('scroll', () => {
+    const hint = back.querySelector('#backScrollHint');
+    if (!hint) return;
+    const atBottom = back.scrollTop + back.clientHeight >= back.scrollHeight - 10;
+    hint.classList.toggle('hidden', atBottom);
+  }, { passive: true });
+
+  // Wire related chip clicks
+  back.querySelectorAll('.back-related-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const idx = parseInt(chip.dataset.q);
+      activeCategory = 'All';
+      filteredQuotes = QUOTES.slice();
+      currentIndex = idx;
+      window._peelBack && window._peelBack(document.getElementById('activeCard'));
+      setTimeout(() => renderCard(), 320);
     });
   });
+  back.addEventListener('click', e => e.stopPropagation());
+
+  // Both faces go inside the flip wrapper
+  card.innerHTML = '';
+  card.appendChild(front);
+  card.appendChild(back);
+
+  // Sticky depth overlay for back card — sticks to visible card edges while scrolling
+  const stickyDepth = document.createElement('div');
+  stickyDepth.className = 'card-back-depth';
+  back.appendChild(stickyDepth);
+
+
+  card._data = d;
 
   return card;
 }
-
 function renderDots() {
   progressDots.innerHTML = '';
   const total = Math.min(filteredQuotes.length, 9);
@@ -1822,22 +2104,33 @@ function relatedChip(r) {
 
 function openDrawer(d, tab) {
   // film
-  document.getElementById('drawerFilmTitle').textContent = d.src;
-  document.getElementById('drawerFilmYear').textContent = `${d.year} · ${d.type === 'movie' ? 'Film' : 'TV Series'}`;
+  document.getElementById('drawerFilmTitle').textContent = d.type === 'historical' ? (d.person || d.src) : d.src;
+  document.getElementById('drawerFilmYear').textContent = `${d.year > 0 ? d.year : Math.abs(d.year) + ' BC'} · ${d.type === 'movie' ? 'Film' : d.type === 'tv' ? 'TV Series' : d.era || 'Historical'}`;
   document.getElementById('drawerFilmDesc').textContent = d.desc;
 
-  // actors
+  // actors / person
   const actorList = document.getElementById('drawerActorList');
-  actorList.innerHTML = d.actors.map(a => {
-    const initials = a.name.split(' ').map(n => n[0]).join('');
-    return `<div class="actor-row">
+  if (d.type === 'historical') {
+    const initials = (d.person || d.src).split(' ').map(n => n[0]).join('').slice(0, 2);
+    actorList.innerHTML = `<div class="actor-row">
       <div class="actor-avatar">${initials}</div>
       <div class="actor-info">
-        <div class="actor-name">${a.name}</div>
-        <div class="actor-role">as ${a.role}</div>
+        <div class="actor-name">${d.person || d.src}</div>
+        <div class="actor-role">${d.born ? d.born + (d.died ? ' – ' + d.died : '') : d.era || ''}</div>
       </div>
     </div>`;
-  }).join('');
+  } else {
+    actorList.innerHTML = d.actors.map(a => {
+      const initials = a.name.split(' ').map(n => n[0]).join('');
+      return `<div class="actor-row">
+        <div class="actor-avatar">${initials}</div>
+        <div class="actor-info">
+          <div class="actor-name">${a.name}</div>
+          <div class="actor-role">as ${a.role}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }
 
   // trivia
   const triviaEl = document.getElementById('drawerTriviaContent');
@@ -1899,25 +2192,43 @@ function _doPrev() {
 function goNext() {
   if (_navigating || filteredQuotes.length === 0) return;
   _navigating = true;
+  // Reset peel before swipe
+  _peelOpen = false; _peelActive = false;
+  if (_peelRaf) { cancelAnimationFrame(_peelRaf); _peelRaf = null; }
   const card = document.getElementById('activeCard');
   if (!card) { _doNext(); return; }
-  card.style.transition = 'transform 0.28s cubic-bezier(0.4,0,0.8,0.6), opacity 0.22s ease';
-  card.style.transform = 'translateX(-105%) rotate(-6deg)';
+  // Clear canvas immediately so it doesn't ghost during slide-out
+  const cv = card.querySelector('#peelCanvas');
+  if (cv) cv.getContext('2d').clearRect(0, 0, cv.width, cv.height);
+  const front = card.querySelector('.card-front');
+  const back  = card.querySelector('.card-back');
+  if (front) { front.style.clipPath = 'none'; front.style.visibility = 'visible'; front.style.opacity = '1'; }
+  if (back)  { back.style.clipPath = 'polygon(0px 0px,0px 0px,0px 0px)'; back.style.pointerEvents = 'none'; }
+  card.style.transition = 'transform 0.5s cubic-bezier(0.4,0,0.2,1), opacity 0.35s ease';
+  card.style.transform = 'translateX(-115%) rotate(-5deg) scale(0.93)';
   card.style.opacity = '0';
   card.style.pointerEvents = 'none';
-  setTimeout(_doNext, 240);
+  setTimeout(_doNext, 460);
 }
 
 function goPrev() {
   if (_navigating || filteredQuotes.length === 0) return;
   _navigating = true;
+  _peelOpen = false; _peelActive = false;
+  if (_peelRaf) { cancelAnimationFrame(_peelRaf); _peelRaf = null; }
   const card = document.getElementById('activeCard');
   if (!card) { _doPrev(); return; }
-  card.style.transition = 'transform 0.28s cubic-bezier(0.4,0,0.8,0.6), opacity 0.22s ease';
-  card.style.transform = 'translateX(105%) rotate(6deg)';
+  const cv2 = card.querySelector('#peelCanvas');
+  if (cv2) cv2.getContext('2d').clearRect(0, 0, cv2.width, cv2.height);
+  const front2 = card.querySelector('.card-front');
+  const back2  = card.querySelector('.card-back');
+  if (front2) { front2.style.clipPath = 'none'; front2.style.visibility = 'visible'; front2.style.opacity = '1'; }
+  if (back2)  { back2.style.clipPath = 'polygon(0px 0px,0px 0px,0px 0px)'; back2.style.pointerEvents = 'none'; }
+  card.style.transition = 'transform 0.5s cubic-bezier(0.4,0,0.2,1), opacity 0.35s ease';
+  card.style.transform = 'translateX(115%) rotate(5deg) scale(0.93)';
   card.style.opacity = '0';
   card.style.pointerEvents = 'none';
-  setTimeout(_doPrev, 240);
+  setTimeout(_doPrev, 460);
 }
 
 document.getElementById('btnNext').addEventListener('click', goNext);
@@ -1939,6 +2250,15 @@ function goRandom() {
 
   if (!card) { currentIndex = newIdx; renderCard(); _navigating = false; return; }
 
+  // Clear canvas + peel state before animating out
+  _peelOpen = false; _peelActive = false;
+  if (_peelRaf) { cancelAnimationFrame(_peelRaf); _peelRaf = null; }
+  const cv = card.querySelector('#peelCanvas');
+  if (cv) cv.getContext('2d').clearRect(0, 0, cv.width, cv.height);
+  const rFront = card.querySelector('.card-front');
+  const rBack  = card.querySelector('.card-back');
+  if (rFront) { rFront.style.clipPath = 'none'; rFront.style.visibility = 'visible'; rFront.style.opacity = '1'; }
+  if (rBack)  { rBack.style.clipPath = 'polygon(0px 0px,0px 0px,0px 0px)'; rBack.style.pointerEvents = 'none'; rBack.style.opacity = '0'; rBack.style.visibility = 'hidden'; }
   // Animate out upward with slight rotation — distinct from left/right nav
   card.style.transition = 'transform 0.3s cubic-bezier(0.4,0,0.8,0.6), opacity 0.22s ease';
   card.style.transform = 'translateY(-110%) rotate(3deg) scale(0.9)';
@@ -1951,133 +2271,726 @@ function goRandom() {
   }, 260);
 }
 
-// ── Touch/swipe ──
+// ══════════════════════════════════════════════════════
+// CORNER PAGE-PEEL SYSTEM
+// ══════════════════════════════════════════════════════
+//
+// Geometry:
+//   The card has corners at (0,0) TL, (W,0) TR, (W,H) BR, (0,H) BL.
+//   The peel originates from the bottom-right corner (W, H).
+//   The user drags that corner toward (peelCx, peelCy).
+//   A fold line is the perpendicular bisector of the segment
+//   from (W,H) to (peelCx, peelCy).
+//   Everything "below" the fold line (on the peeled side) forms the flap.
+//   The flap is drawn reflected across the fold line, darkened, with shine.
+//
+// Rendering:
+//   1. .card-back    — HTML, always visible underneath (z-index 1)
+//   2. .card-front   — HTML, clip-path'd to unpeeled polygon (z-index 2)
+//   3. #peelCanvas   — canvas drawing only the flap + shadow (z-index 4)
+// ══════════════════════════════════════════════════════
+
 function setupSwipe() {
   const activeCard = document.getElementById('activeCard');
   if (!activeCard) return;
-  activeCard.addEventListener('touchstart', onTouchStart, { passive: true });
-  activeCard.addEventListener('touchmove', onTouchMove, { passive: false });
-  activeCard.addEventListener('touchend', onTouchEnd);
-  activeCard.addEventListener('mousedown', onMouseDown);
+  const front = activeCard.querySelector('.card-front') || activeCard;
+  if (front._swipeInit) return; // already set up — prevent double-binding
+  front._swipeInit = true;
+  front.addEventListener('touchstart',  onTouchStart, { passive: false });
+  front.addEventListener('touchmove',   onTouchMove,  { passive: false });
+  front.addEventListener('touchend',    onTouchEnd,   { passive: false });
+  front.addEventListener('mousedown',   onMouseDown);
 }
 
-function onTouchStart(e) {
-  touchStartX = e.touches[0].clientX;
-  touchStartY = e.touches[0].clientY;
-  touchCurrentX = touchStartX;
-  isDragging = false;
+// ── Peel geometry helpers ──
+
+
+// Perpendicular bisector of segment from (x1,y1) to (x2,y2).
+// Returns { px, py, nx, ny } where (px,py) is midpoint, (nx,ny) is normal direction.
+function _foldLine(x1, y1, x2, y2) {
+  const mx = (x1 + x2) / 2;
+  const my = (y1 + y2) / 2;
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  // Perpendicular direction (normalized)
+  const len = Math.sqrt(dx*dx + dy*dy) || 1;
+  return { mx, my, nx: -dy/len, ny: dx/len, len };
+}
+
+// Find intersection of fold line (through (mx,my) with direction (nx,ny))
+// with a line segment from (ax,ay) to (bx,by).
+// Returns t parameter along segment (0..1), or null if no intersection.
+function _segIntersect(mx, my, nx, ny, ax, ay, bx, by) {
+  const dx = bx - ax, dy = by - ay;
+  const denom = nx * dy - ny * dx;
+  if (Math.abs(denom) < 1e-10) return null;
+  const t = (nx * (ay - my) - ny * (ax - mx)) / denom;
+  if (t < -1e-6 || t > 1 + 1e-6) return null;
+  const u = (dx * (ay - my) - dy * (ax - mx)) / denom;
+  return { t: Math.max(0, Math.min(1, t)), u, x: ax + t*dx, y: ay + t*dy };
+}
+
+// Which side of fold line is a point on?
+// Returns +1 or -1.
+function _foldSide(mx, my, nx, ny, px, py) {
+  return Math.sign((px - mx) * (-ny) + (py - my) * nx);
+}
+
+// Reflect point (px,py) across fold line through (mx,my) with normal (nx,ny)
+function _reflect(mx, my, nx, ny, px, py) {
+  // The fold line direction is perpendicular to (nx,ny): dir = (ny, -nx)
+  // Project (p - m) onto normal, reflect
+  const dot = (px - mx) * nx + (py - my) * ny;
+  return { rx: px - 2*dot*nx, ry: py - 2*dot*ny };
+}
+
+// Core peel render — called every frame
+function _applyPeel(card) {
+  const front = card.querySelector('.card-front');
+  const back  = card.querySelector('.card-back');
+  if (!front) return;
+
+  const W = front.offsetWidth  || 360;
+  const H = front.offsetHeight || 400;
+
+  // cx,cy = current peel corner position (dragged from bottom-right W,H)
+  const cx = _peelCx, cy = _peelCy;
+  const dist = Math.hypot(cx - W, cy - H);
+
+  if (dist < 2) {
+    _peelReset(card, front, back, W, H);
+    return;
+  }
+
+  const pct = Math.min(1, dist / Math.hypot(W, H));
+
+  // ── Fold line: perpendicular bisector of (W,H)→(cx,cy) ──
+  const fmx = (W + cx) / 2, fmy = (H + cy) / 2;      // midpoint
+  const fdx = cx - W, fdy = cy - H;                   // direction from origin to corner
+  const flen = Math.hypot(fdx, fdy) || 1;
+  // Fold line direction (perpendicular to fdx,fdy)
+  const ftx = -fdy / flen, fty = fdx / flen;
+
+  // Find where fold line hits card edges
+  // Use extended bounds so corner going far off-card still clips correctly
+  const hits = [];
+  const EPS = -1e-6, EPS1 = 1 + 1e-6;
+  if (Math.abs(fty) > 1e-6) {
+    const t = (0 - fmy) / fty;
+    const x = fmx + ftx * t;
+    if (x >= EPS && x <= W - EPS) hits.push([Math.max(0, Math.min(W, x)), 0]);
+  }
+  if (Math.abs(fty) > 1e-6) {
+    const t = (H - fmy) / fty;
+    const x = fmx + ftx * t;
+    if (x >= EPS && x <= W - EPS) hits.push([Math.max(0, Math.min(W, x)), H]);
+  }
+  if (Math.abs(ftx) > 1e-6) {
+    const t = (0 - fmx) / ftx;
+    const y = fmy + fty * t;
+    if (y >= EPS && y <= H - EPS) hits.push([0, Math.max(0, Math.min(H, y))]);
+  }
+  if (Math.abs(ftx) > 1e-6) {
+    const t = (W - fmx) / ftx;
+    const y = fmy + fty * t;
+    if (y >= EPS && y <= H - EPS) hits.push([W, Math.max(0, Math.min(H, y))]);
+  }
+
+  // Dedupe
+  const uniq = [];
+  for (const p of hits) {
+    if (!uniq.some(q => Math.hypot(q[0]-p[0], q[1]-p[1]) < 1)) uniq.push(p);
+  }
+
+  // Build static (front) and peeled (back) polygons
+  const nx2 = fdx / flen, ny2 = fdy / flen;
+  const side_orig = Math.sign((W - fmx) * nx2 + (H - fmy) * ny2); // peeled side
+
+  if (uniq.length < 2) {
+    // Fold line outside card bounds — determine if fully peeled or not peeled at all
+    // If corner has moved significantly toward left (cx < W*0.5), treat as fully peeled
+    if (cx < W * 0.5) {
+      // Fully peeled: hide front completely, show back entirely
+      front.style.clipPath = 'polygon(0px 0px,0px 0px,0px 0px)';
+      front.style.visibility = 'hidden';
+      if (back) { back.style.visibility = 'visible'; back.style.clipPath = 'none'; back.style.opacity = '1'; }
+    } else {
+      // Not peeled: show front fully
+      front.style.clipPath = 'none';
+      front.style.visibility = 'visible';
+      if (back) back.style.clipPath = 'polygon(0px 0px,0px 0px,0px 0px)';
+    }
+  } else {
+    const corners = [[0,0],[W,0],[W,H],[0,H]];
+
+    // Front poly = corners NOT on peeled side
+    const frontPoly = [];
+    for (let i = 0; i < 4; i++) {
+      const [px,py] = corners[i];
+      const side = Math.sign((px - fmx) * nx2 + (py - fmy) * ny2);
+      if (side !== side_orig || side === 0) frontPoly.push([px, py]);
+      const [qx,qy] = corners[(i+1)%4];
+      for (const hit of uniq) {
+        const onEdge = (Math.min(px,qx)-1 <= hit[0] && hit[0] <= Math.max(px,qx)+1) &&
+                       (Math.min(py,qy)-1 <= hit[1] && hit[1] <= Math.max(py,qy)+1);
+        if (onEdge && !frontPoly.some(p => Math.hypot(p[0]-hit[0],p[1]-hit[1])<1)) {
+          frontPoly.push(hit);
+        }
+      }
+    }
+
+    // Back poly = corners on peeled side (what's been revealed)
+    const backPoly = [];
+    for (let i = 0; i < 4; i++) {
+      const [px,py] = corners[i];
+      const side = Math.sign((px - fmx) * nx2 + (py - fmy) * ny2);
+      if (side === side_orig) backPoly.push([px, py]);
+      const [qx,qy] = corners[(i+1)%4];
+      for (const hit of uniq) {
+        const onEdge = (Math.min(px,qx)-1 <= hit[0] && hit[0] <= Math.max(px,qx)+1) &&
+                       (Math.min(py,qy)-1 <= hit[1] && hit[1] <= Math.max(py,qy)+1);
+        if (onEdge && !backPoly.some(p => Math.hypot(p[0]-hit[0],p[1]-hit[1])<1)) {
+          backPoly.push(hit);
+        }
+      }
+    }
+
+    if (frontPoly.length >= 3) {
+      front.style.visibility = 'visible';
+      front.style.clipPath = 'polygon(' + frontPoly.map(([px,py]) => px.toFixed(1)+'px '+py.toFixed(1)+'px').join(',') + ')';
+    } else {
+      front.style.visibility = 'hidden';
+    }
+    if (back && backPoly.length >= 3) {
+      back.style.visibility = 'visible';
+      back.style.opacity = '1';
+      back.style.clipPath = 'polygon(' + backPoly.map(([px,py]) => px.toFixed(1)+'px '+py.toFixed(1)+'px').join(',') + ')';
+    }
+  }
+
+  // ── Canvas: draw flap ──
+  let canvas = card.querySelector('#peelCanvas');
+  if (!canvas) {
+    canvas = document.createElement('canvas');
+    canvas.id = 'peelCanvas';
+    canvas.style.cssText = 'position:absolute;top:0;left:0;pointer-events:none;z-index:4;';
+    card.appendChild(canvas);
+  }
+  const overflow = Math.max(W, H) * 1.2; // generous overflow all directions
+  canvas.style.left = -overflow + 'px';
+  canvas.style.top  = -overflow + 'px';
+
+  const dpr = window.devicePixelRatio || 1;
+  const cw = (W + overflow * 2), ch = (H + overflow * 2);
+  canvas.width  = cw * dpr;
+  canvas.height = ch * dpr;
+  canvas.style.width  = cw + 'px';
+  canvas.style.height = ch + 'px';
+
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.save();
+  ctx.scale(dpr, dpr);
+  ctx.translate(overflow, overflow); // shift so card coords (0,0) map to canvas centre
+
+  if (uniq.length >= 2) {
+    const [h1, h2] = uniq;
+    const nx = fdx / flen, ny = fdy / flen;
+    const side_orig = Math.sign((W - fmx) * nx + (H - fmy) * ny);
+
+    // Flap corners = card corners on peeled side + fold hits
+    const corners = [[0,0],[W,0],[W,H],[0,H]];
+    const flapOrig = [];
+    for (let i = 0; i < 4; i++) {
+      const [px,py] = corners[i];
+      const side = Math.sign((px - fmx) * nx + (py - fmy) * ny);
+      if (side === side_orig) flapOrig.push([px, py]);
+      const [qx,qy] = corners[(i+1)%4];
+      for (const h of uniq) {
+        const onEdge = (Math.min(px,qx)-1 <= h[0] && h[0] <= Math.max(px,qx)+1) &&
+                       (Math.min(py,qy)-1 <= h[1] && h[1] <= Math.max(py,qy)+1);
+        if (onEdge && !flapOrig.some(p => Math.hypot(p[0]-h[0],p[1]-h[1])<1)) {
+          flapOrig.push(h);
+        }
+      }
+    }
+
+    // Reflect flap corners across fold line
+    const flap = flapOrig.map(([px,py]) => {
+      // If this is the original corner (W,H), use the drag position (cx,cy) directly
+      if (Math.hypot(px-W, py-H) < 2) return [cx, cy];
+      // Otherwise reflect across fold
+      const dot = (px - fmx) * nx + (py - fmy) * ny;
+      return [px - 2*dot*nx, py - 2*dot*ny];
+    });
+
+    if (flap.length >= 3) {
+
+      // ── Flap fill: flat warm dark — no gradients, no banding ──
+      // Color: #1a1612 — deep warm espresso, distinct from cold card back
+      ctx.save();
+      const flapPath = () => {
+        ctx.beginPath();
+        ctx.moveTo(flap[0][0], flap[0][1]);
+        for (let i = 1; i < flap.length; i++) ctx.lineTo(flap[i][0], flap[i][1]);
+        ctx.closePath();
+      };
+
+      flapPath(); ctx.fillStyle = '#1a1612'; ctx.fill();
+
+      // ── Single linear curl shadow: dark at fold only, imperceptible fade ──
+      // Direction fold→tip, stops computed analytically to avoid banding
+      const curlLen = Math.hypot(cx - fmx, cy - fmy) || 1;
+      const curlGrad = ctx.createLinearGradient(fmx, fmy, fmx + (cx-fmx)/curlLen*curlLen, fmy + (cy-fmy)/curlLen*curlLen);
+      curlGrad.addColorStop(0,    `rgba(0,0,0,${(0.55*pct).toFixed(3)})`);
+      curlGrad.addColorStop(0.12, `rgba(0,0,0,${(0.38*pct).toFixed(3)})`);
+      curlGrad.addColorStop(0.30, `rgba(0,0,0,${(0.18*pct).toFixed(3)})`);
+      curlGrad.addColorStop(0.55, `rgba(0,0,0,${(0.06*pct).toFixed(3)})`);
+      curlGrad.addColorStop(1.0,  `rgba(0,0,0,0)`);
+      flapPath(); ctx.fillStyle = curlGrad; ctx.fill();
+
+      ctx.restore();
+
+      // Feathered edge removed — ctx.filter blur is unclipped in Safari
+
+      // ── Crease line at fold — clipped so shadow doesn't bleed ──
+      ctx.save();
+      ctx.beginPath(); ctx.rect(0, 0, W, H); ctx.clip();
+      ctx.beginPath();
+      ctx.moveTo(h1[0], h1[1]); ctx.lineTo(h2[0], h2[1]);
+      // Brighter crease as fold approaches left edge (snap feel)
+      const leftEdgePct = Math.max(0, 1 - cx / W); // 0 normally, 1 at left edge
+      const creaseAlpha = 0.2 + leftEdgePct * 0.5;
+      const creaseWidth = 1.5 + leftEdgePct * 2;
+      ctx.strokeStyle = `rgba(255,255,255,${creaseAlpha * pct})`;
+      ctx.lineWidth = creaseWidth;
+      ctx.shadowColor = `rgba(255,240,200,${(0.3 + leftEdgePct * 0.6) * pct})`;
+      ctx.shadowBlur = 4 + leftEdgePct * 10;
+      ctx.stroke();
+      // Extra snap flash line when at left edge
+      if (leftEdgePct > 0.7) {
+        ctx.globalAlpha = (leftEdgePct - 0.7) / 0.3;
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = `rgba(255,250,230,0.9)`;
+        ctx.shadowBlur = 18;
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
+      ctx.restore();
+    }
+  }
+
+  ctx.restore(); // end translate
+
+  // No dynamic box-shadow on front — shadows on clip-path elements bleed onto back card
+  if (back) back.style.pointerEvents = pct > 0.55 ? 'auto' : 'none';
+}
+function _peelReset(card, front, back, W, H) {
+  if (front) {
+    front.style.clipPath   = 'none';
+    front.style.visibility = 'visible';
+    front.style.opacity    = '1';
+    front.style.transition = '';
+    front.style.boxShadow  = '0 1px 0 rgba(255,255,255,0.04) inset';
+  }
+  const canvas = card.querySelector('#peelCanvas');
+  if (canvas) {
+    canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+    canvas.style.opacity = '1';
+    canvas.style.transition = '';
+  }
+  if (back) {
+    back.style.pointerEvents = 'none';
+    back.style.overflowY    = 'hidden';
+    back.style.opacity      = '0';
+    back.style.visibility   = 'hidden';
+    back.style.transition   = '';
+    back.style.clipPath     = 'polygon(0px 0px,0px 0px,0px 0px)';
+    back.scrollTop = 0;
+  }
+}
+
+// ── Spring physics for the peel corner ──
+function _peelFrame() {
   const card = document.getElementById('activeCard');
-  if (card) card.style.animationPlayState = 'paused';
-  _lastTouchX = touchStartX;
-  _lastTouchT = Date.now();
-  _touchVelocity = 0;
+  if (!card) return;
+
+  const stiffness = 0.07;
+  const damping   = 0.74;
+
+  _peelVx += (_peelTx - _peelCx) * stiffness;
+  _peelVy += (_peelTy - _peelCy) * stiffness;
+  _peelVx *= damping;
+  _peelVy *= damping;
+  _peelCx += _peelVx;
+  _peelCy += _peelVy;
+
+  _applyPeel(card);
+
+  const settled = Math.abs(_peelVx) < 0.4 && Math.abs(_peelVy) < 0.4 &&
+                  Math.abs(_peelCx - _peelTx) < 1 && Math.abs(_peelCy - _peelTy) < 1;
+  if (settled) {
+    _peelCx = _peelTx; _peelCy = _peelTy;
+    _applyPeel(card);
+    _peelRaf = null;
+    _peelActive = false;
+    if (_peelOpen) {
+      // Fully peeled — smooth reveal of back card
+      const front2 = card.querySelector('.card-front');
+      const back2  = card.querySelector('.card-back');
+      // Front fades out
+      if (front2) {
+        front2.style.transition = 'opacity 0.45s ease';
+        front2.style.opacity = '0';
+        setTimeout(() => {
+          if (front2) { front2.style.visibility = 'hidden'; front2.style.opacity = '1'; front2.style.transition = ''; }
+        }, 460);
+      }
+      // Back expands to full with CSS transition on clip-path
+      if (back2) {
+        back2.style.transition = 'clip-path 0.35s ease';
+        back2.style.clipPath = 'inset(0 0 0 0 round 20px)';
+        setTimeout(() => {
+          back2.style.clipPath = 'none';
+          back2.style.transition = '';
+          back2.style.pointerEvents = 'auto';
+          back2.style.overflowY = 'auto';
+        }, 370);
+      }
+      // Fade canvas flap out
+      const cv = card.querySelector('#peelCanvas');
+      if (cv) {
+        cv.style.transition = 'opacity 0.35s ease';
+        cv.style.opacity = '0';
+        setTimeout(() => {
+          if (cv) { cv.getContext('2d').clearRect(0, 0, cv.width, cv.height); cv.style.opacity = '1'; cv.style.transition = ''; }
+        }, 360);
+      }
+    } else {
+      const front = card.querySelector('.card-front');
+      const back  = card.querySelector('.card-back');
+      const W = front ? front.offsetWidth  : 360;
+      const H = front ? front.offsetHeight : 400;
+      _peelReset(card, front, back, W, H);
+    }
+    return;
+  }
+  _peelRaf = requestAnimationFrame(_peelFrame);
+}
+
+function _startPeelSpring(tx, ty) {
+  _peelTx = tx; _peelTy = ty;
+  if (_peelRaf) cancelAnimationFrame(_peelRaf);
+  _peelRaf = requestAnimationFrame(_peelFrame);
+}
+
+// Get card-local coordinates from a client event point
+function _cardLocalCoords(card, clientX, clientY) {
+  const rect = card.getBoundingClientRect();
+  return { lx: clientX - rect.left, ly: clientY - rect.top };
+}
+
+// ── Touch handlers ──
+function onTouchStart(e) {
+  touchStartX    = e.touches[0].clientX;
+  touchStartY    = e.touches[0].clientY;
+  touchCurrentX  = touchStartX;
+  touchCurrentY  = touchStartY;
+  isDragging     = false;
+  _axisLocked    = false;
+  _axisIsVert    = false;
+  _lastTouchX    = touchStartX;
+  _lastTouchY    = touchStartY;
+  _lastTouchT    = Date.now();
+  _touchVelocity  = 0;
+  _touchVelocityY = 0;
+
+  const card = document.getElementById('activeCard');
+  if (!card) return;
+
+  const front = card.querySelector('.card-front');
+  const W = front ? front.offsetWidth  : 360;
+  const H = front ? front.offsetHeight : 400;
+
+  // If peel corner not yet initialized, set to BR
+  if (_peelCy > H + 10) { _peelCx = W; _peelCy = H; _peelTx = W; _peelTy = H; }
+
+  // Capture peel corner position at drag start
+  _peelStartCx = _peelCx;
+  _peelStartCy = _peelCy;
+
+  if (_peelRaf) { cancelAnimationFrame(_peelRaf); _peelRaf = null; }
 }
 
 function onTouchMove(e) {
   const now = Date.now();
-  const cx = e.touches[0].clientX;
-  const dx = cx - touchStartX;
-  const dy = e.touches[0].clientY - touchStartY;
+  const cx  = e.touches[0].clientX;
+  const cy  = e.touches[0].clientY;
+  const dx  = cx - touchStartX;
+  const dy  = cy - touchStartY;
+  const dt  = now - _lastTouchT || 1;
 
-  // Track velocity
-  const dt = now - _lastTouchT;
-  if (dt > 0) _touchVelocity = (cx - _lastTouchX) / dt;
-  _lastTouchX = cx;
-  _lastTouchT = now;
-  touchCurrentX = cx;
+  _touchVelocity  = (cx - _lastTouchX) / dt;
+  _touchVelocityY = (cy - _lastTouchY) / dt;
+  _lastTouchX = cx; _lastTouchY = cy; _lastTouchT = now;
+  touchCurrentX = cx; touchCurrentY = cy;
 
-  if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 6) {
+  // Lock axis after 8px movement
+  if (!_axisLocked && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) {
+    // Upward drag = peel; clearly sideways = swipe
+    if (dy < 0 || (_peelOpen && Math.abs(dy) > 3)) {
+      _axisIsVert = true;
+    } else {
+      _axisIsVert = Math.abs(dy) >= Math.abs(dx) * 0.4;
+    }
+    _axisLocked = true;
+  }
+  if (!_axisLocked) return;
+
+  if (_axisIsVert) {
     e.preventDefault();
+    isDragging = false;
+    const card = document.getElementById('activeCard');
+    if (!card || _navigating) return;
+    document.body.classList.remove('letterbox');
+
+    const front = card.querySelector('.card-front');
+    const W = front ? front.offsetWidth  : 360;
+    const H = front ? front.offsetHeight : 400;
+
+    // Corner follows touch directly — free angle
+    const newCx = _peelStartCx + dx;
+    const newCy = _peelStartCy + dy;
+    _peelCx = newCx;
+    _peelCy = newCy;
+    _peelActive = true;
+    _applyPeel(card);
+
+  } else {
+    e.preventDefault();
+    if (_peelOpen) return;
     isDragging = true;
-    const card = e.currentTarget;
+    const card = document.getElementById('activeCard');
+    if (!card) return;
     card.classList.add('dragging');
     document.body.classList.remove('letterbox');
-    // Resistance curve — feels more physical
-    const resist = Math.sign(dx) * Math.min(Math.abs(dx) * 0.85, window.innerWidth * 0.6);
-    const rotate = resist * 0.045;
+
+    const resist  = Math.sign(dx) * Math.min(Math.abs(dx) * 0.85, window.innerWidth * 0.6);
+    const rotate  = resist * 0.045;
     const opacity = Math.max(1 - Math.abs(resist) / (window.innerWidth * 0.7), 0.25);
     card.style.transform = `translateX(${resist}px) rotate(${rotate}deg)`;
-    card.style.opacity = opacity;
+    card.style.opacity   = opacity;
   }
 }
 
 function onTouchEnd(e) {
-  const dx = touchCurrentX - touchStartX;
-  const card = e.currentTarget;
-  card.classList.remove('dragging');
+  const card = document.getElementById('activeCard');
+  if (card) card.classList.remove('dragging');
 
-  const shouldSwipe = isDragging && (Math.abs(dx) > 72 || Math.abs(_touchVelocity) > 0.4);
+  if (_axisIsVert && _axisLocked) {
+    const front = card.querySelector('.card-front');
+    const W = front ? front.offsetWidth  : 360;
+    const H = front ? front.offsetHeight : 400;
 
-  if (shouldSwipe && !_navigating) {
-    const dir = dx < 0 ? 'left' : 'right';
-    const vx = Math.abs(_touchVelocity);
-    const dur = Math.max(0.18, 0.28 - vx * 0.08);
-    card.style.transition = `transform ${dur}s cubic-bezier(0.4,0,1,1), opacity ${dur}s ease`;
-    card.style.transform = `translateX(${dir === 'left' ? -110 : 110}%) rotate(${dir === 'left' ? -8 : 8}deg)`;
-    card.style.opacity = '0';
-    card.style.pointerEvents = 'none';
-    _navigating = true;
-    setTimeout(() => { dir === 'left' ? _doNext() : _doPrev(); }, dur * 1000);
-  } else {
-    // Spring snap back
-    card.style.transition = 'transform 0.38s cubic-bezier(0.34,1.4,0.64,1), opacity 0.25s ease';
-    card.style.transform = '';
-    card.style.opacity = '';
-    card.style.animationPlayState = 'running';
-    setTimeout(() => { card.style.transition = ''; }, 400);
+    // Snap decision based on how far corner has moved
+    const dist = Math.hypot(_peelCx - W, _peelCy - H);
+    const maxDist = Math.hypot(W, H);
+    const progress = dist / maxDist;
+    const threshold = 0.25;
+    const flickUp = _touchVelocityY < -0.5;
+    const flickDown = _touchVelocityY > 0.5;
+
+    let peelDirX = (_peelCx - W) / (dist || 1);
+    let peelDirY = (_peelCy - H) / (dist || 1);
+    if (dist < 20) { peelDirX = -0.7; peelDirY = -0.7; }
+    const offCardX = W + peelDirX * maxDist * 1.4;
+    const offCardY = H + peelDirY * maxDist * 1.4;
+
+    if (_peelOpen) {
+      const shouldClose = progress < threshold || flickDown;
+      _peelOpen = !shouldClose;
+      if (shouldClose) {
+        _startPeelSpring(W, H);
+      } else {
+        _startPeelSpring(offCardX, offCardY);
+      }
+    } else {
+      const shouldOpen = progress > threshold || flickUp;
+      _peelOpen = shouldOpen;
+      if (shouldOpen) {
+        _startPeelSpring(offCardX, offCardY);
+      } else {
+        _startPeelSpring(W, H);
+      }
+    }
+
+  } else if (!_axisIsVert && isDragging && !_navigating) {
+    const dx  = touchCurrentX - touchStartX;
+    const vx  = Math.abs(_touchVelocity);
+    if (Math.abs(dx) > 72 || vx > 0.4) {
+      const dir = dx < 0 ? 'left' : 'right';
+      const dur = Math.max(0.18, 0.28 - vx * 0.08);
+      card.style.transition = `transform ${dur}s cubic-bezier(0.4,0,1,1), opacity ${dur}s ease`;
+      card.style.transform  = `translateX(${dir === 'left' ? -110 : 110}%) rotate(${dir === 'left' ? -8 : 8}deg)`;
+      card.style.opacity    = '0';
+      card.style.pointerEvents = 'none';
+      _navigating = true;
+      setTimeout(() => { dir === 'left' ? _doNext() : _doPrev(); }, dur * 1000);
+    } else {
+      card.style.transition = 'transform 0.38s cubic-bezier(0.34,1.4,0.64,1), opacity 0.25s ease';
+      card.style.transform  = '';
+      card.style.opacity    = '';
+      setTimeout(() => { card.style.transition = ''; }, 400);
+    }
   }
+
   isDragging = false;
 }
 
-// mouse
-let mouseStartX = 0, mouseDragging = false, _mouseVelocity = 0, _lastMouseX = 0, _lastMouseT = 0;
+// ── Mouse handlers ──
+let mouseStartX = 0, mouseStartY = 0, mouseDragging = false;
+let _mouseVelocity = 0, _mouseVelocityY = 0;
+let _lastMouseX = 0, _lastMouseY = 0, _lastMouseT = 0;
+let _mouseAxisLocked = false, _mouseAxisIsVert = false;
+let _mouseStartPeelCx = 0, _mouseStartPeelCy = 0;
+
 function onMouseDown(e) {
+  document.body.style.userSelect = 'none';
+  document.body.style.webkitUserSelect = 'none';
   mouseStartX = e.clientX;
+  mouseStartY = e.clientY;
   mouseDragging = false;
   _mouseVelocity = 0;
+  _mouseVelocityY = 0;
   _lastMouseX = e.clientX;
+  _lastMouseY = e.clientY;
   _lastMouseT = Date.now();
+  _mouseAxisLocked = false;
+  _mouseAxisIsVert = false;
+  _mouseStartPeelCx = _peelCx;
+  _mouseStartPeelCy = _peelCy;
   const card = document.getElementById('activeCard');
-  if (card) card.style.animationPlayState = 'paused';
+  if (card) {
+    const front = card.querySelector('.card-front');
+    const W = front ? front.offsetWidth  : 360;
+    const H = front ? front.offsetHeight : 400;
+    if (_peelCy > H + 10) { _peelCx = W; _peelCy = H; _peelTx = W; _peelTy = H; }
+    _mouseStartPeelCx = _peelCx;
+    _mouseStartPeelCy = _peelCy;
+  }
+  if (_peelRaf) { cancelAnimationFrame(_peelRaf); _peelRaf = null; }
   document.addEventListener('mousemove', onMouseMove);
-  document.addEventListener('mouseup', onMouseUp);
+  document.addEventListener('mouseup',   onMouseUp);
 }
+
 function onMouseMove(e) {
   const now = Date.now();
-  const dt = now - _lastMouseT;
-  if (dt > 0) _mouseVelocity = (e.clientX - _lastMouseX) / dt;
+  const dt  = now - _lastMouseT || 1;
+  _mouseVelocity  = (e.clientX - _lastMouseX) / dt;
+  _mouseVelocityY = (e.clientY - _lastMouseY) / dt;
   _lastMouseX = e.clientX;
+  _lastMouseY = e.clientY;
   _lastMouseT = now;
 
   const dx = e.clientX - mouseStartX;
-  if (Math.abs(dx) > 6) {
+  const dy = e.clientY - mouseStartY;
+
+  // Lock axis once: upward drag = peel, clearly sideways = swipe
+  if (!_mouseAxisLocked && (Math.abs(dx) > 6 || Math.abs(dy) > 6)) {
+    // Any upward movement triggers peel; strongly horizontal-only = swipe
+    if (dy < 0 || (_peelOpen && Math.abs(dy) > 3)) {
+      _mouseAxisIsVert = true;
+    } else {
+      _mouseAxisIsVert = Math.abs(dy) >= Math.abs(dx) * 0.4;
+    }
+    _mouseAxisLocked = true;
+  }
+  if (!_mouseAxisLocked) return;
+
+  if (_mouseAxisIsVert) {
+    const card = document.getElementById('activeCard');
+    if (!card || _navigating) return;
+    const front = card.querySelector('.card-front');
+    const W = front ? front.offsetWidth  : 360;
+    const H = front ? front.offsetHeight : 400;
+
+    // Corner follows cursor directly — free angle based on drag direction
+    const rect = front.getBoundingClientRect();
+    const cursorLocalX = e.clientX - rect.left;
+    const cursorLocalY = e.clientY - rect.top;
+    // Corner = drag delta applied from its start position, clamped so it can overflow top but not right/bottom
+    const newCx = _mouseStartPeelCx + (e.clientX - mouseStartX);
+    const newCy = _mouseStartPeelCy + (e.clientY - mouseStartY);
+    _peelCx = newCx;
+    _peelCy = newCy;
+    _peelActive = true;
+    _applyPeel(card);
+  } else {
+    if (_peelOpen) return;
     mouseDragging = true;
     const card = cardStack.querySelector('.active');
     if (card) {
       const resist = Math.sign(dx) * Math.min(Math.abs(dx) * 0.85, window.innerWidth * 0.6);
       card.style.transform = `translateX(${resist}px) rotate(${resist * 0.045}deg)`;
-      card.style.opacity = Math.max(1 - Math.abs(resist) / (window.innerWidth * 0.7), 0.25);
+      card.style.opacity   = Math.max(1 - Math.abs(resist) / (window.innerWidth * 0.7), 0.25);
     }
   }
 }
+
 function onMouseUp(e) {
+  document.body.style.userSelect = '';
+  document.body.style.webkitUserSelect = '';
   document.removeEventListener('mousemove', onMouseMove);
-  document.removeEventListener('mouseup', onMouseUp);
-  const dx = e.clientX - mouseStartX;
+  document.removeEventListener('mouseup',   onMouseUp);
+
   const card = document.getElementById('activeCard');
-  const shouldSwipe = mouseDragging && (Math.abs(dx) > 72 || Math.abs(_mouseVelocity) > 0.4);
-  if (shouldSwipe && card && !_navigating) {
-    dx < 0 ? goNext() : goPrev();
-  } else if (card) {
-    card.style.transition = 'transform 0.38s cubic-bezier(0.34,1.4,0.64,1), opacity 0.25s ease';
-    card.style.transform = '';
-    card.style.opacity = '';
-    card.style.animationPlayState = 'running';
-    setTimeout(() => { card.style.transition = ''; }, 400);
+  const dx   = e.clientX - mouseStartX;
+  const dy   = e.clientY - mouseStartY;
+
+  if (_mouseAxisIsVert && _mouseAxisLocked) {
+    const front = card ? card.querySelector('.card-front') : null;
+    const W = front ? front.offsetWidth  : 360;
+    const H = front ? front.offsetHeight : 400;
+
+    // Progress = how far corner has moved from (W,H) as fraction of card diagonal
+    const dist = Math.hypot(_peelCx - W, _peelCy - H);
+    const maxDist = Math.hypot(W, H);
+    const progress = dist / maxDist;
+    const threshold = 0.25;
+    const flickUp   = _mouseVelocityY < -0.5;
+    const flickDown = _mouseVelocityY > 0.5;
+
+    // Snap-open target: continue in current peel direction, off-card
+    // Off-card target: continue in peel direction, fallback to top-left on flick
+    let peelDirX = (_peelCx - W) / (dist || 1);
+    let peelDirY = (_peelCy - H) / (dist || 1);
+    if (dist < 20) { peelDirX = -0.7; peelDirY = -0.7; } // default diagonal on tiny peel
+    const offCardX = W + peelDirX * maxDist * 1.4;
+    const offCardY = H + peelDirY * maxDist * 1.4;
+
+    if (_peelOpen) {
+      const shouldClose = progress < threshold || flickDown;
+      _peelOpen = !shouldClose;
+      _startPeelSpring(shouldClose ? W : offCardX, shouldClose ? H : offCardY);
+    } else {
+      const shouldOpen = progress > threshold || flickUp;
+      _peelOpen = shouldOpen;
+      _startPeelSpring(shouldOpen ? offCardX : W, shouldOpen ? offCardY : H);
+    }
+  } else if (mouseDragging && card && !_navigating) {
+    const vx = Math.abs(_mouseVelocity);
+    if (Math.abs(dx) > 72 || vx > 0.4) {
+      dx < 0 ? goNext() : goPrev();
+    } else {
+      card.style.transition = 'transform 0.38s cubic-bezier(0.34,1.4,0.64,1), opacity 0.25s ease';
+      card.style.transform  = '';
+      card.style.opacity    = '';
+      setTimeout(() => { card.style.transition = ''; }, 400);
+    }
   }
+
   mouseDragging = false;
 }
-
 
 // keyboard
 document.addEventListener('keydown', e => {
@@ -2161,147 +3074,67 @@ currentIndex = Math.floor(Math.random() * QUOTES.length);
 
 // Letterbox timer
 let _letterboxTimer = null;
+let _counterTimer   = null;
 
-// ── Ghost card warm tint — second ghost slightly cooler ──
-(function applyGhostTints() {
-  const g1 = document.getElementById('ghost1');
-  const g2 = document.getElementById('ghost2');
-  if (g1) g1.style.filter = 'brightness(0.92) sepia(0.06)';
-  if (g2) g2.style.filter = 'brightness(0.80) sepia(0.12) hue-rotate(-8deg)';
-})();
 
-// ── Swipe particle trail ──
-(function initParticles() {
-  const canvas = document.getElementById('swipeCanvas');
-  if (!canvas) return;
-  const ctx = canvas.getContext('2d');
-  let particles = [];
-  let animId = null;
-
-  function resize() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-  }
-  resize();
-  window.addEventListener('resize', resize);
-
-  function spawnAt(x, y, dx) {
-    const hue = dx > 0 ? '160' : '0'; // green right, red left
-    for (let i = 0; i < 3; i++) {
-      particles.push({
-        x: x + (Math.random() - 0.5) * 16,
-        y: y + (Math.random() - 0.5) * 16,
-        r: Math.random() * 3 + 1.5,
-        alpha: 0.55 + Math.random() * 0.2,
-        vx: (Math.random() - 0.5) * 0.8,
-        vy: -Math.random() * 1.2 - 0.4,
-        hue,
-        life: 1
-      });
-    }
-    if (!animId) animId = requestAnimationFrame(tick);
-  }
-
-  function tick() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    particles = particles.filter(p => p.life > 0.02);
-    for (const p of particles) {
-      p.life -= 0.045;
-      p.x += p.vx;
-      p.y += p.vy;
-      p.alpha = p.life * 0.6;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.r * p.life, 0, Math.PI * 2);
-      ctx.fillStyle = `hsla(${p.hue}, 60%, 65%, ${p.alpha})`;
-      ctx.fill();
-    }
-    if (particles.length > 0) {
-      animId = requestAnimationFrame(tick);
-    } else {
-      animId = null;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-    }
-  }
-
-  // Hook into touch and mouse move during drag
-  let _lastSpawn = 0;
-  function maybeSpawn(x, y, dx) {
-    const now = Date.now();
-    if (now - _lastSpawn < 35) return; // throttle
-    _lastSpawn = now;
-    spawnAt(x, y, dx);
-  }
-
-  document.addEventListener('touchmove', e => {
-    if (!isDragging) return;
-    const t = e.touches[0];
-    const dx = t.clientX - touchStartX;
-    if (Math.abs(dx) > 10) maybeSpawn(t.clientX, t.clientY, dx);
-  }, { passive: true });
-
-  document.addEventListener('mousemove', e => {
-    if (!mouseDragging) return;
-    const dx = e.clientX - mouseStartX;
-    if (Math.abs(dx) > 10) maybeSpawn(e.clientX, e.clientY, dx);
-  });
-})();
-
-// ── Ambient background ──
+// ── Ambient background — greyscale tonal only ──
 (function initAmbient() {
   const canvas = document.getElementById('ambientCanvas');
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
 
-  const catColours = {
-    Regret:          [140, 40,  40],
-    Freedom:         [40,  130, 80],
-    Identity:        [100, 60,  180],
-    Truth:           [160, 140, 40],
-    Mortality:       [60,  70,  120],
-    Courage:         [180, 90,  30],
-    Grief:           [40,  60,  160],
-    Relationships:   [160, 50,  90],
-    Purpose:         [40,  130, 160],
-    Choices:         [130, 130, 40],
-    'Self-Knowledge':[70,  130, 70],
-    War:             [130, 40,  40],
+  // All categories map to greyscale luminance only
+  // Lighter = more exposed, darker = underexposed
+  const catLuminance = {
+    Regret:          18,
+    Freedom:         28,
+    Identity:        22,
+    Truth:           25,
+    Mortality:       14,
+    Courage:         30,
+    Grief:           12,
+    Relationships:   26,
+    Purpose:         24,
+    Choices:         20,
+    'Self-Knowledge':22,
+    War:             10,
   };
 
-  let current = [80, 80, 100];
-  let target  = [80, 80, 100];
-  let phase   = 0;
+  let currentL = 18;
+  let targetL  = 18;
+  let phase    = 0;
 
   function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
   window.addEventListener('resize', resize);
   resize();
 
-  window._setAmbientCat = function(cat) { target = catColours[cat] || [80, 80, 100]; };
+  window._setAmbientCat = function(cat) { targetL = catLuminance[cat] ?? 18; };
 
   function lerp(a, b, t) { return a + (b - a) * t; }
 
   function draw() {
-    phase += 0.004;
-    current[0] = lerp(current[0], target[0], 0.012);
-    current[1] = lerp(current[1], target[1], 0.012);
-    current[2] = lerp(current[2], target[2], 0.012);
+    phase += 0.003;
+    currentL = lerp(currentL, targetL, 0.008);
+    const L = Math.round(currentL);
 
-    const [r, g, b] = current;
     const w = canvas.width, h = canvas.height;
     ctx.clearRect(0, 0, w, h);
 
-    const x1 = w * (0.3 + 0.2  * Math.sin(phase * 0.7));
-    const y1 = h * (0.3 + 0.15 * Math.cos(phase * 0.5));
-    const x2 = w * (0.7 + 0.18 * Math.cos(phase * 0.6));
-    const y2 = h * (0.65 + 0.12 * Math.sin(phase * 0.8));
+    // Two slow drifting tonal pools — pure greyscale
+    const x1 = w * (0.25 + 0.2  * Math.sin(phase * 0.6));
+    const y1 = h * (0.3  + 0.15 * Math.cos(phase * 0.45));
+    const x2 = w * (0.72 + 0.16 * Math.cos(phase * 0.55));
+    const y2 = h * (0.65 + 0.12 * Math.sin(phase * 0.7));
 
-    const g1 = ctx.createRadialGradient(x1, y1, 0, x1, y1, w * 0.55);
-    g1.addColorStop(0, `rgba(${r},${g},${b},0.13)`);
-    g1.addColorStop(1, `rgba(${r},${g},${b},0)`);
+    const g1 = ctx.createRadialGradient(x1, y1, 0, x1, y1, w * 0.6);
+    g1.addColorStop(0, `rgba(${L},${L},${L},0.18)`);
+    g1.addColorStop(1, `rgba(${L},${L},${L},0)`);
     ctx.fillStyle = g1;
     ctx.fillRect(0, 0, w, h);
 
-    const g2 = ctx.createRadialGradient(x2, y2, 0, x2, y2, w * 0.45);
-    g2.addColorStop(0, `rgba(${Math.round(r*0.6)},${Math.round(g*0.6)},${Math.round(b*1.2)},0.10)`);
+    const L2 = Math.max(8, L - 6);
+    const g2 = ctx.createRadialGradient(x2, y2, 0, x2, y2, w * 0.48);
+    g2.addColorStop(0, `rgba(${L2},${L2},${L2},0.13)`);
     g2.addColorStop(1, `rgba(0,0,0,0)`);
     ctx.fillStyle = g2;
     ctx.fillRect(0, 0, w, h);
@@ -2380,7 +3213,79 @@ let _letterboxTimer = null;
   };
 })();
 
+// Init peel corner — will be properly set after card renders
+_peelCx = 9999; _peelCy = 9999;
+_peelTx = 9999; _peelTy = 9999;
+
+// Flip back to front face
+window._peelBack = function(card) {
+  if (!card) card = document.getElementById('activeCard');
+  if (!card) return;
+  const front = card.querySelector('.card-front');
+  const back  = card.querySelector('.card-back');
+  const W = front ? front.offsetWidth  : 360;
+  const H = front ? front.offsetHeight : 400;
+
+  // Restore front visibility immediately (it's behind the peel)
+  if (front) {
+    front.style.visibility = 'visible';
+    front.style.opacity = '1';
+    front.style.transition = '';
+    front.style.clipPath = 'none';
+  }
+  if (back) {
+    back.style.pointerEvents = 'none';
+    back.style.overflowY = 'hidden';
+  }
+
+  // Spring the peel corner back to (W,H) — reverse animation through _peelFrame
+  _peelOpen = false;
+  // Corner starts from wherever it currently is (fully peeled = off-card)
+  // If fully off-card, set it just off the top-left so spring plays back visibly
+  if (_peelCx < 0 || _peelCy < 0) {
+    _peelCx = Math.min(_peelCx, -W * 0.4);
+    _peelCy = Math.min(_peelCy, -H * 0.4);
+  }
+  _peelTx = W; _peelTy = H;
+  _peelVx = 0; _peelVy = 0;
+
+  // Use a faster spring for the return
+  if (_peelRaf) cancelAnimationFrame(_peelRaf);
+
+  // Fixed-duration eased return — always ~900ms regardless of how far the peel went
+  const revStartCx = _peelCx, revStartCy = _peelCy;
+  const revDuration = 900; // ms
+  let revStart = null;
+
+  function easeInOutCubic(t) {
+    return t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2,3)/2;
+  }
+
+  function reverseFrame(ts) {
+    if (!revStart) revStart = ts;
+    const elapsed = ts - revStart;
+    const t = Math.min(elapsed / revDuration, 1);
+    const e = easeInOutCubic(t);
+
+    _peelCx = revStartCx + (W - revStartCx) * e;
+    _peelCy = revStartCy + (H - revStartCy) * e;
+    _applyPeel(card);
+
+    if (t < 1) {
+      _peelRaf = requestAnimationFrame(reverseFrame);
+    } else {
+      _peelRaf = null;
+      _peelCx = W; _peelCy = H;
+      _peelReset(card, front, back, W, H);
+    }
+  }
+  _peelRaf = requestAnimationFrame(reverseFrame);
+};
+
 initStack();
+document.addEventListener('keydown', e => {
+  if (e.key === 'd' || e.key === 'D') document.body.classList.toggle('debug-mode');
+});
 </script>
 
 </body>
