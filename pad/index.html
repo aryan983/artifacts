@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+l<!DOCTYPE html>
 
 <html lang="en">
 <head>
@@ -190,7 +190,7 @@ font-size: 11px; letter-spacing: .1em; padding: 64px 20px; line-height: 2.6;
 /* FAB */
 .fab-backdrop { position: fixed; top:0;right:0;bottom:0;left:0; z-index: 49; display: none; }
 .fab-backdrop.show { display: block; }
-.fab-wrap { position: fixed; bottom: 28px; right: 20px; bottom: calc(28px + env(safe-area-inset-bottom)); z-index: 50; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.fab-wrap { position: fixed; bottom: calc(28px + env(safe-area-inset-bottom, 0px)); right: 20px; z-index: 50; display: flex; flex-direction: column; align-items: center; gap: 12px; }
 .fab-main {
 width: 56px; height: 56px; border-radius: 50%;
 background: var(–green); border: none; cursor: pointer;
@@ -228,7 +228,7 @@ box-shadow: 0 4px 16px rgba(0,0,0,.5);
 /* OVERLAY / SHEET */
 .overlay { position: fixed; top:0;right:0;bottom:0;left:0; background: rgba(0,0,0,.9); z-index: 100; display: flex; align-items: flex-end; opacity: 0; pointer-events: none; transition: opacity .18s; }
 .overlay.open { opacity: 1; pointer-events: all; }
-.sheet { width: 100%; background: var(–bg2); padding: 0 16px 50px; padding-bottom: calc(50px + env(safe-area-inset-bottom)); transform: translateY(100%); transition: transform .24s cubic-bezier(.16,1,.3,1); max-height: 94vh; max-height: 94dvh; overflow-y: auto; -webkit-overflow-scrolling: touch; border-top: 1px solid var(–border2); }
+.sheet { width: 100%; background: var(–bg2); padding: 0 16px calc(50px + env(safe-area-inset-bottom, 0px)); transform: translateY(100%); transition: transform .24s cubic-bezier(.16,1,.3,1); max-height: 94vh; max-height: 94dvh; overflow-y: auto; -webkit-overflow-scrolling: touch; border-top: 1px solid var(–border2); }
 .overlay.open .sheet { transform: none; }
 .sheet-accent { height: 2px; margin-bottom: 20px; }
 .sheet-accent.action { background: var(–c-critical); box-shadow: 0 0 16px rgba(255,59,92,.6); }
@@ -935,7 +935,10 @@ function fabPick(tag) { closeFab(); openNew(tag); }
 function tick(){ var n=new Date(); document.getElementById(‘clock’).textContent=pad(n.getHours())+’:’+pad(n.getMinutes()); }
 setInterval(tick,1000); tick();
 
-load(); render();
+try { load(); } catch(e) { entries = []; }
+try { render(); } catch(e) {
+document.getElementById(‘feed’).innerHTML = ‘<div class="empty-state">Error loading. Try refreshing.<br><br><span style="font-size:10px;color:var(--red);">’+e.message+’</span></div>’;
+}
 </script>
 
 </body>
