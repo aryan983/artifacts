@@ -7,7 +7,10 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>SCRATCHPAD</title>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;700&display=swap" rel="stylesheet"></noscript>
 <style>
 :root {
   --bg: #050505;
@@ -29,8 +32,8 @@
   --c-low: #00e87a;
   --c-idea: #3dd6f5;
   --c-overdue: #ff3b5c;
-  --mono: 'IBM Plex Mono', monospace;
-  --sans: 'IBM Plex Sans', sans-serif;
+  --mono: 'IBM Plex Mono', 'Menlo', 'Courier New', monospace;
+  --sans: 'IBM Plex Sans', -apple-system, 'Helvetica Neue', sans-serif;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 html { height: 100%; }
@@ -102,130 +105,103 @@ transition: width .12s; border-radius: 3px;
 }
 .swipe-bg.full { width: 100%; justify-content: center; padding-right: 0; }
 
-.card {
-background: var(–bg2);
-border: 1px solid var(–border2);
-border-radius: 3px;
-padding: 11px 13px 10px;
-cursor: pointer;
-position: relative;
-touch-action: pan-y;
-user-select: none;
-transition: transform .18s ease, background .1s;
-overflow: hidden;
+/* ACTION CARD - compact horizontal */
+.action-card {
+background: var(–bg2); border: 1px solid var(–border2); border-radius: 3px;
+padding: 10px 12px; cursor: pointer; position: relative;
+touch-action: pan-y; user-select: none; transition: transform .18s ease, background .1s;
 }
-.card::before {
-content: ‘’; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
-}
-.card.overdue::before { background: var(–c-overdue); box-shadow: 2px 0 10px rgba(255,59,92,.4); }
-.card.critical::before { background: var(–c-critical); }
-.card.normal::before { background: var(–c-normal); }
-.card.low::before { background: var(–c-low); }
-.card.idea::before { background: var(–c-idea); }
-.card.done-card { opacity: .45; }
-.card:active { background: var(–bg3); }
+.action-card:active { background: var(–bg3); }
+.action-card.overdue { background: rgba(255,59,92,.05); border-color: rgba(255,59,92,.3); }
+.action-card.done-card { opacity: .4; }
+.ac-main { display: flex; align-items: center; gap: 10px; }
+.ac-left { flex-shrink: 0; }
+.ac-dot { width: 10px; height: 10px; border-radius: 50%; }
+.critical-dot { background: var(–c-critical); box-shadow: 0 0 6px rgba(255,59,92,.6); }
+.normal-dot { background: var(–c-normal); box-shadow: 0 0 6px rgba(255,204,0,.4); }
+.low-dot { background: var(–c-low); box-shadow: 0 0 6px rgba(0,232,122,.4); }
+.od-dot { background: var(–c-overdue); box-shadow: 0 0 8px rgba(255,59,92,.7); animation: odpulse 1.5s infinite; }
+.done-dot { background: var(–muted); box-shadow: none; }
+@keyframes odpulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+.ac-body { flex: 1; min-width: 0; }
+.ac-title { font-family: var(–sans); font-size: 14px; font-weight: 700; color: var(–white); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ac-done { text-decoration: line-through; color: var(–muted); }
+.ac-meta { display: flex; align-items: center; gap: 6px; margin-top: 4px; flex-wrap: wrap; }
+.ac-tag { font-family: var(–mono); font-size: 8px; font-weight: 700; letter-spacing: .12em; padding: 1px 5px; border-radius: 2px; }
+.ac-critical { background: var(–c-critical); color: #000; }
+.ac-normal { background: var(–c-normal); color: #000; }
+.ac-low { background: var(–c-low); color: #000; }
+.ac-overdue { background: var(–c-overdue); color: #fff; }
+.ac-done-tag { background: var(–border2); color: var(–muted); }
+.ac-due { font-family: var(–mono); font-size: 9px; color: var(–muted); }
+.ac-due-od { color: var(–c-overdue); }
+.ac-idea-ref { font-family: var(–mono); font-size: 9px; color: var(–c-idea); border: 1px solid rgba(61,214,245,.25); padding: 1px 5px; border-radius: 2px; }
+.ac-audio { font-family: var(–mono); font-size: 8px; color: var(–blue); letter-spacing: .08em; }
 
-/* OVERDUE CARD — slightly elevated */
-.card.overdue {
-background: rgba(255,59,92,.06);
-border-color: rgba(255,59,92,.25);
+/* IDEA CARD - expansive vertical */
+.idea-card {
+background: rgba(61,214,245,.04); border: 1px solid rgba(61,214,245,.2);
+border-top: 2px solid var(–c-idea); border-radius: 3px;
+padding: 12px 14px; cursor: pointer; position: relative;
+touch-action: pan-y; user-select: none; transition: transform .18s ease, background .1s;
 }
+.idea-card:active { background: rgba(61,214,245,.07); }
+.ic-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.ic-label { font-family: var(–mono); font-size: 9px; font-weight: 700; letter-spacing: .18em; color: var(–c-idea); }
+.ic-header-right { display: flex; align-items: center; gap: 8px; }
+.ic-ts { font-family: var(–mono); font-size: 9px; color: var(–muted); }
+.ic-title { font-family: var(–sans); font-size: 16px; font-weight: 700; color: var(–white); line-height: 1.3; margin-bottom: 6px; }
+.ic-body { font-family: var(–mono); font-size: 11px; color: var(–dim); white-space: pre-wrap; word-break: break-word; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.5; margin-bottom: 10px; }
+.ic-footer { margin-top: 8px; }
+.ic-progress-wrap { display: flex; align-items: center; gap: 8px; }
+.ic-progress-bar { flex: 1; height: 3px; background: var(–border2); border-radius: 2px; overflow: hidden; }
+.ic-progress-fill { height: 100%; background: var(–c-idea); border-radius: 2px; transition: width .3s; }
+.ic-progress-lbl { font-family: var(–mono); font-size: 9px; color: var(–muted); white-space: nowrap; }
+.ic-no-actions { font-family: var(–mono); font-size: 9px; color: var(–muted); }
 
-.card-top { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; flex-wrap: wrap; }
-.pill {
-font-family: var(–mono); font-size: 8px; font-weight: 700;
-letter-spacing: .14em; padding: 2px 7px; border-radius: 2px; flex-shrink: 0;
-}
-.pill-overdue { background: var(–c-overdue); color: #fff; }
-.pill-critical { background: var(–c-critical); color: #000; }
-.pill-normal { background: var(–c-normal); color: #000; }
-.pill-low { background: var(–c-low); color: #000; }
-.pill-idea { background: var(–c-idea); color: #000; }
-.pill-done { background: var(–border2); color: var(–muted); }
-.card-ts { font-family: var(–mono); font-size: 9px; color: var(–muted); flex: 1; text-align: right; }
-.audio-dot { width: 6px; height: 6px; border-radius: 50%; background: var(–blue); flex-shrink: 0; }
-
-.card-title {
-font-family: var(–sans); font-size: 14px; font-weight: 700;
-color: var(–white); line-height: 1.3; margin-bottom: 4px;
-}
-.card.done-card .card-title { text-decoration: line-through; color: var(–dim); }
-
-.card-body {
-font-family: var(–mono); font-size: 11px; color: var(–dim);
-white-space: pre-wrap; word-break: break-word;
-display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
-line-height: 1.5;
-}
-
-.card-foot {
-display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap;
-}
-.due-tag {
-font-family: var(–mono); font-size: 9px; padding: 2px 6px;
-border: 1px solid var(–border2); border-radius: 2px; color: var(–muted);
-}
-.due-tag.od { color: var(–c-overdue); border-color: rgba(255,59,92,.4); }
-.idea-ref {
-font-family: var(–mono); font-size: 9px; color: var(–c-idea);
-border: 1px solid rgba(61,214,245,.25); padding: 2px 6px; border-radius: 2px;
-}
-.act-count {
-font-family: var(–mono); font-size: 9px; padding: 2px 6px;
-border: 1px solid var(–border2); border-radius: 2px; color: var(–muted);
-}
-.act-count.has { color: var(–c-idea); border-color: rgba(61,214,245,.3); }
 .card-edit-btn { background: none; border: none; color: var(–muted); font-size: 15px; cursor: pointer; padding: 0 2px; line-height: 1; flex-shrink: 0; }
 .card-edit-btn:active { color: var(–white); }
 
 /* EMPTY */
 .empty-state {
-text-align: center; color: var(–muted); font-family: var(–mono);
-font-size: 11px; letter-spacing: .1em; padding: 64px 20px; line-height: 2.6;
+text-align: center; color: #666; font-family: var(–mono);
+font-size: 12px; letter-spacing: .1em; padding: 80px 20px; line-height: 2.8;
 }
 .blink { display: inline-block; width: 7px; height: 12px; background: var(–green); vertical-align: middle; animation: blink 1s infinite; }
 @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
 @keyframes pop { from{opacity:0;transform:translateY(-4px)} to{opacity:1;transform:none} }
 
 /* FAB */
-.fab-backdrop { position: fixed; top:0;right:0;bottom:0;left:0; z-index: 49; display: none; }
-.fab-backdrop.show { display: block; }
-.fab-wrap { position: fixed; bottom: calc(28px + env(safe-area-inset-bottom, 0px)); right: 20px; z-index: 50; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.fab-backdrop { position: fixed; top:0;right:0;bottom:0;left:0; z-index: 49; background: transparent; }
+.fab-wrap { position: fixed; bottom: calc(28px + env(safe-area-inset-bottom, 0px)); right: 20px; z-index: 50; display: flex; flex-direction: column; align-items: flex-end; gap: 12px; }
 .fab-main {
 width: 56px; height: 56px; border-radius: 50%;
 background: var(–green); border: none; cursor: pointer;
 display: flex; align-items: center; justify-content: center;
 box-shadow: 0 4px 20px rgba(0,232,122,.35);
-transition: transform .2s, box-shadow .2s;
-position: relative; z-index: 2;
+transition: transform .2s;
+position: relative; z-index: 2; -webkit-appearance: none;
 }
 .fab-main:active { transform: scale(.93); }
-.fab-main.open { transform: rotate(45deg); box-shadow: 0 4px 28px rgba(0,232,122,.5); }
-.fab-plus { font-size: 28px; font-weight: 300; color: #000; line-height: 1; font-family: var(–mono); transition: transform .2s; }
-
-.fab-child {
+.fab-main.open { transform: rotate(45deg); }
+.fab-plus { font-size: 28px; font-weight: 300; color: #000; line-height: 1; font-family: var(–mono); }
+.fab-child { display: flex; align-items: center; }
+.fab-child-btn {
 display: flex; align-items: center; gap: 10px;
-padding: 10px 16px 10px 12px;
-border-radius: 28px; cursor: pointer;
-border: 1px solid var(–border2);
-background: var(–bg2);
-opacity: 0; transform: translateY(10px) scale(.9);
-transition: opacity .18s, transform .18s;
-pointer-events: none;
-white-space: nowrap;
-box-shadow: 0 4px 16px rgba(0,0,0,.5);
--webkit-appearance: none;
-font-family: var(–mono);
+padding: 11px 18px 11px 14px; border-radius: 28px; cursor: pointer;
+border: 1px solid var(–border2); background: var(–bg2);
+white-space: nowrap; box-shadow: 0 4px 16px rgba(0,0,0,.5);
+-webkit-appearance: none; font-family: var(–mono);
+animation: fabIn .15s ease;
 }
-.fab-child.visible { opacity: 1; transform: none; pointer-events: all; }
-#fabAction { border-color: rgba(255,59,92,.4); transition-delay: 0s; }
-#fabIdea   { border-color: rgba(61,214,245,.4); transition-delay: .04s; }
-#fabAction.visible { transition-delay: .04s; }
-#fabIdea.visible   { transition-delay: 0s; }
+@keyframes fabIn { from{opacity:0;transform:scale(.9) translateY(6px)} to{opacity:1;transform:none} }
+.fab-child-btn:active { opacity: .75; }
+.action-btn { border-color: rgba(255,59,92,.4); }
+.idea-btn { border-color: rgba(61,214,245,.4); }
 .fab-child-icon { font-size: 18px; line-height: 1; }
 .fab-child-lbl { font-family: var(–mono); font-size: 11px; font-weight: 700; letter-spacing: .14em; }
-#fabAction .fab-child-lbl { color: var(–c-critical); }
-#fabIdea   .fab-child-lbl { color: var(–c-idea); }
+.action-lbl { color: var(–c-critical); }
+.idea-lbl { color: var(–c-idea); }
 
 /* OVERLAY / SHEET */
 .overlay { position: fixed; top:0;right:0;bottom:0;left:0; background: rgba(0,0,0,.9); z-index: 100; display: flex; align-items: flex-end; opacity: 0; pointer-events: none; transition: opacity .18s; }
@@ -372,19 +348,23 @@ audio { width: 100%; height: 34px; margin-top: 10px; display: block; border-radi
 <div class="feed" id="feed"></div>
 
 <div class="fab-wrap" id="fabWrap">
-  <button class="fab-child" id="fabIdea" onclick="fabPick('idea')" ontouchend="event.preventDefault();fabPick('idea')">
-    <span class="fab-child-icon">&#128161;</span>
-    <span class="fab-child-lbl">IDEA</span>
-  </button>
-  <button class="fab-child" id="fabAction" onclick="fabPick('action')" ontouchend="event.preventDefault();fabPick('action')">
-    <span class="fab-child-icon">&#9889;</span>
-    <span class="fab-child-lbl">ACTION</span>
-  </button>
+  <div class="fab-child" id="fabIdea" style="display:none;">
+    <button class="fab-child-btn idea-btn" onclick="fabPick('idea')">
+      <span class="fab-child-icon">&#128161;</span>
+      <span class="fab-child-lbl idea-lbl">IDEA</span>
+    </button>
+  </div>
+  <div class="fab-child" id="fabAction" style="display:none;">
+    <button class="fab-child-btn action-btn" onclick="fabPick('action')">
+      <span class="fab-child-icon">&#9889;</span>
+      <span class="fab-child-lbl action-lbl">ACTION</span>
+    </button>
+  </div>
   <button class="fab-main" id="fabMain" onclick="toggleFab()">
     <span class="fab-plus" id="fabPlus">+</span>
   </button>
 </div>
-<div class="fab-backdrop" id="fabBackdrop" onclick="closeFab()"></div>
+<div class="fab-backdrop" id="fabBackdrop" onclick="closeFab()" style="display:none;"></div>
 
 <!-- NEW / EDIT SHEET -->
 
@@ -582,7 +562,7 @@ function render() {
   feed.innerHTML = html;
 
   // Bug fix 2: long-press sets a flag to block the subsequent onclick
-  var cards = document.querySelectorAll('.card');
+  var cards = document.querySelectorAll('.action-card, .idea-card');
   for (var n=0; n<cards.length; n++) {
     (function(card) {
       var timer;
@@ -606,51 +586,80 @@ function render() {
 
 function renderCard(e) {
   var od = isOD(e.due, e.done);
-  var cardClass = 'card';
-  if (e.tag==='idea') cardClass += ' idea';
-  else if (e.done) cardClass += ' done-card ' + e.sev;
-  else if (od) cardClass += ' overdue';
-  else cardClass += ' '+e.sev;
 
   var linkedIdea = null;
   if (e.tag==='action' && e.ideaId) {
-    for (var k=0; k<entries.length; k++) { if (entries[k].id===e.ideaId){ linkedIdea=entries[k]; break; } }
+    for (var k=0; k<entries.length; k++) { if (entries[k].id===e.ideaId && entries[k].title){ linkedIdea=entries[k]; break; } }
   }
   var linkedActions = [];
+  var doneCount = 0;
   if (e.tag==='idea') {
-    for (var m=0; m<entries.length; m++) { if (entries[m].tag==='action' && entries[m].ideaId===e.id) linkedActions.push(entries[m]); }
+    for (var m=0; m<entries.length; m++) {
+      if (entries[m].tag==='action' && entries[m].ideaId===e.id) {
+        linkedActions.push(entries[m]);
+        if (entries[m].done) doneCount++;
+      }
+    }
   }
 
-  var top = '<div class="card-top">';
-  if (e.tag==='action') {
-    if (od) top += '<span class="pill pill-overdue">OVERDUE</span>';
-    top += '<span class="pill pill-'+(e.sev||'normal')+'">'+(e.sev||'normal').toUpperCase()+'</span>';
-    if (e.done) top += '<span class="pill pill-done">DONE</span>';
+  var html = '';
+  html += '<div class="card-wrap" id="cw-'+e.id+'">';
+  html += '<div class="swipe-bg" id="sb-'+e.id+'">DELETE</div>';
+
+  if (e.tag === 'action') {
+    // COMPACT HORIZONTAL ACTION CARD
+    var sevClass = e.done ? 'done-card' : od ? 'overdue' : (e.sev || 'normal');
+    html += '<div class="card action-card '+sevClass+'" data-id="'+e.id+'" onclick="viewEntry(\''+e.id+'\')" ontouchstart="swStart(event,\''+e.id+'\')" ontouchmove="swMove(event,\''+e.id+'\')" ontouchend="swEnd(event,\''+e.id+'\')">';
+    html += '<div class="ac-main">';
+    html += '<div class="ac-left">';
+    // Severity dot
+    html += '<div class="ac-dot '+(od?'od-dot':(e.sev||'normal'))+'-dot'+(e.done?' done-dot':'')+'"></div>';
+    html += '</div>';
+    html += '<div class="ac-body">';
+    html += '<div class="ac-title'+(e.done?' ac-done':'')+'">'+esc(e.title)+'</div>';
+    html += '<div class="ac-meta">';
+    if (od) html += '<span class="ac-tag ac-overdue">OVERDUE</span>';
+    else html += '<span class="ac-tag ac-'+(e.sev||'normal')+'">'+(e.sev||'normal').toUpperCase()+'</span>';
+    if (e.done) html += '<span class="ac-tag ac-done-tag">DONE</span>';
+    if (e.due) html += '<span class="ac-due'+(od?' ac-due-od':'')+'">'+fmtDate(e.due)+'</span>';
+    if (linkedIdea) html += '<span class="ac-idea-ref">'+esc(linkedIdea.title.slice(0,18))+'</span>';
+    if (e.audio) html += '<span class="ac-audio">REC</span>';
+    html += '</div>';
+    html += '</div>';
+    html += '<button class="card-edit-btn" onclick="event.stopPropagation();openEdit(\''+e.id+'\')">&#9998;</button>';
+    html += '</div>';
+    html += '</div>';
+
   } else {
-    top += '<span class="pill pill-idea">IDEA</span>';
+    // EXPANSIVE VERTICAL IDEA CARD
+    var progressPct = linkedActions.length > 0 ? Math.round((doneCount/linkedActions.length)*100) : 0;
+    html += '<div class="card idea-card" data-id="'+e.id+'" onclick="viewEntry(\''+e.id+'\')" ontouchstart="swStart(event,\''+e.id+'\')" ontouchmove="swMove(event,\''+e.id+'\')" ontouchend="swEnd(event,\''+e.id+'\')">';
+    html += '<div class="ic-header">';
+    html += '<span class="ic-label">&#128161; IDEA</span>';
+    html += '<div class="ic-header-right">';
+    if (e.audio) html += '<span class="ac-audio">REC</span>';
+    html += '<span class="ic-ts">'+fmtTs(e.ts)+'</span>';
+    html += '<button class="card-edit-btn" onclick="event.stopPropagation();openEdit(\''+e.id+'\')">&#9998;</button>';
+    html += '</div>';
+    html += '</div>';
+    html += '<div class="ic-title">'+esc(e.title)+'</div>';
+    if (e.body) html += '<div class="ic-body">'+esc(e.body)+'</div>';
+    // Actions progress
+    html += '<div class="ic-footer">';
+    if (linkedActions.length > 0) {
+      html += '<div class="ic-progress-wrap">';
+      html += '<div class="ic-progress-bar"><div class="ic-progress-fill" style="width:'+progressPct+'%"></div></div>';
+      html += '<span class="ic-progress-lbl">'+doneCount+'/'+linkedActions.length+' actions done</span>';
+      html += '</div>';
+    } else {
+      html += '<span class="ic-no-actions">no actions yet</span>';
+    }
+    html += '</div>';
+    html += '</div>';
   }
-  if (e.audio) top += '<div class="audio-dot" title="has voice note"></div>';
-  top += '<span class="card-ts">'+fmtTs(e.ts)+'</span>';
-  top += '<button class="card-edit-btn" onclick="event.stopPropagation();openEdit(\''+e.id+'\')">&#9998;</button>';
-  top += '</div>';
 
-  var body = '<div class="card-title">'+esc(e.title)+'</div>';
-  if (e.tag==='action' && e.desc) body += '<div class="card-body">'+esc(e.desc)+'</div>';
-  if (e.tag==='idea' && e.body) body += '<div class="card-body">'+esc(e.body)+'</div>';
-
-  var foot = '<div class="card-foot">';
-  if (e.tag==='action') {
-    if (e.due) foot += '<span class="due-tag'+(od?' od':'')+'">DUE '+fmtDate(e.due)+'</span>';
-    if (linkedIdea && linkedIdea.title) foot += '<span class="idea-ref">'+esc(linkedIdea.title.slice(0,22))+'</span>';
-  } else {
-    if (linkedActions.length) foot += '<span class="act-count has">'+linkedActions.length+' action'+(linkedActions.length>1?'s':'')+'</span>';
-    else foot += '<span class="act-count">no actions</span>';
-  }
-  foot += '</div>';
-
-  return '<div class="card-wrap" id="cw-'+e.id+'"><div class="swipe-bg" id="sb-'+e.id+'">DELETE</div>'
-    +'<div class="'+cardClass+'" data-id="'+e.id+'" onclick="viewEntry(\''+e.id+'\')" ontouchstart="swStart(event,\''+e.id+'\')" ontouchmove="swMove(event,\''+e.id+'\')" ontouchend="swEnd(event,\''+e.id+'\')">'
-    +top+body+foot+'</div></div>';
+  html += '</div>';
+  return html;
 }
 
 function swStart(e,id){ swipes[id]={x:e.touches[0].clientX,d:0,moved:false}; }
@@ -1053,17 +1062,17 @@ function toggleFab() { fabOpen ? closeFab() : openFab(); }
 function openFab() {
 fabOpen = true;
 document.getElementById(‘fabMain’).classList.add(‘open’);
-document.getElementById(‘fabAction’).classList.add(‘visible’);
-document.getElementById(‘fabIdea’).classList.add(‘visible’);
-document.getElementById(‘fabBackdrop’).classList.add(‘show’);
+document.getElementById(‘fabAction’).style.display = ‘flex’;
+document.getElementById(‘fabIdea’).style.display = ‘flex’;
+document.getElementById(‘fabBackdrop’).style.display = ‘block’;
 haptic(‘light’);
 }
 function closeFab() {
 fabOpen = false;
 document.getElementById(‘fabMain’).classList.remove(‘open’);
-document.getElementById(‘fabAction’).classList.remove(‘visible’);
-document.getElementById(‘fabIdea’).classList.remove(‘visible’);
-document.getElementById(‘fabBackdrop’).classList.remove(‘show’);
+document.getElementById(‘fabAction’).style.display = ‘none’;
+document.getElementById(‘fabIdea’).style.display = ‘none’;
+document.getElementById(‘fabBackdrop’).style.display = ‘none’;
 }
 function fabPick(tag) { closeFab(); openNew(tag); }
 
