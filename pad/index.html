@@ -3,7 +3,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>SCRATCHPAD</title>
@@ -38,7 +38,7 @@ body { background: var(--bg); color: var(--white); font-family: var(--mono); fon
 
 /* SCANLINES */
 body::before {
-content: ‘’; position: fixed; inset: 0; z-index: 9999; pointer-events: none;
+content: ‘’; position: fixed; top:0;right:0;bottom:0;left:0; z-index: 9999; pointer-events: none;
 background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,.06) 2px, rgba(0,0,0,.06) 4px);
 }
 
@@ -73,6 +73,7 @@ font-family: var(–mono);
 .section-hdr {
 padding: 12px 16px 6px;
 display: flex; align-items: center; gap: 10px;
+position: -webkit-sticky;
 position: sticky; top: 0; z-index: 5;
 background: var(–bg);
 }
@@ -174,7 +175,8 @@ font-family: var(–mono); font-size: 9px; padding: 2px 6px;
 border: 1px solid var(–border2); border-radius: 2px; color: var(–muted);
 }
 .act-count.has { color: var(–c-idea); border-color: rgba(61,214,245,.3); }
-.hint { font-family: var(–mono); font-size: 9px; color: var(–muted); margin-top: 7px; letter-spacing: .05em; }
+.card-edit-btn { background: none; border: none; color: var(–muted); font-size: 15px; cursor: pointer; padding: 0 2px; line-height: 1; flex-shrink: 0; }
+.card-edit-btn:active { color: var(–white); }
 
 /* EMPTY */
 .empty-state {
@@ -186,9 +188,9 @@ font-size: 11px; letter-spacing: .1em; padding: 64px 20px; line-height: 2.6;
 @keyframes pop { from{opacity:0;transform:translateY(-4px)} to{opacity:1;transform:none} }
 
 /* FAB */
-.fab-backdrop { position: fixed; inset: 0; z-index: 49; display: none; }
+.fab-backdrop { position: fixed; top:0;right:0;bottom:0;left:0; z-index: 49; display: none; }
 .fab-backdrop.show { display: block; }
-.fab-wrap { position: fixed; bottom: 28px; right: 20px; z-index: 50; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.fab-wrap { position: fixed; bottom: 28px; right: 20px; bottom: calc(28px + env(safe-area-inset-bottom)); z-index: 50; display: flex; flex-direction: column; align-items: center; gap: 12px; }
 .fab-main {
 width: 56px; height: 56px; border-radius: 50%;
 background: var(–green); border: none; cursor: pointer;
@@ -224,9 +226,9 @@ box-shadow: 0 4px 16px rgba(0,0,0,.5);
 #fabIdea   .fab-child-lbl { color: var(–c-idea); }
 
 /* OVERLAY / SHEET */
-.overlay { position: fixed; inset: 0; background: rgba(0,0,0,.9); z-index: 100; display: flex; align-items: flex-end; opacity: 0; pointer-events: none; transition: opacity .18s; }
+.overlay { position: fixed; top:0;right:0;bottom:0;left:0; background: rgba(0,0,0,.9); z-index: 100; display: flex; align-items: flex-end; opacity: 0; pointer-events: none; transition: opacity .18s; }
 .overlay.open { opacity: 1; pointer-events: all; }
-.sheet { width: 100%; background: var(–bg2); padding: 0 16px 50px; transform: translateY(100%); transition: transform .24s cubic-bezier(.16,1,.3,1); max-height: 94dvh; overflow-y: auto; -webkit-overflow-scrolling: touch; border-top: 1px solid var(–border2); }
+.sheet { width: 100%; background: var(–bg2); padding: 0 16px 50px; padding-bottom: calc(50px + env(safe-area-inset-bottom)); transform: translateY(100%); transition: transform .24s cubic-bezier(.16,1,.3,1); max-height: 94vh; max-height: 94dvh; overflow-y: auto; -webkit-overflow-scrolling: touch; border-top: 1px solid var(–border2); }
 .overlay.open .sheet { transform: none; }
 .sheet-accent { height: 2px; margin-bottom: 20px; }
 .sheet-accent.action { background: var(–c-critical); box-shadow: 0 0 16px rgba(255,59,92,.6); }
@@ -261,7 +263,7 @@ select.field { cursor: pointer; }
 .tog-lbl { font-family: var(–mono); font-size: 10px; color: var(–muted); letter-spacing: .1em; flex: 1; }
 .tog { position: relative; width: 40px; height: 22px; flex-shrink: 0; }
 .tog input { opacity: 0; width: 0; height: 0; position: absolute; }
-.tog-sl { position: absolute; inset: 0; background: var(–bg3); border: 1px solid var(–border2); border-radius: 2px; cursor: pointer; transition: .18s; }
+.tog-sl { position: absolute; top:0;right:0;bottom:0;left:0; background: var(–bg3); border: 1px solid var(–border2); border-radius: 2px; cursor: pointer; transition: .18s; }
 .tog-sl::before { content: ‘’; position: absolute; width: 14px; height: 12px; left: 3px; top: 4px; background: var(–muted); border-radius: 1px; transition: .18s; }
 .tog input:checked + .tog-sl { background: rgba(0,232,122,.1); border-color: var(–green); }
 .tog input:checked + .tog-sl::before { background: var(–green); transform: translateX(17px); }
@@ -292,7 +294,7 @@ audio { width: 100%; height: 34px; margin-top: 10px; display: block; border-radi
 /* VIEW */
 .vw-title { font-family: var(–sans); font-size: 20px; font-weight: 700; color: var(–white); line-height: 1.25; margin-bottom: 12px; }
 .vw-pills { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
-.vw-block { font-family: var(–mono); font-size: 12px; line-height: 1.75; color: var(–dim); white-space: pre-wrap; word-break: break-word; padding: 10px 12px; background: var(–bg3); border: 1px solid var(–border2); border-radius: 3px; max-height: 32dvh; overflow-y: auto; }
+.vw-block { font-family: var(–mono); font-size: 12px; line-height: 1.75; color: var(–dim); white-space: pre-wrap; word-break: break-word; padding: 10px 12px; background: var(–bg3); border: 1px solid var(–border2); border-radius: 3px; max-height: 32vh; max-height: 32dvh; overflow-y: auto; }
 .vw-ts { font-family: var(–mono); font-size: 9px; color: var(–muted); letter-spacing: .07em; margin-top: 12px; }
 .vw-btn { width: 100%; margin-top: 8px; padding: 12px; font-family: var(–mono); font-size: 10px; font-weight: 700; letter-spacing: .16em; border: none; border-radius: 3px; cursor: pointer; transition: opacity .12s; }
 .vw-btn:active { opacity: .8; }
@@ -498,28 +500,18 @@ function updateStore() {
 
 function render() {
   updateStrip(); updateStore();
+  // Bug fix 5: always reset filter since strip is gone
+  activeFilter = 'all';
   var feed = document.getElementById('feed');
 
   var list = entries.slice();
   list.sort(function(a,b){ return sortScore(a)-sortScore(b); });
-
-  if (activeFilter !== 'all') {
-    list = list.filter(function(e) {
-      if (activeFilter === 'overdue') return e.tag==='action' && isOD(e.due,e.done);
-      if (activeFilter === 'idea') return e.tag==='idea';
-      if (activeFilter === 'critical') return e.tag==='action' && e.sev==='critical' && !isOD(e.due,e.done) && !e.done;
-      if (activeFilter === 'normal') return e.tag==='action' && e.sev==='normal' && !isOD(e.due,e.done) && !e.done;
-      if (activeFilter === 'low') return e.tag==='action' && e.sev==='low' && !isOD(e.due,e.done) && !e.done;
-      return true;
-    });
-  }
 
   if (!list.length) {
     feed.innerHTML = '<div class="empty-state">ALL CLEAR<br><br><span class="blink"></span><br><br>TAP + TO ADD</div>';
     return;
   }
 
-  // Group into sections
   var sections = [
     { key:'overdue', label:'OVERDUE', items:[] },
     { key:'critical', label:'CRITICAL', items:[] },
@@ -549,14 +541,25 @@ function render() {
   }
   feed.innerHTML = html;
 
-  // Attach long-press for edit
+  // Bug fix 2: long-press sets a flag to block the subsequent onclick
   var cards = document.querySelectorAll('.card');
   for (var n=0; n<cards.length; n++) {
     (function(card) {
       var timer;
-      card.addEventListener('touchstart', function(){ timer = setTimeout(function(){ haptic('medium'); openEdit(card.dataset.id); }, 600); }, {passive:true});
+      var didLongPress = false;
+      card.addEventListener('touchstart', function(){
+        didLongPress = false;
+        timer = setTimeout(function(){
+          didLongPress = true;
+          haptic('medium');
+          openEdit(card.dataset.id);
+        }, 600);
+      }, {passive:true});
       card.addEventListener('touchend', function(){ clearTimeout(timer); }, {passive:true});
       card.addEventListener('touchmove', function(){ clearTimeout(timer); }, {passive:true});
+      card.addEventListener('click', function(e){
+        if (didLongPress) { e.stopImmediatePropagation(); didLongPress = false; }
+      }, true);
     })(cards[n]);
   }
 }
@@ -581,13 +584,15 @@ function renderCard(e) {
   var top = '<div class="card-top">';
   if (e.tag==='action') {
     if (od) top += '<span class="pill pill-overdue">OVERDUE</span>';
-    top += '<span class="pill pill-'+e.sev+'">'+(e.sev||'').toUpperCase()+'</span>';
+    top += '<span class="pill pill-'+(e.sev||'normal')+'">'+(e.sev||'normal').toUpperCase()+'</span>';
     if (e.done) top += '<span class="pill pill-done">DONE</span>';
   } else {
     top += '<span class="pill pill-idea">IDEA</span>';
   }
   if (e.audio) top += '<div class="audio-dot" title="has voice note"></div>';
-  top += '<span class="card-ts">'+fmtTs(e.ts)+'</span></div>';
+  top += '<span class="card-ts">'+fmtTs(e.ts)+'</span>';
+  top += '<button class="card-edit-btn" onclick="event.stopPropagation();openEdit(\''+e.id+'\')">&#9998;</button>';
+  top += '</div>';
 
   var body = '<div class="card-title">'+esc(e.title)+'</div>';
   if (e.tag==='action' && e.desc) body += '<div class="card-body">'+esc(e.desc)+'</div>';
@@ -603,19 +608,17 @@ function renderCard(e) {
   }
   foot += '</div>';
 
-  var hint = '<div class="hint">hold to edit | swipe to delete</div>';
-
   return '<div class="card-wrap" id="cw-'+e.id+'"><div class="swipe-bg" id="sb-'+e.id+'">DELETE</div>'
     +'<div class="'+cardClass+'" data-id="'+e.id+'" onclick="viewEntry(\''+e.id+'\')" ontouchstart="swStart(event,\''+e.id+'\')" ontouchmove="swMove(event,\''+e.id+'\')" ontouchend="swEnd(event,\''+e.id+'\')">'
-    +top+body+foot+hint+'</div></div>';
+    +top+body+foot+'</div></div>';
 }
 
-// Swipe
-function swStart(e,id){ swipes[id]={x:e.touches[0].clientX,d:0}; }
+function swStart(e,id){ swipes[id]={x:e.touches[0].clientX,d:0,moved:false}; }
 function swMove(e,id){
   var s=swipes[id]; if(!s) return;
   var dx=e.touches[0].clientX-s.x; if(dx>0){s.d=0;return;}
   s.d=Math.max(dx,-110);
+  if(Math.abs(s.d)>8) s.moved=true;
   var c=document.querySelector('#cw-'+id+' .card'), bg=document.getElementById('sb-'+id);
   if(c) c.style.transform='translateX('+s.d+'px)';
   if(bg) bg.style.width=Math.abs(s.d)+'px';
@@ -630,18 +633,22 @@ function swEnd(e,id){
   } else {
     if(c) c.style.transform='';
     if(bg) bg.style.width='0';
+    // If swiped but not enough to delete, block the tap
+    if(s.moved) e.stopImmediatePropagation();
   }
   delete swipes[id];
 }
 
 // NEW/EDIT
 function openNew(tag) {
+  closeFab();
   editingId=null; currentTag=tag; pendingB64=null; pendingMime=null; keepAudio=false;
   stopRec(false); setSheet(tag,'> NEW '+tag.toUpperCase()); buildFields(tag,null);
   document.getElementById('newOverlay').classList.add('open'); checkWarn();
   setTimeout(function(){ var f=document.getElementById('newFields').querySelector('.field'); if(f)f.focus(); },300);
 }
 function openEdit(id) {
+  closeFab();
   var e=find(id); if(!e) return;
   editingId=id; currentTag=e.tag; pendingB64=null; pendingMime=null; keepAudio=!!e.audio;
   stopRec(false); setSheet(e.tag,'> EDIT '+e.tag.toUpperCase()); buildFields(e.tag,e);
@@ -704,21 +711,29 @@ function pickSev(el) { var o=document.querySelectorAll(’.sev-opt’); for(var 
 async function toggleRec() {
 if(mediaRec&&mediaRec.state===‘recording’){stopRec(true);return;}
 if(getUsed()/LIMIT>=BLOCK){toast(‘Storage full’,‘err’);openFullSheet();return;}
+if(typeof MediaRecorder === ‘undefined’ || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+var st=document.getElementById(‘recSt’);
+if(st) st.textContent=‘Voice not supported on this browser’;
+toast(‘Voice recording not supported here’,‘err’);
+return;
+}
 try {
 var stream=await navigator.mediaDevices.getUserMedia({audio:true});
 audioChunks=[]; recSecs=0;
-mediaRec=new MediaRecorder(stream);
+var mime = MediaRecorder.isTypeSupported(‘audio/mp4’) ? ‘audio/mp4’ :
+MediaRecorder.isTypeSupported(‘audio/webm’) ? ‘audio/webm’ : ‘’;
+mediaRec = mime ? new MediaRecorder(stream, {mimeType: mime}) : new MediaRecorder(stream);
 mediaRec.ondataavailable=function(ev){if(ev.data.size>0)audioChunks.push(ev.data);};
 mediaRec.onstop=function(){
 stream.getTracks().forEach(function(t){t.stop();});
-var mime=(audioChunks[0]&&audioChunks[0].type)||‘audio/webm’;
-var blob=new Blob(audioChunks,{type:mime});
+var usedMime = mime || (audioChunks[0] && audioChunks[0].type) || ‘audio/mp4’;
+var blob=new Blob(audioChunks,{type:usedMime});
 var r=new FileReader();
 r.onload=function(){
 var b64=r.result.split(’,’)[1];
 if((getUsed()+abytes(b64))/LIMIT>=BLOCK){toast(‘Too large’,‘err’);openFullSheet();return;}
 if((getUsed()+abytes(b64))/LIMIT>=WARN) toast(‘Storage nearly full’,‘warn’);
-pendingB64=b64; pendingMime=mime; keepAudio=false;
+pendingB64=b64; pendingMime=usedMime; keepAudio=false;
 var url=URL.createObjectURL(blob);
 var p=document.getElementById(‘audioPrev’);
 if(p) p.innerHTML=’<audio controls src="'+url+'"></audio><button class="rm-audio" onclick="clearAudio()">[ x REMOVE ]</button>’;
@@ -778,7 +793,7 @@ var ss=document.querySelector(’.sev-opt.sel’); entry.sev=ss?ss.dataset.v:‘
 var d=document.getElementById(‘f_desc’); entry.desc=d?d.value.trim():’’;
 var du=document.getElementById(‘f_due’); entry.due=du?du.value||null:null;
 var dn=document.getElementById(‘f_done’); entry.done=dn?dn.checked:false;
-var id2=document.getElementById(‘f_idea’); entry.ideaId=id2?id2.value||null:null;
+var id2=document.getElementById(‘f_idea’); entry.ideaId=(id2&&id2.value)?id2.value:null;
 } else {
 var b=document.getElementById(‘f_body’); entry.body=b?b.value.trim():’’;
 }
@@ -835,7 +850,20 @@ document.getElementById(‘viewOverlay’).classList.add(‘open’);
 function closeView(){ document.getElementById(‘viewOverlay’).classList.remove(‘open’); }
 function toggleDone(id){
 var e=find(id); if(!e) return;
-e.done=!e.done; persist(); render(); haptic(‘medium’); viewEntry(id);
+e.done=!e.done; persist(); haptic(‘medium’);
+// Re-render feed in background, then refresh view sheet without closing it
+updateStrip(); updateStore();
+var feed=document.getElementById(‘feed’);
+var list=entries.slice(); list.sort(function(a,b){return sortScore(a)-sortScore(b);});
+if(!list.length){ feed.innerHTML=’<div class="empty-state">ALL CLEAR<br><br><span class="blink"></span><br><br>TAP + TO ADD</div>’; }
+else {
+var sections=[{key:‘overdue’,label:‘OVERDUE’,items:[]},{key:‘critical’,label:‘CRITICAL’,items:[]},{key:‘normal’,label:‘NORMAL’,items:[]},{key:‘low’,label:‘LOW’,items:[]},{key:‘idea’,label:‘IDEAS’,items:[]},{key:‘done’,label:‘DONE’,items:[]}];
+for(var i=0;i<list.length;i++){var ex=list[i];if(ex.tag===‘idea’){sections[4].items.push(ex);continue;}if(ex.done){sections[5].items.push(ex);continue;}if(isOD(ex.due,ex.done)){sections[0].items.push(ex);continue;}if(ex.sev===‘critical’){sections[1].items.push(ex);continue;}if(ex.sev===‘normal’){sections[2].items.push(ex);continue;}sections[3].items.push(ex);}
+var html=’’; for(var s=0;s<sections.length;s++){if(!sections[s].items.length)continue;html+=’<div class="section-hdr"><span class="section-label '+sections[s].key+'">’+sections[s].label+’</span></div>’;for(var j=0;j<sections[s].items.length;j++)html+=renderCard(sections[s].items[j]);}
+feed.innerHTML=html;
+}
+// Refresh view content in place
+viewEntry(id);
 }
 
 function openFullSheet(){
