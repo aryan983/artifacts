@@ -151,6 +151,7 @@ body::before {
 .ac-done-tag { background: var(--border2); color: var(--muted); }
 .ac-due { font-family: var(--mono); font-size: 9px; color: var(--muted); }
 .ac-due-od { color: var(--c-overdue); }
+.ac-due-today { color: var(--c-normal); }
 .ac-idea-ref { font-family: var(--mono); font-size: 9px; color: var(--c-idea); border: 1px solid rgba(61,214,245,.25); padding: 1px 5px; border-radius: 2px; }
 .ac-audio { font-family: var(--mono); font-size: 8px; color: var(--blue); letter-spacing: .08em; }
 
@@ -370,8 +371,16 @@ audio { width: 100%; height: 34px; margin-top: 10px; display: block; border-radi
 .qdate-btn:active { border-color: var(--green); color: var(--green); background: rgba(0,232,122,.08); }
 
 /* SETTINGS */
+.hdr-qc-btn { background: none; border: none; color: #aaa; font-size: 15px; cursor: pointer; padding: 0 6px 0 0; -webkit-appearance: none; }
+.hdr-qc-btn:active { color: var(--c-critical); }
 .hdr-menu-btn { background: none; border: none; color: #777; font-size: 14px; cursor: pointer; padding: 0 0 0 8px; -webkit-appearance: none; }
 .hdr-menu-btn:active { color: #f2f2f2; }
+
+/* DUE TODAY BANNER */
+.due-banner { flex-shrink: 0; background: rgba(255,59,92,.12); border-bottom: 1px solid rgba(255,59,92,.3); padding: 8px 16px; font-family: var(--mono); font-size: 10px; color: var(--c-critical); letter-spacing: .08em; cursor: pointer; }
+.due-banner:active { background: rgba(255,59,92,.18); }
+
+/* RECURRING OPTS - same style as sev-opt */
 .settings-btn { width: 100%; margin-top: 8px; padding: 13px; font-family: var(--mono); font-size: 11px; font-weight: 700; letter-spacing: .15em; border: 1px solid var(--border2); border-radius: 3px; background: var(--bg3); color: var(--white); cursor: pointer; text-align: left; -webkit-appearance: none; transition: all .12s; }
 .settings-btn:active { border-color: var(--green); color: var(--green); }
 .settings-btn.warn-btn { color: var(--muted); }
@@ -388,12 +397,15 @@ audio { width: 100%; height: 34px; margin-top: 10px; display: block; border-radi
   <div class="hdr-right">
     <div class="hdr-clock" id="clock">00:00</div>
     <div class="store-row">
+      <button class="hdr-qc-btn" onclick="openQuickCapture()" title="Quick capture">&#9998;</button>
       <div class="store-track"><div class="store-fill" id="storeFill" style="width:0%;background:#00e87a;"></div></div>
       <div class="store-lbl" id="storeLbl">0/5MB</div>
       <button class="hdr-menu-btn" onclick="openSettings()" title="Settings">&#9776;</button>
     </div>
   </div>
 </div>
+
+<div class="due-banner" id="dueBanner" style="display:none;" onclick="closeDueBanner()"></div>
 
 
 
@@ -417,6 +429,25 @@ audio { width: 100%; height: 34px; margin-top: 10px; display: block; border-radi
   </button>
 </div>
 <div class="fab-backdrop" id="fabBackdrop" onclick="closeFab()" style="display:none;"></div>
+
+<!-- QUICK CAPTURE SHEET -->
+<div class="overlay" id="qcOverlay" onclick="if(event.target===this)closeQuickCapture()">
+  <div class="sheet">
+    <div class="sheet-accent" style="background:var(--c-critical);box-shadow:0 0 14px rgba(255,59,92,.5);"></div>
+    <div class="sheet-top">
+      <div class="sheet-ttl action">&#9889; QUICK CAPTURE</div>
+      <button class="sheet-close" onclick="closeQuickCapture()">ESC</button>
+    </div>
+    <input id="qc_title" class="field" type="text" placeholder="what needs doing..." autocomplete="off" style="font-size:16px;" onkeydown="if(event.key==='Enter')saveQuickCapture()">
+    <div class="quick-dates" style="margin-top:10px;">
+      <button type="button" class="qdate-btn" onclick="setQCDate(0)">TODAY</button>
+      <button type="button" class="qdate-btn" onclick="setQCDate(1)">TOMORROW</button>
+      <button type="button" class="qdate-btn" onclick="setQCDate(7)">+1 WEEK</button>
+    </div>
+    <input id="qc_due" class="field" type="date" style="margin-top:6px;">
+    <button class="save-btn action" style="margin-top:14px;" onclick="saveQuickCapture()">CAPTURE</button>
+  </div>
+</div>
 
 <!-- NEW / EDIT SHEET -->
 <div class="overlay" id="newOverlay" onclick="if(event.target===this)closeNew()">
@@ -457,6 +488,8 @@ audio { width: 100%; height: 34px; margin-top: 10px; display: block; border-radi
     <button class="settings-btn" onclick="importBackup()">IMPORT BACKUP</button>
     <div class="flbl">// STORAGE</div>
     <button class="settings-btn warn-btn" onclick="closeSettings();openFullSheet()">MANAGE VOICE NOTES</button>
+    <div class="flbl">// NOTIFICATIONS</div>
+    <button class="settings-btn" onclick="requestNotifications()">ENABLE DUE DATE ALERTS</button>
     <p style="font-size:10px;color:#666;font-family:var(--mono);margin-top:14px;line-height:1.7;">Export saves all your data as a JSON file. Import merges entries without duplicates. Use this to back up before clearing Safari data.</p>
   </div>
 </div>
@@ -529,6 +562,16 @@ function fmtDate(s) {
   return pad(parseInt(p[2]))+'/'+pad(parseInt(p[1]))+'/'+(''+p[0]).slice(2);
 }
 function fmtDur(s) { return Math.floor(s/60)+':'+pad(s%60); }
+function daysUntil(dateStr) {
+  if (!dateStr) return null;
+  var today = new Date(); today.setHours(0,0,0,0);
+  var due = new Date(dateStr); due.setHours(0,0,0,0);
+  var diff = Math.round((due - today) / 86400000);
+  if (diff < 0) return Math.abs(diff)+'d overdue';
+  if (diff === 0) return 'due today';
+  if (diff === 1) return 'due tomorrow';
+  return diff+'d left';
+}
 function isOD(s, done) { return s && !done && new Date(s) < new Date(new Date().toDateString()); }
 function abytes(b64) { return b64 ? Math.round(b64.length*3/4) : 0; }
 function fmtB(b) {
@@ -691,10 +734,12 @@ function renderCard(e) {
     if (od) html += '<span class="ac-tag ac-overdue">OVERDUE</span>';
     else html += '<span class="ac-tag ac-'+(e.sev||'normal')+'">'+(e.sev||'normal').toUpperCase()+'</span>';
     if (e.done) html += '<span class="ac-tag ac-done-tag">DONE</span>';
-    if (e.due) html += '<span class="ac-due'+(od?' ac-due-od':'')+'">'+fmtDate(e.due)+'</span>';
+    if (e.due && !e.done) {
+      var dl = daysUntil(e.due);
+      html += '<span class="ac-due'+(od?' ac-due-od':dl==='due today'?' ac-due-today':'')+'">'+(od?'(!) ':'')+dl+'</span>';
+    }
     if (linkedIdea && linkedIdea.title) html += '<span class="ac-idea-ref">'+esc(linkedIdea.title.slice(0,18))+'</span>';
-    if (e.audio) html += '<span class="ac-audio">REC'+(e.audioDur?' '+fmtDur(e.audioDur):'')+'</span>';
-    html += '<span class="ac-age">'+timeAgo(e.ts)+'</span>';
+    if (e.audio) html += '<span class="ac-audio">REC'+(e.audioDur?' '+fmtDur(e.audioDur):'')+'</span>';    html += '<span class="ac-age">'+timeAgo(e.ts)+'</span>';
     html += '</div>';
     html += '</div>';
     html += '<button class="card-edit-btn" onclick="event.stopPropagation();openEdit(\''+e.id+'\')">&#9998;</button>';
@@ -809,8 +854,7 @@ function buildFields(tag, e) {
       for(var j=0;j<ideas.length;j++) h+='<option value="'+ideas[j].id+'"'+(e&&e.ideaId===ideas[j].id?' selected':'')+'>'+esc(ideas[j].title.slice(0,40))+'</option>';
       h+='</select>';
     }
-    h+='<div class="tog-row"><span class="tog-lbl">// MARK AS DONE</span><label class="tog"><input type="checkbox" id="f_done"'+(e&&e.done?' checked':'')+' ><span class="tog-sl"></span></label></div>';
-  } else {
+    h+='<div class="tog-row"><span class="tog-lbl">// MARK AS DONE</span><label class="tog"><input type="checkbox" id="f_done"'+(e&&e.done?' checked':'')+' ><span class="tog-sl"></span></label></div>';  } else {
     h+='<label class="flbl">// TITLE *</label><input id="f_title" class="field" type="text" placeholder="the big idea..." autocomplete="off" value="'+esc(e?e.title||'':'')+'">';
     h+='<label class="flbl">// BRAIN DUMP</label><textarea id="f_body" class="field" placeholder="everything about it...">'+esc(e?e.body||'':'')+'</textarea>';
     h+='<label class="flbl">// ACTIONS</label>';
@@ -999,7 +1043,7 @@ function saveEntry(){
     entry=find(editingId); if(!entry) return;
     entry.title=title; entry.edited=Date.now();
   } else {
-    entry={id:''+Date.now(),tag:tag,ts:Date.now()};
+    entry={id:''+Date.now(),tag:tag,ts:Date.now(),title:title};
     entries.push(entry);
   }
   if(pendingB64){entry.audio=pendingB64;entry.audioMime=pendingMime;entry.audioDur=pendingDuration;}
@@ -1009,8 +1053,7 @@ function saveEntry(){
     var d=document.getElementById('f_desc'); entry.desc=d?d.value.trim():'';
     var du=document.getElementById('f_due'); entry.due=du?du.value||null:null;
     var dn=document.getElementById('f_done'); entry.done=dn?dn.checked:false;
-    var id2=document.getElementById('f_idea'); entry.ideaId=(id2&&id2.value)?id2.value:null;
-  } else {
+    var id2=document.getElementById('f_idea'); entry.ideaId=(id2&&id2.value)?id2.value:null;  } else {
     var b=document.getElementById('f_body'); entry.body=b?b.value.trim():'';
     // Save any inline actions that haven't been individually saved yet
     pendingIdeaId = entry.id;
@@ -1035,7 +1078,7 @@ function viewEntry(id){
     h+='<span class="pill pill-'+e.sev+'">'+e.sev.toUpperCase()+'</span>';
     if(e.done) h+='<span class="pill pill-done">DONE</span>';
     if(od) h+='<span class="pill pill-overdue">OVERDUE</span>';
-    if(e.due) h+='<span class="due-tag'+(od?' od':'')+'">DUE '+fmtDate(e.due)+'</span>';
+    if(e.due) h+='<span class="due-tag'+(od?' od':'')+'" >DUE '+fmtDate(e.due)+' <span style="opacity:.7;">('+daysUntil(e.due)+')</span></span>';
     h+='</div>';
     if(li && li.title) h+='<div class="idea-link-ref" onclick="closeView();viewEntry(\''+li.id+'\')">IDEA: '+esc(li.title)+'</div>';
     if(e.desc) h+='<div class="vw-block">'+esc(e.desc)+'</div>';
@@ -1137,6 +1180,80 @@ function find(id){ for(var i=0;i<entries.length;i++) if(entries[i].id===id) retu
 
 function openSettings() { document.getElementById('settingsOverlay').classList.add('open'); }
 function closeSettings() { document.getElementById('settingsOverlay').classList.remove('open'); }
+
+// QUICK CAPTURE
+function openQuickCapture() {
+  closeFab();
+  document.getElementById('qc_title').value = '';
+  document.getElementById('qc_due').value = '';
+  document.getElementById('qcOverlay').classList.add('open');
+  setTimeout(function(){ document.getElementById('qc_title').focus(); }, 300);
+}
+function closeQuickCapture() { document.getElementById('qcOverlay').classList.remove('open'); }
+function setQCDate(days) {
+  var d = new Date(); d.setDate(d.getDate()+days);
+  document.getElementById('qc_due').value = d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+}
+function saveQuickCapture() {
+  var titleEl = document.getElementById('qc_title');
+  var title = titleEl ? titleEl.value.trim() : '';
+  if (!title) { toast('Title required','err'); return; }
+  var dueEl = document.getElementById('qc_due');
+  var entry = {
+    id: ''+Date.now(), tag: 'action', ts: Date.now(),
+    title: title, sev: 'normal', done: false, desc: '',
+    due: dueEl && dueEl.value ? dueEl.value : null,
+    ideaId: null
+  };
+  entries.push(entry);
+  persist(); closeQuickCapture(); render(); haptic('medium'); toast('CAPTURED');
+}
+
+
+
+// DUE TODAY BANNER
+function checkDueBanner() {
+  var today = new Date().toISOString().split('T')[0];
+  var dueToday = 0, overdue = 0;
+  for (var i=0;i<entries.length;i++) {
+    var e = entries[i];
+    if (e.tag!=='action'||e.done||!e.due) continue;
+    if (e.due===today) dueToday++;
+    else if (e.due<today) overdue++;
+  }
+  var banner = document.getElementById('dueBanner');
+  if (dueToday>0||overdue>0) {
+    var parts = [];
+    if (overdue>0) parts.push(overdue+' OVERDUE');
+    if (dueToday>0) parts.push(dueToday+' DUE TODAY');
+    banner.textContent = '(!) '+parts.join(' | ')+' - tap to dismiss';
+    banner.style.display = 'block';
+  } else {
+    banner.style.display = 'none';
+  }
+}
+function closeDueBanner() { document.getElementById('dueBanner').style.display='none'; }
+
+// NOTIFICATIONS
+function requestNotifications() {
+  if (!('Notification' in window)) { toast('Notifications not supported','warn'); return; }
+  Notification.requestPermission().then(function(perm) {
+    if (perm==='granted') { toast('NOTIFICATIONS ENABLED'); scheduleNotifications(); }
+    else toast('Notifications denied','warn');
+  });
+}
+function scheduleNotifications() {
+  if (Notification.permission!=='granted') return;
+  var today = new Date().toISOString().split('T')[0];
+  for (var i=0;i<entries.length;i++) {
+    var e = entries[i];
+    if (e.tag!=='action'||e.done||!e.due) continue;
+    if (e.due===today||e.due<today) {
+      var label = e.due<today ? 'OVERDUE: ' : 'DUE TODAY: ';
+      new Notification('Scratchpad', { body: label+e.title, icon: 'manifest.json' });
+    }
+  }
+}
 
 function timeAgo(ts) {
   var diff = Math.floor((Date.now()-ts)/1000);
@@ -1323,7 +1440,7 @@ function tick(){ var n=new Date(); document.getElementById('clock').textContent=
 setInterval(tick,1000); tick();
 
 try { load(); } catch(e) { entries = []; }
-try { render(); } catch(e) {
+try { render(); checkDueBanner(); } catch(e) {
   document.getElementById('feed').innerHTML = '<div class="empty-state">Error loading. Try refreshing.<br><br><span style="font-size:10px;color:var(--red);">'+e.message+'</span></div>';
 }
 </script>
