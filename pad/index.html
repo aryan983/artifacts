@@ -736,7 +736,8 @@ function renderCard(e) {
       html += '<span class="ac-due'+(od?' ac-due-od':dl==='due today'?' ac-due-today':'')+'">'+(od?'(!) ':'')+dl+'</span>';
     }
     if (linkedIdea && linkedIdea.title) html += '<span class="ac-idea-ref">'+esc(linkedIdea.title.slice(0,18))+'</span>';
-    if (e.audio) html += '<span class="ac-audio">REC'+(e.audioDur?' '+fmtDur(e.audioDur):'')+'</span>';    html += '<span class="ac-age">'+timeAgo(e.ts)+'</span>';
+    if (e.audio) html += '<span class="ac-audio">REC'+(e.audioDur?' '+fmtDur(e.audioDur):'')+'</span>';
+    html += '<span class="ac-age">'+timeAgo(e.ts)+'</span>';
     html += '</div>';
     html += '</div>';
     html += '<button class="card-edit-btn" onclick="event.stopPropagation();openEdit(\''+e.id+'\')">&#9998;</button>';
@@ -1412,6 +1413,8 @@ function tick(){ var n=new Date(); document.getElementById(‘clock’).textCont
 setInterval(tick,1000); tick();
 
 try { load(); } catch(e) { entries = []; }
+// Reset FAB state in case it was left open
+try { closeFab(); } catch(e) {}
 try { render(); checkDueBanner(); } catch(e) {
 document.getElementById(‘feed’).innerHTML = ‘<div class="empty-state">Error loading. Try refreshing.<br><br><span style="font-size:10px;color:var(--red);">’+e.message+’</span></div>’;
 }
