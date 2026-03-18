@@ -171,6 +171,8 @@ body::before {
 .ic-progress-fill { height: 100%; background: var(--c-idea); border-radius: 2px; transition: width .3s; }
 .ic-progress-lbl { font-family: var(--mono); font-size: 9px; color: var(--muted); white-space: nowrap; }
 .ic-no-actions { font-family: var(--mono); font-size: 9px; color: var(--muted); }
+.clear-done-btn { width: 100%; padding: 9px; font-family: var(--mono); font-size: 9px; font-weight: 700; letter-spacing: .15em; border: 1px solid #333; border-radius: 3px; background: transparent; color: #666; cursor: pointer; transition: all .15s; }
+.clear-done-btn:active { border-color: var(--red); color: var(--red); }
 
 .card-edit-btn { background: none; border: none; color: var(--muted); font-size: 15px; cursor: pointer; padding: 0 2px; line-height: 1; flex-shrink: 0; }
 .card-edit-btn:active { color: var(--white); }
@@ -274,6 +276,19 @@ audio { width: 100%; height: 34px; margin-top: 10px; display: block; border-radi
 .rm-audio { font-family: var(--mono); font-size: 9px; color: var(--muted); background: none; border: none; cursor: pointer; letter-spacing: .1em; margin-top: 6px; display: block; }
 .rm-audio:active { color: var(--red); }
 
+/* CUSTOM AUDIO PLAYER */
+.cplayer { background: var(--bg3); border: 1px solid var(--border2); border-radius: 3px; padding: 10px 12px; margin-top: 10px; }
+.cplayer-row { display: flex; align-items: center; gap: 10px; }
+.cplay-btn { width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--green); background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; transition: all .15s; -webkit-appearance: none; }
+.cplay-btn:active { background: rgba(0,232,122,.15); }
+.cplay-btn.playing { box-shadow: 0 0 8px rgba(0,232,122,.4); border-color: var(--green); }
+.cplay-icon { width: 0; height: 0; border-style: solid; border-width: 5px 0 5px 9px; border-color: transparent transparent transparent var(--green); margin-left: 2px; }
+.cplay-icon.pause { width: 9px; height: 10px; border: none; border-left: 3px solid var(--green); border-right: 3px solid var(--green); margin-left: 0; }
+.cplayer-info { flex: 1; min-width: 0; }
+.cplayer-time { font-family: var(--mono); font-size: 10px; color: var(--muted); letter-spacing: .05em; margin-bottom: 5px; }
+.cplayer-track { height: 3px; background: var(--border2); border-radius: 2px; overflow: hidden; cursor: pointer; }
+.cplayer-fill { height: 100%; background: var(--green); border-radius: 2px; width: 0%; transition: width .1s linear; }
+
 .store-warn { background: rgba(255,204,0,.07); border: 1px solid rgba(255,204,0,.3); border-radius: 3px; padding: 9px 12px; font-family: var(--mono); font-size: 10px; color: var(--yellow); letter-spacing: .06em; line-height: 1.6; margin-bottom: 14px; display: none; }
 .store-warn.show { display: block; }
 
@@ -339,6 +354,25 @@ audio { width: 100%; height: 34px; margin-top: 10px; display: block; border-radi
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 .toast.err { background: var(--red); color: #fff; }
 .toast.warn { background: var(--yellow); color: #000; }
+
+/* SECTION COUNT */
+.section-count { font-weight: 400; opacity: .6; }
+
+/* TIMESTAMP */
+.ac-age { font-family: var(--mono); font-size: 9px; color: #666; margin-left: auto; }
+
+/* QUICK DATES */
+.quick-dates { display: flex; gap: 6px; margin-bottom: 6px; }
+.qdate-btn { flex: 1; padding: 7px 4px; font-family: var(--mono); font-size: 9px; font-weight: 700; letter-spacing: .1em; border: 1px solid var(--border2); border-radius: 3px; background: var(--bg3); color: var(--muted); cursor: pointer; transition: all .12s; -webkit-appearance: none; }
+.qdate-btn:active { border-color: var(--green); color: var(--green); background: rgba(0,232,122,.08); }
+
+/* SETTINGS */
+.hdr-menu-btn { background: none; border: none; color: #777; font-size: 14px; cursor: pointer; padding: 0 0 0 8px; -webkit-appearance: none; }
+.hdr-menu-btn:active { color: #f2f2f2; }
+.settings-btn { width: 100%; margin-top: 8px; padding: 13px; font-family: var(--mono); font-size: 11px; font-weight: 700; letter-spacing: .15em; border: 1px solid var(--border2); border-radius: 3px; background: var(--bg3); color: var(--white); cursor: pointer; text-align: left; -webkit-appearance: none; transition: all .12s; }
+.settings-btn:active { border-color: var(--green); color: var(--green); }
+.settings-btn.warn-btn { color: var(--muted); }
+.settings-btn.warn-btn:active { border-color: var(--red); color: var(--red); }
 </style>
 </head>
 <body>
@@ -351,8 +385,9 @@ audio { width: 100%; height: 34px; margin-top: 10px; display: block; border-radi
   <div class="hdr-right">
     <div class="hdr-clock" id="clock">00:00</div>
     <div class="store-row">
-      <div class="store-track"><div class="store-fill" id="storeFill" style="width:0%;background:var(--green);"></div></div>
+      <div class="store-track"><div class="store-fill" id="storeFill" style="width:0%;background:#00e87a;"></div></div>
       <div class="store-lbl" id="storeLbl">0/5MB</div>
+      <button class="hdr-menu-btn" onclick="openSettings()" title="Settings">&#9776;</button>
     </div>
   </div>
 </div>
@@ -407,6 +442,22 @@ audio { width: 100%; height: 34px; margin-top: 10px; display: block; border-radi
   </div>
 </div>
 
+<div class="overlay" id="settingsOverlay" onclick="if(event.target===this)closeSettings()">
+  <div class="sheet">
+    <div class="sheet-accent" style="background:#555;"></div>
+    <div class="sheet-top">
+      <div class="sheet-ttl" style="color:#aaa;">SETTINGS</div>
+      <button class="sheet-close" onclick="closeSettings()">ESC</button>
+    </div>
+    <div class="flbl" style="margin-top:0;">// DATA</div>
+    <button class="settings-btn" onclick="exportBackup()">EXPORT BACKUP (.JSON)</button>
+    <button class="settings-btn" onclick="importBackup()">IMPORT BACKUP</button>
+    <div class="flbl">// STORAGE</div>
+    <button class="settings-btn warn-btn" onclick="closeSettings();openFullSheet()">MANAGE VOICE NOTES</button>
+    <p style="font-size:10px;color:#666;font-family:var(--mono);margin-top:14px;line-height:1.7;">Export saves all your data as a JSON file. Import merges entries without duplicates. Use this to back up before clearing Safari data.</p>
+  </div>
+</div>
+
 <!-- STORAGE FULL SHEET -->
 <div class="overlay" id="fullOverlay" onclick="if(event.target===this)closeFullSheet()">
   <div class="sheet">
@@ -437,7 +488,9 @@ var recInterval = null;
 var recSecs = 0;
 var pendingB64 = null;
 var pendingMime = null;
+var pendingDuration = 0;
 var keepAudio = false;
+var activePlayers = {};
 var swipes = {};
 
 function load() {
@@ -472,6 +525,7 @@ function fmtDate(s) {
   var p = s.split('-');
   return pad(parseInt(p[2]))+'/'+pad(parseInt(p[1]))+'/'+(''+p[0]).slice(2);
 }
+function fmtDur(s) { return Math.floor(s/60)+':'+pad(s%60); }
 function isOD(s, done) { return s && !done && new Date(s) < new Date(new Date().toDateString()); }
 function abytes(b64) { return b64 ? Math.round(b64.length*3/4) : 0; }
 function fmtB(b) {
@@ -565,9 +619,12 @@ function render() {
   for (var s=0; s<sections.length; s++) {
     var sec = sections[s];
     if (!sec.items.length) continue;
-    html += '<div class="section-hdr"><span class="section-label '+sec.key+'">'+sec.label+'</span></div>';
+    html += '<div class="section-hdr"><span class="section-label '+sec.key+'">'+sec.label+' <span class="section-count">('+sec.items.length+')</span></span></div>';
     for (var j=0; j<sec.items.length; j++) {
       html += renderCard(sec.items[j]);
+    }
+    if (sec.key === 'done' && sec.items.length >= 3) {
+      html += '<div style="padding:4px 12px 8px;"><button class="clear-done-btn" onclick="clearDone()">CLEAR ALL DONE ('+sec.items.length+')</button></div>';
     }
   }
   feed.innerHTML = html;
@@ -623,7 +680,6 @@ function renderCard(e) {
     html += '<div class="card action-card '+sevClass+'" data-id="'+e.id+'" onclick="viewEntry(\''+e.id+'\')" ontouchstart="swStart(event,\''+e.id+'\')" ontouchmove="swMove(event,\''+e.id+'\')" ontouchend="swEnd(event,\''+e.id+'\')">';
     html += '<div class="ac-main">';
     html += '<div class="ac-left">';
-    // Severity dot
     html += '<div class="ac-dot '+(od?'od-dot':(e.sev||'normal'))+'-dot'+(e.done?' done-dot':'')+'"></div>';
     html += '</div>';
     html += '<div class="ac-body">';
@@ -633,8 +689,9 @@ function renderCard(e) {
     else html += '<span class="ac-tag ac-'+(e.sev||'normal')+'">'+(e.sev||'normal').toUpperCase()+'</span>';
     if (e.done) html += '<span class="ac-tag ac-done-tag">DONE</span>';
     if (e.due) html += '<span class="ac-due'+(od?' ac-due-od':'')+'">'+fmtDate(e.due)+'</span>';
-    if (linkedIdea) html += '<span class="ac-idea-ref">'+esc(linkedIdea.title.slice(0,18))+'</span>';
-    if (e.audio) html += '<span class="ac-audio">REC</span>';
+    if (linkedIdea && linkedIdea.title) html += '<span class="ac-idea-ref">'+esc(linkedIdea.title.slice(0,18))+'</span>';
+    if (e.audio) html += '<span class="ac-audio">REC'+(e.audioDur?' '+fmtDur(e.audioDur):'')+'</span>';
+    html += '<span class="ac-age">'+timeAgo(e.ts)+'</span>';
     html += '</div>';
     html += '</div>';
     html += '<button class="card-edit-btn" onclick="event.stopPropagation();openEdit(\''+e.id+'\')">&#9998;</button>';
@@ -648,8 +705,7 @@ function renderCard(e) {
     html += '<div class="ic-header">';
     html += '<span class="ic-label">&#128161; IDEA</span>';
     html += '<div class="ic-header-right">';
-    if (e.audio) html += '<span class="ac-audio">REC</span>';
-    html += '<span class="ic-ts">'+fmtTs(e.ts)+'</span>';
+    if (e.audio) html += '<span class="ac-audio">REC'+(e.audioDur?' '+fmtDur(e.audioDur):'')+'</span>';
     html += '<button class="card-edit-btn" onclick="event.stopPropagation();openEdit(\''+e.id+'\')">&#9998;</button>';
     html += '</div>';
     html += '</div>';
@@ -738,7 +794,13 @@ function buildFields(tag, e) {
     h+='<div class="sev-opt'+(e&&e.sev==='low'?' sel':'')+'" data-v="low" onclick="pickSev(this)">LOW</div>';
     h+='</div>';
     h+='<label class="flbl">// DESCRIPTION</label><textarea id="f_desc" class="field" placeholder="more detail...">'+esc(e?e.desc||'':'')+'</textarea>';
-    h+='<label class="flbl">// DUE DATE</label><input id="f_due" class="field" type="date" value="'+(e&&e.due?e.due:'')+'">';
+    h+='<label class="flbl">// DUE DATE</label>';
+    h+='<div class="quick-dates">';
+    h+='<button type="button" class="qdate-btn" onclick="setQuickDate(0)">TODAY</button>';
+    h+='<button type="button" class="qdate-btn" onclick="setQuickDate(1)">TOMORROW</button>';
+    h+='<button type="button" class="qdate-btn" onclick="setQuickDate(7)">+1 WEEK</button>';
+    h+='</div>';
+    h+='<input id="f_due" class="field" type="date" value="'+(e&&e.due?e.due:'')+'">';
     if(ideas.length){
       h+='<label class="flbl">// LINK TO IDEA</label><select id="f_idea" class="field"><option value="">-- none --</option>';
       for(var j=0;j<ideas.length;j++) h+='<option value="'+ideas[j].id+'"'+(e&&e.ideaId===ideas[j].id?' selected':'')+'>'+esc(ideas[j].title.slice(0,40))+'</option>';
@@ -884,6 +946,7 @@ async function toggleRec() {
         if((getUsed()+abytes(b64))/LIMIT>=BLOCK){toast('Too large','err');openFullSheet();return;}
         if((getUsed()+abytes(b64))/LIMIT>=WARN) toast('Storage nearly full','warn');
         pendingB64=b64; pendingMime=usedMime; keepAudio=false;
+        pendingDuration = recSecs;
         var url=URL.createObjectURL(blob);
         var p=document.getElementById('audioPrev');
         if(p) p.innerHTML='<audio controls src="'+url+'"></audio><button class="rm-audio" onclick="clearAudio()">[ x REMOVE ]</button>';
@@ -936,8 +999,8 @@ function saveEntry(){
     entry={id:''+Date.now(),tag:tag,ts:Date.now()};
     entries.push(entry);
   }
-  if(pendingB64){entry.audio=pendingB64;entry.audioMime=pendingMime;}
-  else if(!keepAudio){delete entry.audio;delete entry.audioMime;}
+  if(pendingB64){entry.audio=pendingB64;entry.audioMime=pendingMime;entry.audioDur=pendingDuration;}
+  else if(!keepAudio){delete entry.audio;delete entry.audioMime;delete entry.audioDur;}
   if(tag==='action'){
     var ss=document.querySelector('.sev-opt.sel'); entry.sev=ss?ss.dataset.v:'normal';
     var d=document.getElementById('f_desc'); entry.desc=d?d.value.trim():'';
@@ -995,14 +1058,26 @@ function viewEntry(id){
   }
   if(e.audio){
     var url='data:'+e.audioMime+';base64,'+e.audio;
-    h+='<div style="margin-top:14px;"><div class="flbl" style="margin-top:0;">// VOICE NOTE</div><audio controls src="'+url+'"></audio></div>';
+    var dur = e.audioDur || 0;
+    h+='<div style="margin-top:14px;"><div class="flbl" style="margin-top:0;">// VOICE NOTE</div>';
+    h+='<div class="cplayer" id="cplayer-'+e.id+'">';
+    h+='<div class="cplayer-row">';
+    h+='<button class="cplay-btn" id="cplay-'+e.id+'" onclick="togglePlay(\''+e.id+'\',\''+url+'\')" type="button"><div class="cplay-icon" id="cplayicon-'+e.id+'"></div></button>';
+    h+='<div class="cplayer-info">';
+    h+='<div class="cplayer-time" id="ctime-'+e.id+'">0:00 / '+fmtDur(dur)+'</div>';
+    h+='<div class="cplayer-track" onclick="seekPlayer(event,\''+e.id+'\')" ontouchstart="seekPlayer(event,\''+e.id+'\')"><div class="cplayer-fill" id="cfill-'+e.id+'"></div></div>';
+    h+='</div></div></div></div>';
   }
   h+='<button class="vw-btn btn-edit" onclick="closeView();openEdit(\''+e.id+'\')">EDIT</button>';
   h+='<button class="vw-btn btn-del" onclick="closeView();delEntry(\''+e.id+'\')">DELETE</button>';
   document.getElementById('viewContent').innerHTML=h;
   document.getElementById('viewOverlay').classList.add('open');
 }
-function closeView(){ document.getElementById('viewOverlay').classList.remove('open'); }
+function closeView(){
+  document.getElementById('viewOverlay').classList.remove('open');
+  for (var k in activePlayers) { try { activePlayers[k].pause(); } catch(e){} }
+  activePlayers = {};
+}
 function toggleDone(id){
   var e=find(id); if(!e) return;
   e.done=!e.done; persist(); haptic('medium');
@@ -1041,7 +1116,7 @@ function openFullSheet(){
 function closeFullSheet(){ document.getElementById('fullOverlay').classList.remove('open'); }
 function delVoice(id){
   var e=find(id); if(!e) return;
-  delete e.audio; delete e.audioMime;
+  delete e.audio; delete e.audioMime; delete e.audioDur;
   persist(); render(); openFullSheet(); checkWarn(); haptic('light'); toast('Voice note removed');
 }
 
@@ -1062,11 +1137,162 @@ function exportICS(id){
 }
 
 function delEntry(id){
-  var next=[]; for(var i=0;i<entries.length;i++){ if(entries[i].id!==id){ if(entries[i].ideaId===id) entries[i].ideaId=null; next.push(entries[i]); } }
-  entries=next; persist(); render(); haptic('heavy'); toast('DELETED');
+  closeView();
+  delEntryWithUndo(id);
 }
 
 function find(id){ for(var i=0;i<entries.length;i++) if(entries[i].id===id) return entries[i]; return null; }
+
+function openSettings() { document.getElementById('settingsOverlay').classList.add('open'); }
+function closeSettings() { document.getElementById('settingsOverlay').classList.remove('open'); }
+
+function timeAgo(ts) {
+  var diff = Math.floor((Date.now()-ts)/1000);
+  if (diff < 60) return 'just now';
+  if (diff < 3600) return Math.floor(diff/60)+'m ago';
+  if (diff < 86400) return Math.floor(diff/3600)+'h ago';
+  if (diff < 604800) return Math.floor(diff/86400)+'d ago';
+  return fmtTs(ts).split(' ')[0];
+}
+
+function setQuickDate(daysFromNow) {
+  var d = new Date();
+  d.setDate(d.getDate() + daysFromNow);
+  var y = d.getFullYear();
+  var m = pad(d.getMonth()+1);
+  var day = pad(d.getDate());
+  var el = document.getElementById('f_due');
+  if (el) el.value = y+'-'+m+'-'+day;
+}
+
+function clearDone() {
+  entries = entries.filter(function(e){ return !e.done; });
+  persist(); render(); haptic('medium'); toast('DONE ITEMS CLEARED');
+}
+
+// UNDO DELETE
+var undoStack = null;
+var undoTimer = null;
+function delEntryWithUndo(id) {
+  var idx = -1;
+  for (var i=0;i<entries.length;i++) { if(entries[i].id===id){ idx=i; break; } }
+  if (idx === -1) return;
+  undoStack = { entry: entries[idx], idx: idx };
+  entries = entries.filter(function(e){ return e.id!==id; });
+  // Clear links
+  for (var j=0;j<entries.length;j++) { if(entries[j].ideaId===id) entries[j].ideaId=null; }
+  persist(); render(); haptic('heavy');
+  // Show UNDO toast
+  if (undoTimer) clearTimeout(undoTimer);
+  var t = document.getElementById('toast');
+  t.textContent = 'DELETED'; t.className = 'toast';
+  t.innerHTML = 'DELETED &nbsp;<span style="text-decoration:underline;cursor:pointer;" onclick="undoDelete()">UNDO</span>';
+  t.style.pointerEvents = 'all';
+  t.classList.add('show');
+  undoTimer = setTimeout(function(){
+    t.classList.remove('show');
+    t.style.pointerEvents = 'none';
+    t.innerHTML = '';
+    undoStack = null;
+  }, 4000);
+}
+function undoDelete() {
+  if (!undoStack) return;
+  clearTimeout(undoTimer);
+  var t = document.getElementById('toast');
+  t.classList.remove('show'); t.style.pointerEvents='none'; t.innerHTML='';
+  entries.splice(undoStack.idx, 0, undoStack.entry);
+  undoStack = null;
+  persist(); render(); haptic('medium'); toast('RESTORED');
+}
+
+// EXPORT / IMPORT
+function exportBackup() {
+  var data = JSON.stringify({ version: 1, exported: Date.now(), entries: entries }, null, 2);
+  var blob = new Blob([data], {type:'application/json'});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  var d = new Date();
+  a.href = url;
+  a.download = 'scratchpad-backup-'+d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate())+'.json';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toast('BACKUP DOWNLOADED');
+}
+function importBackup() {
+  var inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = '.json,application/json';
+  inp.onchange = function() {
+    var file = inp.files[0]; if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function() {
+      try {
+        var data = JSON.parse(reader.result);
+        var imported = data.entries || data;
+        if (!Array.isArray(imported)) { toast('INVALID FILE','err'); return; }
+        var existingIds = {};
+        for (var i=0;i<entries.length;i++) existingIds[entries[i].id] = true;
+        var added = 0;
+        for (var j=0;j<imported.length;j++) {
+          if (imported[j].id && !existingIds[imported[j].id]) {
+            entries.push(imported[j]); added++;
+          }
+        }
+        persist(); render(); haptic('medium');
+        toast(added+' ENTRIES IMPORTED');
+      } catch(err) { toast('IMPORT FAILED','err'); }
+    };
+    reader.readAsText(file);
+  };
+  document.body.appendChild(inp); inp.click(); document.body.removeChild(inp);
+}
+function togglePlay(id, url) {
+  var ap = activePlayers[id];
+  if (!ap) {
+    ap = new Audio(url);
+    activePlayers[id] = ap;
+    ap.ontimeupdate = function() {
+      var pct = ap.duration ? (ap.currentTime/ap.duration)*100 : 0;
+      var fill = document.getElementById('cfill-'+id);
+      var time = document.getElementById('ctime-'+id);
+      if (fill) fill.style.width = pct+'%';
+      if (time) time.textContent = fmtDur(Math.floor(ap.currentTime))+' / '+fmtDur(Math.floor(ap.duration||0));
+    };
+    ap.onended = function() {
+      var btn = document.getElementById('cplay-'+id);
+      var icon = document.getElementById('cplayicon-'+id);
+      var fill = document.getElementById('cfill-'+id);
+      if (btn) btn.classList.remove('playing');
+      if (icon) icon.className = 'cplay-icon';
+      if (fill) fill.style.width = '0%';
+    };
+  }
+  var btn = document.getElementById('cplay-'+id);
+  var icon = document.getElementById('cplayicon-'+id);
+  if (ap.paused) {
+    // Stop any other playing
+    for (var k in activePlayers) { if (k!==id && !activePlayers[k].paused) { activePlayers[k].pause(); var ob=document.getElementById('cplay-'+k); var oi=document.getElementById('cplayicon-'+k); if(ob)ob.classList.remove('playing'); if(oi)oi.className='cplay-icon'; } }
+    ap.play();
+    if (btn) btn.classList.add('playing');
+    if (icon) icon.className = 'cplay-icon pause';
+    haptic('light');
+  } else {
+    ap.pause();
+    if (btn) btn.classList.remove('playing');
+    if (icon) icon.className = 'cplay-icon';
+  }
+}
+function seekPlayer(evt, id) {
+  var ap = activePlayers[id];
+  if (!ap || !ap.duration) return;
+  var track = evt.currentTarget;
+  var rect = track.getBoundingClientRect();
+  var clientX = evt.touches ? evt.touches[0].clientX : evt.clientX;
+  var pct = Math.min(Math.max((clientX - rect.left) / rect.width, 0), 1);
+  ap.currentTime = pct * ap.duration;
+}
+
+
 
 var fabOpen = false;
 function toggleFab() { fabOpen ? closeFab() : openFab(); }
