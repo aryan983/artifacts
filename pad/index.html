@@ -487,10 +487,7 @@ audio { width: 100%; height: 34px; margin-top: 10px; display: block; border-radi
     <button class="settings-btn" onclick="exportBackup()">EXPORT BACKUP (.JSON)</button>
     <button class="settings-btn" onclick="importBackup()">IMPORT BACKUP</button>
     <div class="flbl">// STORAGE</div>
-    <button class="settings-btn warn-btn" onclick="closeSettings();openFullSheet()">MANAGE VOICE NOTES</button>
-    <div class="flbl">// NOTIFICATIONS</div>
-    <button class="settings-btn" onclick="requestNotifications()">ENABLE DUE DATE ALERTS</button>
-    <p style="font-size:10px;color:#666;font-family:var(--mono);margin-top:14px;line-height:1.7;">Export saves all your data as a JSON file. Import merges entries without duplicates. Use this to back up before clearing Safari data.</p>
+    <button class="settings-btn warn-btn" onclick="closeSettings();openFullSheet()">MANAGE VOICE NOTES</button>    <p style="font-size:10px;color:#666;font-family:var(--mono);margin-top:14px;line-height:1.7;">Export saves all your data as a JSON file. Import merges entries without duplicates. Use this to back up before clearing Safari data.</p>
   </div>
 </div>
 
@@ -1226,34 +1223,25 @@ function checkDueBanner() {
     var parts = [];
     if (overdue>0) parts.push(overdue+' OVERDUE');
     if (dueToday>0) parts.push(dueToday+' DUE TODAY');
-    banner.textContent = '(!) '+parts.join(' | ')+' - tap to dismiss';
+    banner.textContent = '(!) '+parts.join(' | ')+' - tap to jump';
     banner.style.display = 'block';
   } else {
     banner.style.display = 'none';
   }
 }
-function closeDueBanner() { document.getElementById('dueBanner').style.display='none'; }
-
-// NOTIFICATIONS
-function requestNotifications() {
-  if (!('Notification' in window)) { toast('Notifications not supported','warn'); return; }
-  Notification.requestPermission().then(function(perm) {
-    if (perm==='granted') { toast('NOTIFICATIONS ENABLED'); scheduleNotifications(); }
-    else toast('Notifications denied','warn');
-  });
-}
-function scheduleNotifications() {
-  if (Notification.permission!=='granted') return;
-  var today = new Date().toISOString().split('T')[0];
-  for (var i=0;i<entries.length;i++) {
-    var e = entries[i];
-    if (e.tag!=='action'||e.done||!e.due) continue;
-    if (e.due===today||e.due<today) {
-      var label = e.due<today ? 'OVERDUE: ' : 'DUE TODAY: ';
-      new Notification('Scratchpad', { body: label+e.title, icon: 'manifest.json' });
+function closeDueBanner() {
+  // Scroll to first overdue or critical section header
+  var headers = document.querySelectorAll('.section-hdr');
+  for (var i=0;i<headers.length;i++) {
+    var label = headers[i].querySelector('.section-label');
+    if (label && (label.classList.contains('overdue') || label.classList.contains('critical'))) {
+      headers[i].scrollIntoView({behavior:'smooth', block:'start'});
+      break;
     }
   }
+  document.getElementById('dueBanner').style.display='none';
 }
+
 
 function timeAgo(ts) {
   var diff = Math.floor((Date.now()-ts)/1000);
@@ -1275,8 +1263,30 @@ function setQuickDate(daysFromNow) {
 }
 
 function clearDone() {
+  var cleared = entries.filter(function(e){ return e.done; });
+  if (!cleared.length) return;
   entries = entries.filter(function(e){ return !e.done; });
-  persist(); render(); haptic('medium'); toast('DONE ITEMS CLEARED');
+  persist(); render(); haptic('medium');
+  // Show undo toast
+  if (undoTimer) clearTimeout(undoTimer);
+  var t = document.getElementById('toast');
+  t.className = 'toast';
+  t.innerHTML = cleared.length+' DONE CLEARED &nbsp;<span style="text-decoration:underline;cursor:pointer;" onclick="undoClearDone()">UNDO</span>';
+  t.style.pointerEvents = 'all';
+  t.classList.add('show');
+  t._clearedEntries = cleared;
+  undoTimer = setTimeout(function(){
+    t.classList.remove('show'); t.style.pointerEvents='none'; t.innerHTML=''; t._clearedEntries=null;
+  }, 4000);
+}
+function undoClearDone() {
+  var t = document.getElementById('toast');
+  var cleared = t._clearedEntries;
+  if (!cleared) return;
+  clearTimeout(undoTimer);
+  t.classList.remove('show'); t.style.pointerEvents='none'; t.innerHTML=''; t._clearedEntries=null;
+  for (var i=0;i<cleared.length;i++) entries.push(cleared[i]);
+  persist(); render(); haptic('medium'); toast('RESTORED');
 }
 
 // UNDO DELETE
