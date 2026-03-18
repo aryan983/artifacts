@@ -1081,18 +1081,7 @@ function closeView(){
 function toggleDone(id){
   var e=find(id); if(!e) return;
   e.done=!e.done; persist(); haptic('medium');
-  // Re-render feed in background, then refresh view sheet without closing it
-  updateStrip(); updateStore();
-  var feed=document.getElementById('feed');
-  var list=entries.slice(); list.sort(function(a,b){return sortScore(a)-sortScore(b);});
-  if(!list.length){ feed.innerHTML='<div class="empty-state">ALL CLEAR<br><br><span class="blink"></span><br><br>TAP + TO ADD</div>'; }
-  else {
-    var sections=[{key:'overdue',label:'OVERDUE',items:[]},{key:'critical',label:'CRITICAL',items:[]},{key:'normal',label:'NORMAL',items:[]},{key:'low',label:'LOW',items:[]},{key:'idea',label:'IDEAS',items:[]},{key:'done',label:'DONE',items:[]}];
-    for(var i=0;i<list.length;i++){var ex=list[i];if(ex.tag==='idea'){sections[4].items.push(ex);continue;}if(ex.done){sections[5].items.push(ex);continue;}if(isOD(ex.due,ex.done)){sections[0].items.push(ex);continue;}if(ex.sev==='critical'){sections[1].items.push(ex);continue;}if(ex.sev==='normal'){sections[2].items.push(ex);continue;}sections[3].items.push(ex);}
-    var html=''; for(var s=0;s<sections.length;s++){if(!sections[s].items.length)continue;html+='<div class="section-hdr"><span class="section-label '+sections[s].key+'">'+sections[s].label+'</span></div>';for(var j=0;j<sections[s].items.length;j++)html+=renderCard(sections[s].items[j]);}
-    feed.innerHTML=html;
-  }
-  // Refresh view content in place
+  render();
   viewEntry(id);
 }
 
@@ -1177,15 +1166,19 @@ function delEntryWithUndo(id) {
   var idx = -1;
   for (var i=0;i<entries.length;i++) { if(entries[i].id===id){ idx=i; break; } }
   if (idx === -1) return;
-  undoStack = { entry: entries[idx], idx: idx };
+  // Save affected ideaIds before nullifying so undo can restore them
+  var affectedLinks = [];
+  for (var j=0;j<entries.length;j++) {
+    if(entries[j].ideaId===id) affectedLinks.push(entries[j].id);
+  }
+  undoStack = { entry: entries[idx], idx: idx, affectedLinks: affectedLinks };
   entries = entries.filter(function(e){ return e.id!==id; });
-  // Clear links
-  for (var j=0;j<entries.length;j++) { if(entries[j].ideaId===id) entries[j].ideaId=null; }
+  // Nullify links
+  for (var k=0;k<entries.length;k++) { if(entries[k].ideaId===id) entries[k].ideaId=null; }
   persist(); render(); haptic('heavy');
-  // Show UNDO toast
   if (undoTimer) clearTimeout(undoTimer);
   var t = document.getElementById('toast');
-  t.textContent = 'DELETED'; t.className = 'toast';
+  t.className = 'toast';
   t.innerHTML = 'DELETED &nbsp;<span style="text-decoration:underline;cursor:pointer;" onclick="undoDelete()">UNDO</span>';
   t.style.pointerEvents = 'all';
   t.classList.add('show');
@@ -1201,7 +1194,16 @@ function undoDelete() {
   clearTimeout(undoTimer);
   var t = document.getElementById('toast');
   t.classList.remove('show'); t.style.pointerEvents='none'; t.innerHTML='';
+  // Restore entry
   entries.splice(undoStack.idx, 0, undoStack.entry);
+  // Restore ideaId links on affected actions
+  if (undoStack.affectedLinks && undoStack.affectedLinks.length) {
+    for (var i=0;i<entries.length;i++) {
+      if (undoStack.affectedLinks.indexOf(entries[i].id) !== -1) {
+        entries[i].ideaId = undoStack.entry.id;
+      }
+    }
+  }
   undoStack = null;
   persist(); render(); haptic('medium'); toast('RESTORED');
 }
@@ -1234,6 +1236,7 @@ function importBackup() {
         for (var i=0;i<entries.length;i++) existingIds[entries[i].id] = true;
         var added = 0;
         for (var j=0;j<imported.length;j++) {
+          if (!imported[j].id || !imported[j].tag || !imported[j].title) continue;
           if (imported[j].id && !existingIds[imported[j].id]) {
             entries.push(imported[j]); added++;
           }
