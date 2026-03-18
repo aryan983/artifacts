@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Scratchpad">
+<meta name="theme-color" content="#080808">
+<link rel="manifest" href="manifest.json">
 <title>SCRATCHPAD</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1322,6 +1325,27 @@ setInterval(tick,1000); tick();
 try { load(); } catch(e) { entries = []; }
 try { render(); } catch(e) {
   document.getElementById('feed').innerHTML = '<div class="empty-state">Error loading. Try refreshing.<br><br><span style="font-size:10px;color:var(--red);">'+e.message+'</span></div>';
+}
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('sw.js').then(function(reg) {
+      // Check for updates on every load
+      reg.update();
+      // When a new SW is waiting, notify user
+      reg.addEventListener('updatefound', function() {
+        var newWorker = reg.installing;
+        newWorker.addEventListener('statechange', function() {
+          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+            toast('APP UPDATED — reload to get latest', 'warn');
+          }
+        });
+      });
+    }).catch(function(err) {
+      console.log('SW registration failed:', err);
+    });
+  });
 }
 </script>
 </body>
