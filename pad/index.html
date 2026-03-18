@@ -190,7 +190,8 @@ font-size: 12px; letter-spacing: .1em; padding: 80px 20px; line-height: 2.8;
 @keyframes pop { from{opacity:0;transform:translateY(-4px)} to{opacity:1;transform:none} }
 
 /* FAB */
-.fab-backdrop { position: fixed; top:0;right:0;bottom:0;left:0; z-index: 49; background: transparent; }
+.fab-backdrop { position: fixed; top:0;right:0;bottom:0;left:0; z-index: 49; background: transparent; pointer-events: none; }
+.fab-backdrop.open { pointer-events: all; }
 .fab-wrap { position: fixed; bottom: calc(28px + env(safe-area-inset-bottom, 0px)); right: 20px; z-index: 50; display: flex; flex-direction: column; align-items: flex-end; gap: 12px; }
 .fab-main {
 width: 56px; height: 56px; border-radius: 50%;
@@ -405,7 +406,9 @@ audio { width: 100%; height: 34px; margin-top: 10px; display: block; border-radi
 
 <div class="due-banner" id="dueBanner" style="display:none;" onclick="closeDueBanner()"></div>
 
-<div class="feed" id="feed"></div>
+<div class="feed" id="feed">
+  <div class="empty-state" id="emptyState">ALL CLEAR<br><br><span class="blink"></span><br><br>TAP + TO ADD</div>
+</div>
 
 <div class="fab-wrap" id="fabWrap">
   <div class="fab-child" id="fabIdea" style="display:none;">
@@ -585,7 +588,9 @@ function haptic(type) { try { if (navigator.vibrate) navigator.vibrate(type==='h
 function toast(msg, type) {
   var t = document.getElementById('toast');
   t.textContent = msg; t.className = 'toast'+(type?' '+type:'');
-  t.classList.add('show'); setTimeout(function(){ t.classList.remove('show'); }, 2000);
+  t.style.pointerEvents = 'none';
+  t.classList.add('show');
+  setTimeout(function(){ t.classList.remove('show'); t.style.pointerEvents='none'; }, 2000);
 }
 
 // Sort priority: overdue first, then critical, normal, low, done, ideas last
@@ -628,17 +633,24 @@ function updateStore() {
 
 function render() {
   updateStrip(); updateStore();
-  // Bug fix 5: always reset filter since strip is gone
   activeFilter = 'all';
   var feed = document.getElementById('feed');
+  var emptyState = document.getElementById('emptyState');
 
   var list = entries.slice();
   list.sort(function(a,b){ return sortScore(a)-sortScore(b); });
 
   if (!list.length) {
-    feed.innerHTML = '<div class="empty-state">ALL CLEAR<br><br><span class="blink"></span><br><br>TAP + TO ADD</div>';
+    if (emptyState) emptyState.style.display = 'block';
+    // Remove any old cards but keep the empty state element
+    var children = feed.childNodes;
+    for (var ci = children.length-1; ci >= 0; ci--) {
+      if (children[ci].id !== 'emptyState') feed.removeChild(children[ci]);
+    }
     return;
   }
+
+  if (emptyState) emptyState.style.display = 'none';
 
   var sections = [
     { key:'overdue', label:'OVERDUE', items:[] },
@@ -670,7 +682,10 @@ function render() {
       html += '<div style="padding:4px 12px 8px;"><button class="clear-done-btn" onclick="clearDone()">CLEAR ALL DONE ('+sec.items.length+')</button></div>';
     }
   }
+  // Preserve the empty state element, replace everything else
+  var emptyEl = document.getElementById('emptyState');
   feed.innerHTML = html;
+  if (emptyEl) { emptyEl.style.display = 'none'; feed.insertBefore(emptyEl, feed.firstChild); }
 
   // Bug fix 2: long-press sets a flag to block the subsequent onclick
   var cards = document.querySelectorAll('.action-card, .idea-card');
@@ -1397,7 +1412,7 @@ fabOpen = true;
 document.getElementById(‘fabMain’).classList.add(‘open’);
 document.getElementById(‘fabAction’).style.display = ‘flex’;
 document.getElementById(‘fabIdea’).style.display = ‘flex’;
-document.getElementById(‘fabBackdrop’).style.display = ‘block’;
+document.getElementById(‘fabBackdrop’).classList.add(‘open’);
 haptic(‘light’);
 }
 function closeFab() {
@@ -1405,7 +1420,7 @@ fabOpen = false;
 document.getElementById(‘fabMain’).classList.remove(‘open’);
 document.getElementById(‘fabAction’).style.display = ‘none’;
 document.getElementById(‘fabIdea’).style.display = ‘none’;
-document.getElementById(‘fabBackdrop’).style.display = ‘none’;
+document.getElementById(‘fabBackdrop’).classList.remove(‘open’);
 }
 function fabPick(tag) { closeFab(); openNew(tag); }
 
@@ -1413,10 +1428,17 @@ function tick(){ var n=new Date(); document.getElementById(‘clock’).textCont
 setInterval(tick,1000); tick();
 
 try { load(); } catch(e) { entries = []; }
-// Reset FAB state in case it was left open
-try { closeFab(); } catch(e) {}
+// Hard reset any blocking state from previous session
+try {
+closeFab();
+var overlays = document.querySelectorAll(’.overlay’);
+for (var oi=0; oi<overlays.length; oi++) overlays[oi].classList.remove(‘open’);
+var t = document.getElementById(‘toast’);
+if (t) { t.classList.remove(‘show’); t.style.pointerEvents=‘none’; }
+} catch(e) {}
 try { render(); checkDueBanner(); } catch(e) {
-document.getElementById(‘feed’).innerHTML = ‘<div class="empty-state">Error loading. Try refreshing.<br><br><span style="font-size:10px;color:var(--red);">’+e.message+’</span></div>’;
+var es = document.getElementById(‘emptyState’);
+if (es) { es.style.display = ‘block’; es.innerHTML = ‘Error loading. Try refreshing.<br><br><span style="font-size:10px;color:#ff3b5c;">’+e.message+’</span>’; }
 }
 </script>
 
