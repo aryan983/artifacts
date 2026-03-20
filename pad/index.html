@@ -47,6 +47,13 @@ body::before {
   background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,.06) 2px, rgba(0,0,0,.06) 4px);
 }
 
+.plant-card { background: #0d0d0d; border: 1px solid #222; border-radius: 3px; padding: 12px; cursor: pointer; transition: all .15s; display: flex; flex-direction: column; align-items: center; gap: 8px; position: relative; }
+.plant-card:active { border-color: #3dd6f5; background: rgba(61,214,245,.05); }
+.plant-card.selected { border-color: #3dd6f5; background: rgba(61,214,245,.07); }
+.plant-card-name { font-family: 'IBM Plex Mono','Menlo',monospace; font-size: 10px; font-weight: 700; letter-spacing: .14em; color: #f2f2f2; }
+.plant-card-req { font-family: 'IBM Plex Mono','Menlo',monospace; font-size: 8px; color: #555; letter-spacing: .1em; }
+.plant-card-grown { position: absolute; top: 6px; right: 6px; font-family: 'IBM Plex Mono','Menlo',monospace; font-size: 7px; color: #3dd6f5; letter-spacing: .1em; border: 1px solid rgba(61,214,245,.4); padding: 1px 4px; border-radius: 1px; }
+
 /* HEADER */
 .hdr {
   flex-shrink: 0; padding: 14px 16px 10px;
@@ -97,6 +104,8 @@ body::before {
 .section-label.low { color: var(--c-low); }
 .section-label.ideas { color: var(--c-idea); }
 .section-label.idea { color: var(--c-idea); }
+.section-label.blocked { color: #ff6b35; }
+.section-label.delayed { color: #ffcc00; }
 
 /* PILLS - used in view sheet */
 .pill { font-family: var(--mono); font-size: 8px; font-weight: 700; letter-spacing: .14em; padding: 2px 7px; border-radius: 2px; flex-shrink: 0; }
@@ -130,6 +139,12 @@ body::before {
 .action-card:active { background: var(--bg3); }
 .action-card.overdue { background: rgba(255,59,92,.05); border-color: rgba(255,59,92,.3); }
 .action-card.done-card { opacity: .4; }
+.action-card.blocked { opacity: .7; border-color: rgba(255,107,53,.35); background: rgba(255,107,53,.04); }
+.action-card.delayed { opacity: .7; border-color: rgba(255,204,0,.25); background: rgba(255,204,0,.03); }
+.ac-blocked { background: #ff6b35; color: #000; }
+.ac-delayed { background: #ffcc00; color: #000; }
+.pill-blocked { background: #ff6b35; color: #000; }
+.pill-delayed { background: #ffcc00; color: #000; }
 .ac-main { display: flex; align-items: center; gap: 10px; }
 .ac-left { flex-shrink: 0; }
 .ac-dot { width: 10px; height: 10px; border-radius: 50%; }
@@ -328,9 +343,15 @@ audio { width: 100%; height: 34px; margin-top: 10px; display: block; border-radi
 .vw-btn:active { opacity: .8; }
 .btn-done { background: var(--green); color: #000; }
 .btn-undone { background: var(--border2); color: var(--muted); }
+.btn-status { background: var(--bg3); color: var(--muted); border: 1px solid var(--border2); font-size: 9px; }
+.btn-status.btn-status-on.blocked-on { background: rgba(255,107,53,.15); color: #ff6b35; border-color: rgba(255,107,53,.4); }
+.btn-status { background: var(--bg3); color: #666; border: 1px solid #222; }
+.btn-status:active { opacity: .7; }
 .btn-cal { background: var(--bg3); color: var(--blue); border: 1px solid rgba(61,214,245,.3); margin-top: 8px; }
 .btn-edit { background: var(--bg3); color: var(--white); border: 1px solid var(--border2); margin-top: 8px; }
 .btn-del { background: var(--bg3); color: var(--red); border: 1px solid rgba(255,59,92,.3); margin-top: 8px; }
+.btn-move { background: var(--bg3); color: #888; border: 1px solid #2a2a2a; margin-top: 8px; font-size: 9px; letter-spacing: .16em; }
+.btn-move:active { color: #00e87a; border-color: rgba(0,232,122,.4); }
 .idea-link-ref { font-family: var(--mono); font-size: 9px; color: var(--c-idea); border: 1px solid rgba(61,214,245,.3); padding: 3px 8px; border-radius: 2px; cursor: pointer; display: inline-block; margin-bottom: 10px; }
 
 .linked-hdr { font-family: var(--mono); font-size: 9px; color: var(--muted); letter-spacing: .15em; margin: 14px 0 8px; }
@@ -357,6 +378,31 @@ audio { width: 100%; height: 34px; margin-top: 10px; display: block; border-radi
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 .toast.err { background: var(--red); color: #fff; }
 .toast.warn { background: var(--yellow); color: #000; }
+
+/* KANBAN PILLS */
+.kanban-pills { flex-shrink: 0; display: flex; gap: 6px; padding: 8px 12px; background: #050505; border-bottom: 1px solid #1a1a1a; }
+.kpill { flex: 1; padding: 7px 4px; font-family: 'IBM Plex Mono','Menlo',monospace; font-size: 9px; font-weight: 700; letter-spacing: .14em; text-align: center; border-radius: 3px; border: 1px solid #1e1e1e; background: transparent; color: #444; cursor: pointer; transition: all .15s; -webkit-appearance: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kpill.active { background: #00e87a; color: #000; border-color: #00e87a; }
+.kpill.active.backlog { background: #ffcc00; color: #000; border-color: #ffcc00; }
+.kpill.active.done { background: #333; color: #aaa; border-color: #444; }
+
+/* KANBAN VIEWPORT */
+.kanban-viewport { flex: 1; min-height: 0; overflow: hidden; position: relative; }
+.kanban-slider { display: flex; height: 100%; transition: transform .28s cubic-bezier(.16,1,.3,1); will-change: transform; }
+.kanban-col { flex-shrink: 0; width: 100%; height: 100%; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 8px 0 100px; }
+
+/* PULL TO CAPTURE */
+.pull-indicator { text-align: center; font-family: 'IBM Plex Mono','Menlo',monospace; font-size: 9px; color: #333; letter-spacing: .14em; padding: 12px 0 0; transition: color .15s; overflow: hidden; height: 0; }
+.pull-indicator.ready { color: #00e87a; }
+
+/* DONE CARD - minimal */
+.done-card-min { opacity: .45; }
+.done-card-min .ac-title { color: #666; text-decoration: line-through; }
+.done-card-min .ac-meta { display: none; }
+.done-ts { font-family: 'IBM Plex Mono','Menlo',monospace; font-size: 9px; color: #444; margin-top: 3px; }
+
+/* KANBAN EMPTY */
+.kanban-empty { text-align: center; padding: 60px 24px; font-family: 'IBM Plex Mono','Menlo',monospace; font-size: 11px; letter-spacing: .1em; color: #333; line-height: 2.6; }
 
 /* SECTION COUNT */
 .section-count { font-weight: 400; opacity: .6; }
@@ -406,10 +452,30 @@ audio { width: 100%; height: 34px; margin-top: 10px; display: block; border-radi
 
 <div class="due-banner" id="dueBanner" style="display:none;" onclick="closeDueBanner()"></div>
 
+<!-- KANBAN PILLS -->
+<div class="kanban-pills">
+  <button class="kpill active" id="kpill-active" onclick="switchColumn(0)">ACTIVE</button>
+  <button class="kpill backlog" id="kpill-backlog" onclick="switchColumn(1)">BACKLOG</button>
+  <button class="kpill done" id="kpill-done" onclick="switchColumn(2)">DONE</button>
+</div>
 
-
-<div class="feed" id="feed">
-  <div class="empty-state" id="emptyState">ALL CLEAR<br><br><span class="blink"></span><br><br>TAP + TO ADD</div>
+<!-- KANBAN VIEWPORT -->
+<div class="kanban-viewport" id="kanbanViewport">
+  <div class="kanban-slider" id="kanbanSlider">
+    <!-- ACTIVE -->
+    <div class="kanban-col" id="colActive">
+      <div class="pull-indicator" id="pullIndicator">RELEASE TO CAPTURE</div>
+      <div id="colActiveCards"></div>
+    </div>
+    <!-- BACKLOG -->
+    <div class="kanban-col" id="colBacklog">
+      <div id="colBacklogCards"></div>
+    </div>
+    <!-- DONE -->
+    <div class="kanban-col" id="colDone">
+      <div id="colDoneCards"></div>
+    </div>
+  </div>
 </div>
 
 <div class="fab-wrap" id="fabWrap">
@@ -629,81 +695,119 @@ function updateStore() {
   l.textContent = fmtB(used)+'/5MB';
 }
 
+var currentCol = 0;
+
+function kanbanSortScore(e) {
+  if (e.done) return 90;
+  if (e.status==='blocked') return 60;
+  if (e.status==='delayed') return 70;
+  if (isOD(e.due,e.done)) return 0;
+  var today = new Date(); today.setHours(0,0,0,0);
+  if (e.due) {
+    var due = new Date(e.due); due.setHours(0,0,0,0);
+    var diff = Math.round((due-today)/86400000);
+    if (diff===0) return 1;
+    if (diff<=7) return 2;
+  }
+  if (e.sev==='critical') return 10;
+  if (e.sev==='normal') return 20;
+  return 30;
+}
+
+function isBacklog(e) {
+  if (e.tag==='idea') return true;
+  if (e.done) return false;
+  if (e.status==='blocked'||e.status==='delayed') return false;
+  if (isOD(e.due,e.done)) return false;
+  if (e.sev==='critical'||e.sev==='normal') return false;
+  if (e.due) {
+    var today = new Date(); today.setHours(0,0,0,0);
+    var due = new Date(e.due); due.setHours(0,0,0,0);
+    var diff = Math.round((due-today)/86400000);
+    if (diff<=7) return false;
+  }
+  return true;
+}
+
 function render() {
   updateStrip(); updateStore();
   activeFilter = 'all';
-  var feed = document.getElementById('feed');
-  var emptyState = document.getElementById('emptyState');
 
-  var list = entries.slice();
-  list.sort(function(a,b){ return sortScore(a)-sortScore(b); });
-
-  if (!list.length) {
-    if (emptyState) emptyState.style.display = 'block';
-    // Remove any old cards but keep the empty state element
-    var children = feed.childNodes;
-    for (var ci = children.length-1; ci >= 0; ci--) {
-      if (children[ci].id !== 'emptyState') feed.removeChild(children[ci]);
-    }
-    return;
+  var active = [], backlog = [], done = [];
+  for (var i=0;i<entries.length;i++) {
+    var e = entries[i];
+    if (e.done) { done.push(e); continue; }
+    if (isBacklog(e)) { backlog.push(e); continue; }
+    active.push(e);
   }
 
-  if (emptyState) emptyState.style.display = 'none';
+  active.sort(function(a,b){ return kanbanSortScore(a)-kanbanSortScore(b); });
+  backlog.sort(function(a,b){ return sortScore(a)-sortScore(b); });
+  done.sort(function(a,b){ return (b.edited||b.ts)-(a.edited||a.ts); });
 
-  var sections = [
-    { key:'overdue', label:'OVERDUE', items:[] },
-    { key:'critical', label:'CRITICAL', items:[] },
-    { key:'normal', label:'NORMAL', items:[] },
-    { key:'low', label:'LOW', items:[] },
-    { key:'idea', label:'IDEAS', items:[] },
-    { key:'done', label:'DONE', items:[] }
-  ];
-  for (var i=0; i<list.length; i++) {
-    var e = list[i];
-    if (e.tag==='idea') { sections[4].items.push(e); continue; }
-    if (e.done) { sections[5].items.push(e); continue; }
-    if (isOD(e.due,e.done)) { sections[0].items.push(e); continue; }
-    if (e.sev==='critical') { sections[1].items.push(e); continue; }
-    if (e.sev==='normal') { sections[2].items.push(e); continue; }
-    sections[3].items.push(e);
+  // Update pill counts
+  document.getElementById('kpill-active').textContent = 'ACTIVE'+(active.length?' ('+active.length+')':'');
+  document.getElementById('kpill-backlog').textContent = 'BACKLOG'+(backlog.length?' ('+backlog.length+')':'');
+  document.getElementById('kpill-done').textContent = 'DONE'+(done.length?' ('+done.length+')':'');
+
+  // Render active col
+  var aHtml = '';
+  if (!active.length) {
+    aHtml = '<div class="kanban-empty">ALL CLEAR<br><br><span class="blink"></span><br><br>TAP + TO ADD</div>';
+  } else {
+    for (var j=0;j<active.length;j++) aHtml += renderCard(active[j]);
   }
+  document.getElementById('colActiveCards').innerHTML = aHtml;
 
-  var html = '';
-  for (var s=0; s<sections.length; s++) {
-    var sec = sections[s];
-    if (!sec.items.length) continue;
-    html += '<div class="section-hdr"><span class="section-label '+sec.key+'">'+sec.label+' <span class="section-count">('+sec.items.length+')</span></span></div>';
-    for (var j=0; j<sec.items.length; j++) {
-      html += renderCard(sec.items[j]);
-    }
-    if (sec.key === 'done' && sec.items.length >= 3) {
-      html += '<div style="padding:4px 12px 8px;"><button class="clear-done-btn" onclick="clearDone()">CLEAR ALL DONE ('+sec.items.length+')</button></div>';
-    }
+  // Render backlog col
+  var bHtml = '';
+  if (!backlog.length) {
+    bHtml = '<div class="kanban-empty">NOTHING PARKED<br><br>low priority actions<br>and ideas live here</div>';
+  } else {
+    for (var k=0;k<backlog.length;k++) bHtml += renderCard(backlog[k]);
   }
-  // Preserve the empty state element, replace everything else
-  var emptyEl = document.getElementById('emptyState');
-  feed.innerHTML = html;
-  if (emptyEl) { emptyEl.style.display = 'none'; feed.insertBefore(emptyEl, feed.firstChild); }
+  document.getElementById('colBacklogCards').innerHTML = bHtml;
 
-  // Bug fix 2: long-press sets a flag to block the subsequent onclick
+  // Render done col
+  var dHtml = '';
+  if (!done.length) {
+    dHtml = '<div class="kanban-empty">NOTHING DONE YET<br><br>completed actions<br>appear here</div>';
+  } else {
+    for (var m=0;m<done.length;m++) dHtml += renderDoneCard(done[m]);
+  }
+  document.getElementById('colDoneCards').innerHTML = dHtml;
+
+  attachLongPress();
+}
+
+function renderDoneCard(e) {
+  var when = e.edited || e.ts;
+  var html = '<div class="card-wrap" id="cw-'+e.id+'">';
+  html += '<div class="swipe-bg" id="sb-'+e.id+'">DELETE</div>';
+  html += '<div class="card action-card done-card-min" data-id="'+e.id+'" onclick="viewEntry(\''+e.id+'\')" ontouchstart="swStart(event,\''+e.id+'\')" ontouchmove="swMove(event,\''+e.id+'\')" ontouchend="swEnd(event,\''+e.id+'\')">';
+  html += '<div class="ac-main">';
+  html += '<div class="ac-left"><div class="ac-dot done-dot"></div></div>';
+  html += '<div class="ac-body">';
+  html += '<div class="ac-title ac-done">'+esc(e.title)+'</div>';
+  html += '<div class="done-ts">completed '+timeAgo(when)+'</div>';
+  html += '</div>';
+  html += '<button class="card-edit-btn" onclick="event.stopPropagation();openEdit(\''+e.id+'\')">&#9998;</button>';
+  html += '</div></div></div>';
+  return html;
+}
+
+function attachLongPress() {
   var cards = document.querySelectorAll('.action-card, .idea-card');
   for (var n=0; n<cards.length; n++) {
     (function(card) {
-      var timer;
-      var didLongPress = false;
+      var timer; var didLongPress = false;
       card.addEventListener('touchstart', function(){
         didLongPress = false;
-        timer = setTimeout(function(){
-          didLongPress = true;
-          haptic('medium');
-          openEdit(card.dataset.id);
-        }, 600);
-      }, {passive:true});
-      card.addEventListener('touchend', function(){ clearTimeout(timer); }, {passive:true});
-      card.addEventListener('touchmove', function(){ clearTimeout(timer); }, {passive:true});
-      card.addEventListener('click', function(e){
-        if (didLongPress) { e.stopImmediatePropagation(); didLongPress = false; }
-      }, true);
+        timer = setTimeout(function(){ didLongPress=true; haptic('medium'); openEdit(card.dataset.id); },600);
+      },{passive:true});
+      card.addEventListener('touchend', function(){ clearTimeout(timer); },{passive:true});
+      card.addEventListener('touchmove', function(){ clearTimeout(timer); },{passive:true});
+      card.addEventListener('click', function(ev){ if(didLongPress){ev.stopImmediatePropagation();didLongPress=false;} },true);
     })(cards[n]);
   }
 }
@@ -732,7 +836,7 @@ function renderCard(e) {
 
   if (e.tag === 'action') {
     // COMPACT HORIZONTAL ACTION CARD
-    var sevClass = e.done ? 'done-card' : od ? 'overdue' : (e.sev || 'normal');
+    var sevClass = e.done ? 'done-card' : e.status==='blocked' ? 'blocked' : e.status==='delayed' ? 'delayed' : od ? 'overdue' : (e.sev || 'normal');
     html += '<div class="card action-card '+sevClass+'" data-id="'+e.id+'" onclick="viewEntry(\''+e.id+'\')" ontouchstart="swStart(event,\''+e.id+'\')" ontouchmove="swMove(event,\''+e.id+'\')" ontouchend="swEnd(event,\''+e.id+'\')">';
     html += '<div class="ac-main">';
     html += '<div class="ac-left">';
@@ -742,6 +846,8 @@ function renderCard(e) {
     html += '<div class="ac-title'+(e.done?' ac-done':'')+'">'+esc(e.title)+'</div>';
     html += '<div class="ac-meta">';
     if (od) html += '<span class="ac-tag ac-overdue">OVERDUE</span>';
+    else if (e.status==='blocked') html += '<span class="ac-tag ac-blocked">BLOCKED</span>';
+    else if (e.status==='delayed') html += '<span class="ac-tag ac-delayed">DELAYED</span>';
     else html += '<span class="ac-tag ac-'+(e.sev||'normal')+'">'+(e.sev||'normal').toUpperCase()+'</span>';
     if (e.done) html += '<span class="ac-tag ac-done-tag">DONE</span>';
     if (e.due && !e.done) {
@@ -1059,6 +1165,15 @@ function viewEntry(id){
     if(li && li.title) h+='<div class="idea-link-ref" onclick="closeView();viewEntry(\''+li.id+'\')">IDEA: '+esc(li.title)+'</div>';
     if(e.desc) h+='<div class="vw-block">'+esc(e.desc)+'</div>';
     h+='<button class="vw-btn '+(e.done?'btn-undone':'btn-done')+'" onclick="toggleDone(\''+e.id+'\')">'+(e.done?'MARK AS PENDING':'MARK AS DONE')+'</button>';
+if(!e.done) {
+  h+='<div style="display:flex;gap:8px;margin-top:8px;">';
+  h+='<button class="vw-btn btn-status'+(e.status==='blocked'?' btn-status-on':'')+'" style="flex:1;margin-top:0;" onclick="setStatus(\''+e.id+'\',\'blocked\')">'+(e.status==='blocked'?'UNBLOCK':'BLOCKED')+'</button>';
+  h+='<button class="vw-btn btn-status'+(e.status==='delayed'?' btn-status-on':'')+'" style="flex:1;margin-top:0;" onclick="setStatus(\''+e.id+'\',\'delayed\')">'+(e.status==='delayed'?'UNDELAY':'DELAYED')+'</button>';
+  h+='</div>';
+  // Move to column button
+  var inBacklog = isBacklog(e);
+  h+='<button class="vw-btn btn-move" onclick="moveToColumn(\''+e.id+'\')">'+(inBacklog?'MOVE TO ACTIVE':'MOVE TO BACKLOG')+'</button>';
+}
     if(e.due&&!e.done) h+='<button class="vw-btn btn-cal" onclick="exportICS(\''+e.id+'\')">ADD TO CALENDAR (.ICS)</button>';
   } else {
     if(e.body) h+='<div class="vw-block">'+esc(e.body)+'</div>';
@@ -1100,10 +1215,38 @@ function closeView(){
   for (var k in activePlayers) { try { activePlayers[k].pause(); } catch(e){} }
   activePlayers = {};
 }
+function setStatus(id, status) {
+  var e = find(id); if(!e) return;
+  e.status = (e.status === status) ? null : status;
+  persist(); render(); haptic('light');
+  viewEntry(id);
+}
+
+function moveToColumn(id) {
+  var e = find(id); if(!e) return;
+  var inBacklog = isBacklog(e);
+  if(inBacklog) {
+    // Move to ACTIVE: bump to normal severity, clear any backlog signals
+    if(e.sev==='low') e.sev='normal';
+    e.status = null;
+    closeView(); persist(); render(); haptic('medium');
+    switchColumn(0);
+    toast('MOVED TO ACTIVE');
+  } else {
+    // Move to BACKLOG: drop to low severity, clear due date
+    e.sev = 'low';
+    e.due = null;
+    e.status = null;
+    closeView(); persist(); render(); haptic('medium');
+    switchColumn(1);
+    toast('MOVED TO BACKLOG');
+  }
+}
+
 function toggleDone(id){
   var e=find(id); if(!e) return;
   e.done=!e.done; persist(); haptic('medium');
-  render();
+    render();
   viewEntry(id);
 }
 
@@ -1154,6 +1297,106 @@ function delEntry(id){
 
 function find(id){ for(var i=0;i<entries.length;i++) if(entries[i].id===id) return entries[i]; return null; }
 
+function switchColumn(idx) {
+  currentCol = idx;
+  var slider = document.getElementById('kanbanSlider');
+  if(slider) slider.style.transform = 'translateX(-'+(idx*100)+'%)';
+  var pills = ['kpill-active','kpill-backlog','kpill-done'];
+  var classes = ['active','backlog done','done'];
+  for(var i=0;i<pills.length;i++) {
+    var p = document.getElementById(pills[i]);
+    if(!p) continue;
+    p.classList.remove('active');
+    if(i===idx) p.classList.add('active');
+  }
+  haptic('light');
+  // Column-aware quick capture
+  }
+
+// Kanban swipe navigation
+(function() {
+  var vp, startX, startY, startCol, dragging, isHoriz;
+  function getVP() { return document.getElementById('kanbanViewport'); }
+  function onStart(e) {
+    var t = e.touches[0];
+    startX=t.clientX; startY=t.clientY; startCol=currentCol; dragging=true; isHoriz=null;
+  }
+  function onMove(e) {
+    if(!dragging) return;
+    var t=e.touches[0];
+    var dx=t.clientX-startX; var dy=t.clientY-startY;
+    if(isHoriz===null) { if(Math.abs(dx)>Math.abs(dy)+4) isHoriz=true; else if(Math.abs(dy)>Math.abs(dx)+4) isHoriz=false; }
+    if(!isHoriz) return;
+    e.preventDefault();
+    var slider=document.getElementById('kanbanSlider');
+    if(!slider) return;
+    var base=startCol*100;
+    var pct=dx/window.innerWidth*100;
+    var raw=base-pct;
+    var clamped=Math.max(-10,Math.min(210,raw));
+    slider.style.transition='none';
+    slider.style.transform='translateX(-'+clamped+'%)';
+  }
+  function onEnd(e) {
+    if(!dragging||!isHoriz){dragging=false;return;}
+    dragging=false;
+    var t=e.changedTouches[0];
+    var dx=t.clientX-startX;
+    var slider=document.getElementById('kanbanSlider');
+    if(!slider) return;
+    slider.style.transition='';
+    if(dx<-60&&startCol<2) switchColumn(startCol+1);
+    else if(dx>60&&startCol>0) switchColumn(startCol-1);
+    else switchColumn(startCol);
+  }
+  window.addEventListener('load',function(){
+    var vp=document.getElementById('kanbanViewport');
+    if(!vp) return;
+    vp.addEventListener('touchstart',onStart,{passive:true});
+    vp.addEventListener('touchmove',onMove,{passive:false});
+    vp.addEventListener('touchend',onEnd,{passive:true});
+  });
+})();
+
+// Pull to capture on ACTIVE column
+(function() {
+  var col, startY, pulling, pullDist;
+  var THRESHOLD = 65;
+  function onStart(e) {
+    col=document.getElementById('colActive');
+    if(!col||currentCol!==0) return;
+    if(col.scrollTop>2) return;
+    startY=e.touches[0].clientY; pulling=true; pullDist=0;
+  }
+  function onMove(e) {
+    if(!pulling) return;
+    var dy=e.touches[0].clientY-startY;
+    if(dy<0){pulling=false;return;}
+    pullDist=dy;
+    var ind=document.getElementById('pullIndicator');
+    if(!ind) return;
+    var h=Math.min(pullDist*0.5,36);
+    ind.style.height=h+'px';
+    ind.style.paddingTop=h>10?'8px':'0';
+    ind.classList.toggle('ready',pullDist>THRESHOLD);
+  }
+  function onEnd(e) {
+    if(!pulling){return;}
+    pulling=false;
+    var ind=document.getElementById('pullIndicator');
+    if(ind){ind.style.height='0';ind.style.paddingTop='0';ind.classList.remove('ready');}
+    if(pullDist>THRESHOLD){ openQuickCapture(); haptic('medium'); }
+    pullDist=0;
+  }
+  window.addEventListener('load',function(){
+    var col=document.getElementById('colActive');
+    if(!col) return;
+    col.addEventListener('touchstart',onStart,{passive:true});
+    col.addEventListener('touchmove',onMove,{passive:true});
+    col.addEventListener('touchend',onEnd,{passive:true});
+  });
+})();
+
 function openSettings() { document.getElementById('settingsOverlay').classList.add('open'); }
 function closeSettings() { document.getElementById('settingsOverlay').classList.remove('open'); }
 
@@ -1175,9 +1418,10 @@ function saveQuickCapture() {
   var title = titleEl ? titleEl.value.trim() : '';
   if (!title) { toast('Title required','err'); return; }
   var dueEl = document.getElementById('qc_due');
+  var inBacklog = currentCol === 1;
   var entry = {
     id: ''+Date.now(), tag: 'action', ts: Date.now(),
-    title: title, sev: 'normal', done: false, desc: '',
+    title: title, sev: inBacklog ? 'low' : 'normal', done: false, desc: '',
     due: dueEl && dueEl.value ? dueEl.value : null,
     ideaId: null
   };
@@ -1209,15 +1453,9 @@ function checkDueBanner() {
   }
 }
 function closeDueBanner() {
-  // Scroll to first overdue or critical section header
-  var headers = document.querySelectorAll('.section-hdr');
-  for (var i=0;i<headers.length;i++) {
-    var label = headers[i].querySelector('.section-label');
-    if (label && (label.classList.contains('overdue') || label.classList.contains('critical'))) {
-      headers[i].scrollIntoView({behavior:'smooth', block:'start'});
-      break;
-    }
-  }
+  switchColumn(0);
+  var col = document.getElementById('colActive');
+  if(col) col.scrollTo({top:0, behavior:'smooth'});
   document.getElementById('dueBanner').style.display='none';
 }
 
