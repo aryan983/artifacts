@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Sip</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EDE9DF;
+  --line:#D9D4C8;
+  --margin:#B43C3C22;
+  --ink:#1a1a1a;
+  --ink2:#888;
+  --ink3:#bbb;
+  --ink4:#ccc;
+  --ink5:#ddd;
+  --check-on:#1a1a1a;
+  --check-x:#EDE9DF;
+  --btn-bg:#1a1a1a;
+  --btn-fg:#EDE9DF;
+  --btn-border:#1a1a1a;
+  --sheet-bg:#E8E4DA;
+  --sheet-border:#1a1a1a;
+  --toast-bg:#1a1a1a;
+  --toast-fg:#EDE9DF;
+  --grain-opacity:0.035;
+}
+
+@media(prefers-color-scheme:dark){
+  :root{
+    --bg:#111;
+    --line:#2A2825;
+    --margin:#7A353535;
+    --ink:#EDE9DF;
+    --ink2:#A09A8C;
+    --ink3:#706B60;
+    --ink4:#4A4640;
+    --ink5:#353230;
+    --check-on:#EDE9DF;
+    --check-x:#111;
+    --btn-bg:#EDE9DF;
+    --btn-fg:#111;
+    --btn-border:#EDE9DF;
+    --sheet-bg:#1A1816;
+    --sheet-border:#EDE9DF;
+    --toast-bg:#EDE9DF;
+    --toast-fg:#111;
+    --grain-opacity:0.04;
+  }
+}
+
+*{margin:0;padding:0;box-sizing:border-box}
+
+body{
+  font-family:'IBM Plex Mono',monospace;
+  background:var(--bg);
+  color:var(--ink);
+  min-height:100dvh;
+  -webkit-tap-highlight-color:transparent;
+  -webkit-font-smoothing:antialiased;
+  /* Lined paper */
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 31px,
+      var(--line) 31px,
+      var(--line) 32px
+    );
+  background-position:0 8px;
+}
+
+/* Paper grain texture overlay */
+body::after{
+  content:'';
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  z-index:999;
+  opacity:var(--grain-opacity);
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size:180px 180px;
+}
+
+/* Red margin line */
+body::before{
+  content:'';
+  position:fixed;
+  top:0;bottom:0;
+  left:min(56px, 14%);
+  width:1px;
+  background:var(--margin);
+  z-index:0;
+  pointer-events:none;
+}
+
+.app{
+  max-width:400px;
+  margin:0 auto;
+  padding:0 20px env(safe-area-inset-bottom);
+  position:relative;
+  z-index:1;
+}
+
+/* Masthead */
+.mast{
+  text-align:center;
+  padding:40px 0 0;
+  border-bottom:2px solid var(--ink);
+  margin-bottom:4px;
+}
+
+.mast-title{
+  font-size:10px;
+  font-weight:600;
+  letter-spacing:8px;
+  text-transform:uppercase;
+}
+
+.mast-rule{
+  width:100%;height:0.5px;
+  background:var(--ink);
+  margin:6px 0 4px;
+}
+
+.mast-date{
+  font-size:8px;
+  color:var(--ink2);
+  letter-spacing:1.5px;
+  text-transform:uppercase;
+  padding-bottom:10px;
+}
+
+.mast-sub{
+  border-top:0.5px solid var(--ink);
+  font-size:7px;
+  color:var(--ink3);
+  letter-spacing:2px;
+  text-transform:uppercase;
+  padding:6px 0;
+  display:flex;
+  justify-content:space-between;
+}
+
+/* Hero number */
+.hero{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  padding:44px 0 8px;
+}
+
+.hero-num{
+  font-family:'Instrument Serif',Georgia,serif;
+  font-size:140px;
+  font-weight:400;
+  line-height:0.8;
+  letter-spacing:-4px;
+  /* Prevent layout shift when number changes width */
+  min-width:120px;
+  text-align:center;
+}
+
+.hero-of{
+  font-family:'Instrument Serif',Georgia,serif;
+  font-style:italic;
+  font-size:18px;
+  color:var(--ink3);
+  margin-top:4px;
+  /* Fixed height so it doesn't shift */
+  height:24px;
+}
+
+/* Checkboxes */
+.checks{
+  display:flex;
+  gap:10px;
+  justify-content:center;
+  padding:28px 0;
+  flex-wrap:wrap;
+  /* Fixed min-height to prevent shift when checks rebuild */
+  min-height:76px;
+}
+
+.check{
+  width:32px;height:32px;
+  border:1.5px solid var(--ink4);
+  border-radius:2px;
+  cursor:pointer;
+  transition:background 0.12s, border-color 0.12s;
+  position:relative;
+  /* No transform transition — prevents layout shift */
+}
+
+.check:active{opacity:0.6;}
+
+.check.on{
+  border-color:var(--check-on);
+  background:var(--check-on);
+}
+
+.check.on::before,
+.check.on::after{
+  content:'';
+  position:absolute;
+  background:var(--check-x);
+  border-radius:0.5px;
+}
+
+.check.on::before{
+  width:18px;height:1.5px;
+  top:50%;left:50%;
+  transform:translate(-50%,-50%) rotate(45deg);
+}
+
+.check.on::after{
+  width:18px;height:1.5px;
+  top:50%;left:50%;
+  transform:translate(-50%,-50%) rotate(-45deg);
+}
+
+/* Divider */
+.rule{
+  width:60px;height:0.5px;
+  background:var(--ink4);
+  margin:0 auto;
+}
+
+/* Log button */
+.log-wrap{padding:28px 0 16px;}
+
+.log-btn{
+  width:100%;
+  padding:16px;
+  background:var(--btn-bg);
+  border:2px solid var(--btn-border);
+  color:var(--btn-fg);
+  font-family:'IBM Plex Mono',monospace;
+  font-size:11px;
+  font-weight:600;
+  letter-spacing:4px;
+  text-transform:uppercase;
+  cursor:pointer;
+  transition:opacity 0.1s;
+}
+
+.log-btn:active{opacity:0.7;}
+
+/* Week */
+.week{
+  display:flex;
+  justify-content:center;
+  gap:14px;
+  padding:8px 0 24px;
+  /* Fixed height */
+  min-height:40px;
+}
+
+.wday{text-align:center;}
+
+.wdot{
+  width:8px;height:8px;
+  border-radius:50%;
+  border:1px solid var(--ink4);
+  margin:0 auto 4px;
+  transition:background 0.2s, border-color 0.2s;
+}
+
+.wdot.hit{background:var(--ink);border-color:var(--ink);}
+.wdot.today{border-color:var(--ink);border-width:2px;}
+
+.wlabel{font-size:7px;color:var(--ink3);letter-spacing:0.5px;}
+
+/* Entries */
+.ent-sec{
+  border-top:0.5px solid var(--ink4);
+  padding-top:12px;
+  margin-bottom:16px;
+}
+
+.ent-hdr{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:8px;
+}
+
+.ent-title{font-size:7px;color:var(--ink3);letter-spacing:2px;text-transform:uppercase;}
+
+.ent-clr{
+  background:none;border:none;
+  font-family:inherit;font-size:7px;
+  color:var(--ink4);cursor:pointer;
+  letter-spacing:1px;text-transform:uppercase;
+}
+
+.ent-clr:active{color:var(--ink);}
+
+.entry{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:8px 0;
+  border-bottom:0.5px solid var(--ink5);
+  font-size:10px;
+}
+
+.entry-time{color:var(--ink2);}
+
+.entry-del{
+  background:none;border:none;
+  font-family:inherit;font-size:9px;
+  color:var(--ink4);cursor:pointer;padding:4px 6px;
+}
+
+.entry-del:active{color:#c44;}
+
+.empty-ent{
+  font-style:italic;
+  font-family:'Instrument Serif',Georgia,serif;
+  font-size:12px;
+  color:var(--ink3);
+  padding:16px 0;
+  text-align:center;
+}
+
+/* Footer */
+.foot{
+  border-top:0.5px solid var(--ink4);
+  padding:12px 0 32px;
+  display:flex;
+  justify-content:space-between;
+  font-size:8px;
+  color:var(--ink3);
+  letter-spacing:0.5px;
+}
+
+.foot button{
+  background:none;border:none;
+  font-family:inherit;font-size:8px;
+  color:var(--ink3);cursor:pointer;
+  text-transform:uppercase;letter-spacing:1px;
+}
+
+.foot button:active{color:var(--ink);}
+
+/* Sheet */
+.ov{
+  position:fixed;inset:0;
+  background:rgba(0,0,0,0.3);
+  z-index:100;opacity:0;pointer-events:none;
+  transition:opacity 0.25s;
+}
+
+@media(prefers-color-scheme:dark){
+  .ov{background:rgba(0,0,0,0.5);}
+}
+
+.ov.open{opacity:1;pointer-events:auto;}
+
+.sh{
+  position:fixed;bottom:0;left:0;right:0;
+  max-width:400px;margin:0 auto;
+  background:var(--sheet-bg);
+  border-top:2px solid var(--sheet-border);
+  padding:20px 20px calc(24px + env(safe-area-inset-bottom));
+  z-index:101;
+  transform:translateY(100%);
+  transition:transform 0.35s cubic-bezier(0.32,0.72,0,1);
+  max-height:75vh;overflow-y:auto;
+}
+
+.sh.open{transform:translateY(0);}
+
+.sh-title{
+  font-size:9px;font-weight:600;
+  letter-spacing:4px;text-transform:uppercase;
+  border-bottom:1px solid var(--ink);
+  padding-bottom:8px;margin-bottom:16px;
+}
+
+.fld{margin-bottom:14px;}
+
+.fld label{
+  display:block;font-size:8px;color:var(--ink2);
+  letter-spacing:1.5px;text-transform:uppercase;
+  margin-bottom:4px;
+}
+
+.fld input{
+  width:100%;padding:10px;
+  background:transparent;
+  border:1px solid var(--ink4);
+  color:var(--ink);
+  font-family:inherit;font-size:13px;
+  outline:none;
+}
+
+.fld input:focus{border-color:var(--ink);}
+
+.fld-row{display:flex;gap:10px;}
+.fld-row .fld{flex:1;}
+
+.sc-info{
+  font-size:9px;color:var(--ink2);line-height:1.5;
+  margin:12px 0;padding:10px;
+  border:0.5px solid var(--ink4);
+}
+
+.sc-info strong{color:var(--ink2);}
+
+.sc-url{
+  display:block;margin-top:6px;
+  font-size:8px;color:var(--ink);
+  word-break:break-all;
+}
+
+.sh-save{
+  width:100%;padding:14px;
+  background:var(--btn-bg);color:var(--btn-fg);border:none;
+  font-family:inherit;font-size:9px;font-weight:600;
+  letter-spacing:2px;text-transform:uppercase;
+  cursor:pointer;margin-top:8px;
+}
+
+.sh-save:active{opacity:0.8;}
+
+.sh-foot{
+  display:flex;gap:12px;margin-top:14px;justify-content:center;
+}
+
+.sh-lnk{
+  background:none;border:none;
+  font-family:inherit;font-size:8px;
+  color:var(--ink2);cursor:pointer;
+  letter-spacing:1px;text-transform:uppercase;
+  padding:6px;
+}
+
+.sh-lnk:active{color:var(--ink);}
+.sh-lnk.danger:active{color:#c44;}
+
+/* Toast */
+.toast{
+  position:fixed;top:48px;left:50%;
+  transform:translateX(-50%) translateY(-12px);
+  background:var(--toast-bg);color:var(--toast-fg);
+  font-family:inherit;font-size:10px;
+  padding:8px 20px;letter-spacing:1px;
+  opacity:0;transition:all 0.3s cubic-bezier(0.32,0.72,0,1);
+  z-index:200;pointer-events:none;
+}
+
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+#importInput{display:none}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="mast">
+    <div class="mast-title">Daily Hydration</div>
+    <div class="mast-rule"></div>
+    <div class="mast-date" id="mDate"></div>
+    <div class="mast-sub">
+      <span id="mEd"></span>
+      <span id="mStr"></span>
+    </div>
+  </div>
+
+  <div class="hero">
+    <div class="hero-num" id="hNum">0</div>
+    <div class="hero-of" id="hOf"></div>
+  </div>
+
+  <div class="checks" id="checks"></div>
+  <div class="rule"></div>
+
+  <div class="log-wrap">
+    <button class="log-btn" id="logBtn">Log Glass</button>
+  </div>
+
+  <div class="week" id="week"></div>
+
+  <div class="ent-sec">
+    <div class="ent-hdr">
+      <span class="ent-title">Today's Record</span>
+      <button class="ent-clr" id="entClr">Clear</button>
+    </div>
+    <div id="entList"></div>
+  </div>
+
+  <div class="foot">
+    <span id="footInfo"></span>
+    <button id="btnCfg">Settings</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="ov" id="ov"></div>
+<div class="sh" id="sh">
+  <div class="sh-title">Configuration</div>
+  <div class="fld-row">
+    <div class="fld"><label>Daily goal (glasses)</label><input type="number" id="sGoal" min="1" max="20" step="1"></div>
+    <div class="fld"><label>ML per glass</label><input type="number" id="sGlass" min="50" max="1000" step="50"></div>
+  </div>
+  <div class="sc-info">
+    <strong>iOS Back Tap shortcut</strong><br>
+    Settings &gt; Accessibility &gt; Touch &gt; Back Tap &gt; Shortcut with "Open URLs":
+    <span class="sc-url" id="urlH"></span>
+  </div>
+  <button class="sh-save" id="btnSave">Done</button>
+  <div class="sh-foot">
+    <button class="sh-lnk" id="btnExp">Export</button>
+    <button class="sh-lnk" id="btnImp">Import</button>
+    <button class="sh-lnk danger" id="btnRst">Reset</button>
+  </div>
+</div>
+
+<input type="file" id="importInput" accept=".gz,.json">
+
+<script>
+const PFX='sip-';
+const dk=d=>(d||new Date()).toISOString().split('T')[0];
+
+let S={goal:8,glass:250};
+let log=[];
+
+function loadS(){try{S={...S,...JSON.parse(localStorage.getItem(PFX+'s')||'{}')};}catch{}}
+function saveS(){localStorage.setItem(PFX+'s',JSON.stringify(S));}
+function loadL(d){try{return JSON.parse(localStorage.getItem(PFX+'l-'+(d||dk())))||[];}catch{return[];}}
+function saveL(){localStorage.setItem(PFX+'l-'+dk(),JSON.stringify(log));}
+
+function allD(){
+  const r={};
+  for(let i=0;i<localStorage.length;i++){
+    const k=localStorage.key(i);
+    if(k.startsWith(PFX+'l-')){
+      try{r[k.replace(PFX+'l-','')]=JSON.parse(localStorage.getItem(k));}catch{}
+    }
+  }
+  // Ensure current session log is included (may not be saved yet)
+  const today=dk();
+  if(log.length>0) r[today]=log;
+  return r;
+}
+
+function dayCount(d){
+  // For today, use in-memory log (most current)
+  if(d===dk()) return log.length;
+  return loadL(d).length;
+}
+
+function streak(){
+  let s=0;const c=new Date();
+  for(let i=0;i<365;i++){
+    const cnt=dayCount(dk(c));
+    if(cnt>=S.goal){s++;c.setDate(c.getDate()-1);}
+    else if(i===0&&cnt>0){c.setDate(c.getDate()-1);}
+    else break;
+  }
+  return s;
+}
+
+// === Render — targeted updates to prevent layout shift ===
+function render(){
+  const count=log.length;
+  const done=count>=S.goal;
+
+  // Masthead
+  const d=new Date();
+  document.getElementById('mDate').textContent=
+    d.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'}).toUpperCase();
+
+  const allKeys=Object.keys(allD());
+  document.getElementById('mEd').textContent='NO. '+(allKeys.length);
+  const s=streak();
+  document.getElementById('mStr').textContent='STREAK: '+s+' DAY'+(s!==1?'S':'');
+
+  // Hero — just update text, no DOM rebuild
+  document.getElementById('hNum').textContent=count;
+  document.getElementById('hOf').textContent=done?'goal reached':'of '+S.goal+' glasses';
+
+  // Checks — only rebuild if count changed from what's rendered
+  const checksEl=document.getElementById('checks');
+  const currentChecks=checksEl.children.length;
+  const currentFilled=checksEl.querySelectorAll('.on').length;
+  if(currentChecks!==S.goal||currentFilled!==Math.min(count,S.goal)){
+    let ch='';
+    for(let i=0;i<S.goal;i++){
+      ch+=`<div class="check ${i<count?'on':''}" data-ci="${i}"></div>`;
+    }
+    checksEl.innerHTML=ch;
+  }
+
+  // Week — only rebuild once per page load (days don't change mid-session)
+  if(!document.getElementById('week').dataset.built){
+    const today=new Date();
+    const dow=today.getDay();
+    const mon=new Date(today);
+    mon.setDate(today.getDate()-(dow===0?6:dow-1));
+    const names=['M','T','W','T','F','S','S'];
+    let w='';
+    for(let i=0;i<7;i++){
+      const dd=new Date(mon);dd.setDate(mon.getDate()+i);
+      const key=dk(dd);
+      const isToday=key===dk();
+      w+=`<div class="wday"><div class="wdot ${isToday?'today':''}" data-wk="${key}"></div><div class="wlabel">${names[i]}</div></div>`;
+    }
+    document.getElementById('week').innerHTML=w;
+    document.getElementById('week').dataset.built='1';
+  }
+  // Update week dots state
+  document.querySelectorAll('[data-wk]').forEach(dot=>{
+    const key=dot.dataset.wk;
+    const hit=dayCount(key)>=S.goal;
+    dot.classList.toggle('hit',hit);
+  });
+
+  // Entries
+  const el=document.getElementById('entList');
+  if(!log.length){
+    el.innerHTML='<div class="empty-ent">no entries yet</div>';
+  }else{
+    el.innerHTML=[...log].reverse().map((e,ri)=>{
+      const i=log.length-1-ri;
+      return`<div class="entry"><span class="entry-time">${e.time}</span><button class="entry-del" data-i="${i}">x</button></div>`;
+    }).join('');
+  }
+
+  document.getElementById('footInfo').textContent=count+' glass'+(count!==1?'es':'');
+}
+
+function addGlass(src){
+  const now=new Date();
+  log.push({time:now.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}),src:src||'tap',ts:now.getTime()});
+  saveL();render();
+  if(navigator.vibrate)navigator.vibrate(25);
+}
+
+function toast(m){
+  const e=document.getElementById('toast');
+  e.textContent=m;e.classList.add('show');
+  setTimeout(()=>e.classList.remove('show'),1800);
+}
+
+// === URL auto-log ===
+// Supports both ?log=1 and ?log=250 (ignores value, always logs 1 glass)
+function checkUrl(){
+  const p=new URLSearchParams(location.search);
+  if(p.has('log')){
+    addGlass('auto');
+    toast('+1 GLASS');
+    history.replaceState({},'',location.origin+location.pathname);
+  }
+}
+
+// === Export — saves current log first, then exports all days ===
+async function exportData(){
+  saveL(); // Ensure current session is persisted
+  const data={settings:S,logs:allD()};
+  const dayCount=Object.keys(data.logs).length;
+  if(dayCount===0){toast('EMPTY');return;}
+  const json=JSON.stringify(data,null,2);
+  const blob=new Blob([json],{type:'application/json'});
+  if('CompressionStream' in window){
+    try{
+      const cs=new CompressionStream('gzip');
+      const compressed=await new Response(blob.stream().pipeThrough(cs)).blob();
+      dl(compressed,`sip-${dk()}.json.gz`);
+      toast('EXPORTED '+dayCount+' DAYS');
+      return;
+    }catch(e){console.warn('Compression failed',e);}
+  }
+  // Fallback uncompressed
+  dl(blob,`sip-${dk()}.json`);
+  toast('EXPORTED '+dayCount+' DAYS');
+}
+
+function dl(b,n){
+  const u=URL.createObjectURL(b);
+  const a=document.createElement('a');
+  a.href=u;a.download=n;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(u);
+}
+
+// === Import — handles .gz and .json, deduplicates by timestamp ===
+async function importData(f){
+  try{
+    let text;
+    if(f.name.endsWith('.gz')){
+      if(!('DecompressionStream' in window)){
+        toast('BROWSER CANNOT DECOMPRESS');return;
+      }
+      const ds=new DecompressionStream('gzip');
+      text=await new Response(f.stream().pipeThrough(ds)).text();
+    }else{
+      text=await f.text();
+    }
+
+    const data=JSON.parse(text);
+    let imported=0;
+
+    // Import settings if present
+    if(data.settings&&typeof data.settings==='object'){
+      S={...S,...data.settings};
+      saveS();
+    }
+
+    // Import logs — support both {logs:{...}} and flat {date:[...]} format
+    const logs=data.logs||data;
+    for(const[date,entries] of Object.entries(logs)){
+      if(date==='settings')continue; // skip if flat format includes settings key
+      if(!Array.isArray(entries))continue;
+      // Validate entries have required fields
+      const valid=entries.filter(e=>typeof e.ts==='number');
+      if(!valid.length)continue;
+
+      const existing=loadL(date);
+      const existingTs=new Set(existing.map(e=>e.ts));
+      const newEntries=valid.filter(e=>!existingTs.has(e.ts));
+      if(newEntries.length){
+        localStorage.setItem(PFX+'l-'+date,JSON.stringify([...existing,...newEntries]));
+        imported+=newEntries.length;
+      }
+    }
+
+    // Reload current day in case it was affected
+    log=loadL();
+    // Reset week cache so it re-renders
+    document.getElementById('week').dataset.built='';
+    render();
+    toast(imported+' ENTRIES IMPORTED');
+  }catch(e){
+    console.error('Import error:',e);
+    toast('IMPORT FAILED');
+  }
+}
+
+function openSh(){
+  document.getElementById('sGoal').value=S.goal;
+  document.getElementById('sGlass').value=S.glass;
+  document.getElementById('urlH').textContent=location.origin+location.pathname+'?log=1';
+  document.getElementById('ov').classList.add('open');
+  document.getElementById('sh').classList.add('open');
+}
+
+function closeSh(){
+  document.getElementById('ov').classList.remove('open');
+  document.getElementById('sh').classList.remove('open');
+}
+
+// === Events ===
+document.getElementById('logBtn').addEventListener('click',()=>addGlass('tap'));
+
+document.getElementById('checks').addEventListener('click',e=>{
+  const c=e.target.closest('.check');
+  if(c&&!c.classList.contains('on'))addGlass('tap');
+});
+
+document.getElementById('entList').addEventListener('click',e=>{
+  const b=e.target.closest('[data-i]');
+  if(b){log.splice(parseInt(b.dataset.i),1);saveL();render();}
+});
+
+document.getElementById('entClr').addEventListener('click',()=>{
+  if(log.length&&confirm('Clear today?')){log=[];saveL();render();}
+});
+
+document.getElementById('btnCfg').addEventListener('click',openSh);
+document.getElementById('ov').addEventListener('click',closeSh);
+
+document.getElementById('btnSave').addEventListener('click',()=>{
+  S.goal=parseInt(document.getElementById('sGoal').value)||8;
+  S.glass=parseInt(document.getElementById('sGlass').value)||250;
+  saveS();closeSh();
+  // Reset checks and week since goal may have changed
+  document.getElementById('week').dataset.built='';
+  render();
+});
+
+document.getElementById('btnExp').addEventListener('click',()=>{closeSh();exportData();});
+document.getElementById('btnImp').addEventListener('click',()=>document.getElementById('importInput').click());
+document.getElementById('importInput').addEventListener('change',e=>{
+  if(e.target.files[0]){closeSh();importData(e.target.files[0]);}
+  e.target.value='';
+});
+
+document.getElementById('btnRst').addEventListener('click',()=>{
+  if(confirm('Delete all data?')){
+    const keys=[];
+    for(let i=0;i<localStorage.length;i++){
+      const k=localStorage.key(i);
+      if(k.startsWith(PFX))keys.push(k);
+    }
+    keys.forEach(k=>localStorage.removeItem(k));
+    log=[];
+    S={goal:8,glass:250};
+    saveS();closeSh();
+    document.getElementById('week').dataset.built='';
+    render();
+    toast('RESET');
+  }
+});
+
+// === Init ===
+loadS();
+log=loadL();
+render();
+checkUrl();
+</script>
+</body>
+</html>
