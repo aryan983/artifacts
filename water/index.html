@@ -56,406 +56,115 @@
 
 body{
   font-family:'IBM Plex Mono',monospace;
-  background:var(--bg);
-  color:var(--ink);
+  background:var(--bg);color:var(--ink);
   min-height:100dvh;
   -webkit-tap-highlight-color:transparent;
   -webkit-font-smoothing:antialiased;
-  /* Lined paper */
-  background-image:
-    repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 31px,
-      var(--line) 31px,
-      var(--line) 32px
-    );
+  background-image:repeating-linear-gradient(0deg,transparent,transparent 31px,var(--line) 31px,var(--line) 32px);
   background-position:0 8px;
 }
 
-/* Paper grain texture overlay */
 body::after{
-  content:'';
-  position:fixed;
-  inset:0;
-  pointer-events:none;
-  z-index:999;
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:999;
   opacity:var(--grain-opacity);
   background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  background-size:180px 180px;
+  background-size:180px;
 }
 
-/* Red margin line */
 body::before{
-  content:'';
-  position:fixed;
-  top:0;bottom:0;
-  left:min(56px, 14%);
-  width:1px;
-  background:var(--margin);
-  z-index:0;
-  pointer-events:none;
+  content:'';position:fixed;top:0;bottom:0;
+  left:min(56px,14%);width:1px;
+  background:var(--margin);z-index:0;pointer-events:none;
 }
 
-.app{
-  max-width:400px;
-  margin:0 auto;
-  padding:0 20px env(safe-area-inset-bottom);
-  position:relative;
-  z-index:1;
-}
+.app{max-width:400px;margin:0 auto;padding:0 20px env(safe-area-inset-bottom);position:relative;z-index:1;}
 
-/* Masthead */
-.mast{
-  text-align:center;
-  padding:40px 0 0;
-  border-bottom:2px solid var(--ink);
-  margin-bottom:4px;
-}
+.mast{text-align:center;padding:40px 0 0;border-bottom:2px solid var(--ink);margin-bottom:4px;}
+.mast-title{font-size:10px;font-weight:600;letter-spacing:8px;text-transform:uppercase;}
+.mast-rule{width:100%;height:0.5px;background:var(--ink);margin:6px 0 4px;}
+.mast-date{font-size:8px;color:var(--ink2);letter-spacing:1.5px;text-transform:uppercase;padding-bottom:10px;}
+.mast-sub{border-top:0.5px solid var(--ink);font-size:7px;color:var(--ink3);letter-spacing:2px;text-transform:uppercase;padding:6px 0;display:flex;justify-content:space-between;}
 
-.mast-title{
-  font-size:10px;
-  font-weight:600;
-  letter-spacing:8px;
-  text-transform:uppercase;
-}
+.hero{display:flex;flex-direction:column;align-items:center;padding:44px 0 8px;}
+.hero-num{font-family:'Instrument Serif',Georgia,serif;font-size:140px;font-weight:400;line-height:0.8;letter-spacing:-4px;min-width:120px;text-align:center;}
+.hero-of{font-family:'Instrument Serif',Georgia,serif;font-style:italic;font-size:18px;color:var(--ink3);margin-top:4px;height:24px;}
 
-.mast-rule{
-  width:100%;height:0.5px;
-  background:var(--ink);
-  margin:6px 0 4px;
-}
-
-.mast-date{
-  font-size:8px;
-  color:var(--ink2);
-  letter-spacing:1.5px;
-  text-transform:uppercase;
-  padding-bottom:10px;
-}
-
-.mast-sub{
-  border-top:0.5px solid var(--ink);
-  font-size:7px;
-  color:var(--ink3);
-  letter-spacing:2px;
-  text-transform:uppercase;
-  padding:6px 0;
-  display:flex;
-  justify-content:space-between;
-}
-
-/* Hero number */
-.hero{
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  padding:44px 0 8px;
-}
-
-.hero-num{
-  font-family:'Instrument Serif',Georgia,serif;
-  font-size:140px;
-  font-weight:400;
-  line-height:0.8;
-  letter-spacing:-4px;
-  /* Prevent layout shift when number changes width */
-  min-width:120px;
-  text-align:center;
-}
-
-.hero-of{
+/* Commentary */
+.commentary{
   font-family:'Instrument Serif',Georgia,serif;
   font-style:italic;
-  font-size:18px;
-  color:var(--ink3);
-  margin-top:4px;
-  /* Fixed height so it doesn't shift */
-  height:24px;
+  font-size:12px;
+  color:var(--ink2);
+  text-align:center;
+  padding:12px 20px 4px;
+  min-height:36px;
+  line-height:1.4;
 }
 
-/* Checkboxes */
-.checks{
-  display:flex;
-  gap:10px;
-  justify-content:center;
-  padding:28px 0;
-  flex-wrap:wrap;
-  /* Fixed min-height to prevent shift when checks rebuild */
-  min-height:76px;
-}
-
-.check{
-  width:32px;height:32px;
-  border:1.5px solid var(--ink4);
-  border-radius:2px;
-  cursor:pointer;
-  transition:background 0.12s, border-color 0.12s;
-  position:relative;
-  /* No transform transition — prevents layout shift */
-}
-
+.checks{display:flex;gap:10px;justify-content:center;padding:20px 0 28px;flex-wrap:wrap;min-height:76px;}
+.check{width:32px;height:32px;border:1.5px solid var(--ink4);border-radius:2px;cursor:pointer;transition:background 0.12s,border-color 0.12s;position:relative;}
 .check:active{opacity:0.6;}
+.check.on{border-color:var(--check-on);background:var(--check-on);}
+.check.on::before,.check.on::after{content:'';position:absolute;background:var(--check-x);border-radius:0.5px;}
+.check.on::before{width:18px;height:1.5px;top:50%;left:50%;transform:translate(-50%,-50%) rotate(45deg);}
+.check.on::after{width:18px;height:1.5px;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-45deg);}
 
-.check.on{
-  border-color:var(--check-on);
-  background:var(--check-on);
-}
+.rule{width:60px;height:0.5px;background:var(--ink4);margin:0 auto;}
 
-.check.on::before,
-.check.on::after{
-  content:'';
-  position:absolute;
-  background:var(--check-x);
-  border-radius:0.5px;
-}
-
-.check.on::before{
-  width:18px;height:1.5px;
-  top:50%;left:50%;
-  transform:translate(-50%,-50%) rotate(45deg);
-}
-
-.check.on::after{
-  width:18px;height:1.5px;
-  top:50%;left:50%;
-  transform:translate(-50%,-50%) rotate(-45deg);
-}
-
-/* Divider */
-.rule{
-  width:60px;height:0.5px;
-  background:var(--ink4);
-  margin:0 auto;
-}
-
-/* Log button */
 .log-wrap{padding:28px 0 16px;}
-
-.log-btn{
-  width:100%;
-  padding:16px;
-  background:var(--btn-bg);
-  border:2px solid var(--btn-border);
-  color:var(--btn-fg);
-  font-family:'IBM Plex Mono',monospace;
-  font-size:11px;
-  font-weight:600;
-  letter-spacing:4px;
-  text-transform:uppercase;
-  cursor:pointer;
-  transition:opacity 0.1s;
-}
-
+.log-btn{width:100%;padding:16px;background:var(--btn-bg);border:2px solid var(--btn-border);color:var(--btn-fg);font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;letter-spacing:4px;text-transform:uppercase;cursor:pointer;transition:opacity 0.1s;}
 .log-btn:active{opacity:0.7;}
 
-/* Week */
-.week{
-  display:flex;
-  justify-content:center;
-  gap:14px;
-  padding:8px 0 24px;
-  /* Fixed height */
-  min-height:40px;
-}
-
+.week{display:flex;justify-content:center;gap:14px;padding:8px 0 24px;min-height:40px;}
 .wday{text-align:center;}
-
-.wdot{
-  width:8px;height:8px;
-  border-radius:50%;
-  border:1px solid var(--ink4);
-  margin:0 auto 4px;
-  transition:background 0.2s, border-color 0.2s;
-}
-
+.wdot{width:8px;height:8px;border-radius:50%;border:1px solid var(--ink4);margin:0 auto 4px;transition:background 0.2s,border-color 0.2s;}
 .wdot.hit{background:var(--ink);border-color:var(--ink);}
 .wdot.today{border-color:var(--ink);border-width:2px;}
-
 .wlabel{font-size:7px;color:var(--ink3);letter-spacing:0.5px;}
 
-/* Entries */
-.ent-sec{
-  border-top:0.5px solid var(--ink4);
-  padding-top:12px;
-  margin-bottom:16px;
-}
-
-.ent-hdr{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  margin-bottom:8px;
-}
-
+.ent-sec{border-top:0.5px solid var(--ink4);padding-top:12px;margin-bottom:16px;}
+.ent-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
 .ent-title{font-size:7px;color:var(--ink3);letter-spacing:2px;text-transform:uppercase;}
-
-.ent-clr{
-  background:none;border:none;
-  font-family:inherit;font-size:7px;
-  color:var(--ink4);cursor:pointer;
-  letter-spacing:1px;text-transform:uppercase;
-}
-
+.ent-clr{background:none;border:none;font-family:inherit;font-size:7px;color:var(--ink4);cursor:pointer;letter-spacing:1px;text-transform:uppercase;}
 .ent-clr:active{color:var(--ink);}
-
-.entry{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  padding:8px 0;
-  border-bottom:0.5px solid var(--ink5);
-  font-size:10px;
-}
-
+.entry{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:0.5px solid var(--ink5);font-size:10px;}
 .entry-time{color:var(--ink2);}
-
-.entry-del{
-  background:none;border:none;
-  font-family:inherit;font-size:9px;
-  color:var(--ink4);cursor:pointer;padding:4px 6px;
-}
-
+.entry-del{background:none;border:none;font-family:inherit;font-size:9px;color:var(--ink4);cursor:pointer;padding:4px 6px;}
 .entry-del:active{color:#c44;}
+.empty-ent{font-style:italic;font-family:'Instrument Serif',Georgia,serif;font-size:12px;color:var(--ink3);padding:16px 0;text-align:center;}
 
-.empty-ent{
-  font-style:italic;
-  font-family:'Instrument Serif',Georgia,serif;
-  font-size:12px;
-  color:var(--ink3);
-  padding:16px 0;
-  text-align:center;
-}
-
-/* Footer */
-.foot{
-  border-top:0.5px solid var(--ink4);
-  padding:12px 0 32px;
-  display:flex;
-  justify-content:space-between;
-  font-size:8px;
-  color:var(--ink3);
-  letter-spacing:0.5px;
-}
-
-.foot button{
-  background:none;border:none;
-  font-family:inherit;font-size:8px;
-  color:var(--ink3);cursor:pointer;
-  text-transform:uppercase;letter-spacing:1px;
-}
-
+.foot{border-top:0.5px solid var(--ink4);padding:12px 0 32px;display:flex;justify-content:space-between;font-size:8px;color:var(--ink3);letter-spacing:0.5px;}
+.foot button{background:none;border:none;font-family:inherit;font-size:8px;color:var(--ink3);cursor:pointer;text-transform:uppercase;letter-spacing:1px;}
 .foot button:active{color:var(--ink);}
 
-/* Sheet */
-.ov{
-  position:fixed;inset:0;
-  background:rgba(0,0,0,0.3);
-  z-index:100;opacity:0;pointer-events:none;
-  transition:opacity 0.25s;
-}
-
-@media(prefers-color-scheme:dark){
-  .ov{background:rgba(0,0,0,0.5);}
-}
-
+.ov{position:fixed;inset:0;background:rgba(0,0,0,0.3);z-index:100;opacity:0;pointer-events:none;transition:opacity 0.25s;}
+@media(prefers-color-scheme:dark){.ov{background:rgba(0,0,0,0.5);}}
 .ov.open{opacity:1;pointer-events:auto;}
 
-.sh{
-  position:fixed;bottom:0;left:0;right:0;
-  max-width:400px;margin:0 auto;
-  background:var(--sheet-bg);
-  border-top:2px solid var(--sheet-border);
-  padding:20px 20px calc(24px + env(safe-area-inset-bottom));
-  z-index:101;
-  transform:translateY(100%);
-  transition:transform 0.35s cubic-bezier(0.32,0.72,0,1);
-  max-height:75vh;overflow-y:auto;
-}
-
+.sh{position:fixed;bottom:0;left:0;right:0;max-width:400px;margin:0 auto;background:var(--sheet-bg);border-top:2px solid var(--sheet-border);padding:20px 20px calc(24px + env(safe-area-inset-bottom));z-index:101;transform:translateY(100%);transition:transform 0.35s cubic-bezier(0.32,0.72,0,1);max-height:80vh;overflow-y:auto;}
 .sh.open{transform:translateY(0);}
-
-.sh-title{
-  font-size:9px;font-weight:600;
-  letter-spacing:4px;text-transform:uppercase;
-  border-bottom:1px solid var(--ink);
-  padding-bottom:8px;margin-bottom:16px;
-}
+.sh-title{font-size:9px;font-weight:600;letter-spacing:4px;text-transform:uppercase;border-bottom:1px solid var(--ink);padding-bottom:8px;margin-bottom:16px;}
 
 .fld{margin-bottom:14px;}
-
-.fld label{
-  display:block;font-size:8px;color:var(--ink2);
-  letter-spacing:1.5px;text-transform:uppercase;
-  margin-bottom:4px;
-}
-
-.fld input{
-  width:100%;padding:10px;
-  background:transparent;
-  border:1px solid var(--ink4);
-  color:var(--ink);
-  font-family:inherit;font-size:13px;
-  outline:none;
-}
-
+.fld label{display:block;font-size:8px;color:var(--ink2);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px;}
+.fld input{width:100%;padding:10px;background:transparent;border:1px solid var(--ink4);color:var(--ink);font-family:inherit;font-size:13px;outline:none;}
 .fld input:focus{border-color:var(--ink);}
-
 .fld-row{display:flex;gap:10px;}
 .fld-row .fld{flex:1;}
 
-.sc-info{
-  font-size:9px;color:var(--ink2);line-height:1.5;
-  margin:12px 0;padding:10px;
-  border:0.5px solid var(--ink4);
-}
-
+.sc-info{font-size:9px;color:var(--ink2);line-height:1.5;margin:12px 0;padding:10px;border:0.5px solid var(--ink4);}
 .sc-info strong{color:var(--ink2);}
+.sc-url{display:block;margin-top:6px;font-size:8px;color:var(--ink);word-break:break-all;}
 
-.sc-url{
-  display:block;margin-top:6px;
-  font-size:8px;color:var(--ink);
-  word-break:break-all;
-}
-
-.sh-save{
-  width:100%;padding:14px;
-  background:var(--btn-bg);color:var(--btn-fg);border:none;
-  font-family:inherit;font-size:9px;font-weight:600;
-  letter-spacing:2px;text-transform:uppercase;
-  cursor:pointer;margin-top:8px;
-}
-
+.sh-save{width:100%;padding:14px;background:var(--btn-bg);color:var(--btn-fg);border:none;font-family:inherit;font-size:9px;font-weight:600;letter-spacing:2px;text-transform:uppercase;cursor:pointer;margin-top:8px;}
 .sh-save:active{opacity:0.8;}
-
-.sh-foot{
-  display:flex;gap:12px;margin-top:14px;justify-content:center;
-}
-
-.sh-lnk{
-  background:none;border:none;
-  font-family:inherit;font-size:8px;
-  color:var(--ink2);cursor:pointer;
-  letter-spacing:1px;text-transform:uppercase;
-  padding:6px;
-}
-
+.sh-foot{display:flex;gap:12px;margin-top:14px;justify-content:center;}
+.sh-lnk{background:none;border:none;font-family:inherit;font-size:8px;color:var(--ink2);cursor:pointer;letter-spacing:1px;text-transform:uppercase;padding:6px;}
 .sh-lnk:active{color:var(--ink);}
 .sh-lnk.danger:active{color:#c44;}
 
-/* Toast */
-.toast{
-  position:fixed;top:48px;left:50%;
-  transform:translateX(-50%) translateY(-12px);
-  background:var(--toast-bg);color:var(--toast-fg);
-  font-family:inherit;font-size:10px;
-  padding:8px 20px;letter-spacing:1px;
-  opacity:0;transition:all 0.3s cubic-bezier(0.32,0.72,0,1);
-  z-index:200;pointer-events:none;
-}
-
+.toast{position:fixed;top:48px;left:50%;transform:translateX(-50%) translateY(-12px);background:var(--toast-bg);color:var(--toast-fg);font-family:inherit;font-size:10px;padding:8px 20px;letter-spacing:1px;opacity:0;transition:all 0.3s cubic-bezier(0.32,0.72,0,1);z-index:200;pointer-events:none;}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
-
 #importInput{display:none}
 </style>
 </head>
@@ -466,10 +175,7 @@ body::before{
     <div class="mast-title">Daily Hydration</div>
     <div class="mast-rule"></div>
     <div class="mast-date" id="mDate"></div>
-    <div class="mast-sub">
-      <span id="mEd"></span>
-      <span id="mStr"></span>
-    </div>
+    <div class="mast-sub"><span id="mEd"></span><span id="mStr"></span></div>
   </div>
 
   <div class="hero">
@@ -477,13 +183,11 @@ body::before{
     <div class="hero-of" id="hOf"></div>
   </div>
 
+  <div class="commentary" id="comment"></div>
+
   <div class="checks" id="checks"></div>
   <div class="rule"></div>
-
-  <div class="log-wrap">
-    <button class="log-btn" id="logBtn">Log Glass</button>
-  </div>
-
+  <div class="log-wrap"><button class="log-btn" id="logBtn">Log Glass</button></div>
   <div class="week" id="week"></div>
 
   <div class="ent-sec">
@@ -510,8 +214,8 @@ body::before{
     <div class="fld"><label>ML per glass</label><input type="number" id="sGlass" min="50" max="1000" step="50"></div>
   </div>
   <div class="sc-info">
-    <strong>iOS Back Tap shortcut</strong><br>
-    Settings &gt; Accessibility &gt; Touch &gt; Back Tap &gt; Shortcut with "Open URLs":
+    <strong>iOS Back Tap</strong><br>
+    Create a Shortcut with "Open URLs" action pointing to:
     <span class="sc-url" id="urlH"></span>
   </div>
   <button class="sh-save" id="btnSave">Done</button>
@@ -538,284 +242,248 @@ function saveL(){localStorage.setItem(PFX+'l-'+dk(),JSON.stringify(log));}
 
 function allD(){
   const r={};
-  for(let i=0;i<localStorage.length;i++){
-    const k=localStorage.key(i);
-    if(k.startsWith(PFX+'l-')){
-      try{r[k.replace(PFX+'l-','')]=JSON.parse(localStorage.getItem(k));}catch{}
-    }
-  }
-  // Ensure current session log is included (may not be saved yet)
-  const today=dk();
-  if(log.length>0) r[today]=log;
+  for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k.startsWith(PFX+'l-'))try{r[k.replace(PFX+'l-','')]=JSON.parse(localStorage.getItem(k));}catch{}}
+  if(log.length>0)r[dk()]=log;
   return r;
 }
 
-function dayCount(d){
-  // For today, use in-memory log (most current)
-  if(d===dk()) return log.length;
-  return loadL(d).length;
-}
+function dayCount(d){if(d===dk())return log.length;return loadL(d).length;}
 
 function streak(){
   let s=0;const c=new Date();
-  for(let i=0;i<365;i++){
-    const cnt=dayCount(dk(c));
-    if(cnt>=S.goal){s++;c.setDate(c.getDate()-1);}
-    else if(i===0&&cnt>0){c.setDate(c.getDate()-1);}
-    else break;
-  }
+  for(let i=0;i<365;i++){const cnt=dayCount(dk(c));if(cnt>=S.goal){s++;c.setDate(c.getDate()-1);}else if(i===0&&cnt>0){c.setDate(c.getDate()-1);}else break;}
   return s;
 }
 
-// === Render — targeted updates to prevent layout shift ===
+// ===== Commentary — honest, time-aware =====
+function getComment(){
+  const count=log.length;
+  const goal=S.goal;
+  const hr=new Date().getHours();
+  const remaining=goal-count;
+  const pct=count/goal;
+  const lastTs=log.length?log[log.length-1].ts:null;
+  const minsSinceLast=lastTs?Math.floor((Date.now()-lastTs)/60000):null;
+
+  // Goal reached
+  if(count>=goal){
+    const over=count-goal;
+    if(over===0) return "Goal hit. Well done. That's all you needed.";
+    if(over===1) return "One over the goal. Extra credit.";
+    if(over<=3) return "Overachiever. Your kidneys are working overtime.";
+    return "You can stop now. Seriously.";
+  }
+
+  // Zero glasses
+  if(count===0){
+    if(hr<8) return "Early. No rush.";
+    if(hr<10) return "Morning. Good time to start.";
+    if(hr<12) return "Almost midday and nothing logged. Just saying.";
+    if(hr<15) return "It's past noon. Not a single glass. Come on.";
+    if(hr<18) return "The afternoon is slipping away. Zero glasses.";
+    if(hr<21) return "Evening. Still at zero. That's not great.";
+    return "Day's almost over. Zero. Tomorrow's a new one, I suppose.";
+  }
+
+  // Has some glasses but not done
+  // Time-based urgency
+  if(hr>=22){
+    if(remaining<=2) return remaining+" more before bed. You can do this.";
+    return remaining+" left and it's late. Unlikely, but try.";
+  }
+
+  if(hr>=20){
+    if(remaining<=2) return "Wind-down time. "+remaining+" to go. Very doable.";
+    if(remaining<=4) return "Evening. "+remaining+" left. Going to need some effort.";
+    return remaining+" still to go. Being honest — you're behind.";
+  }
+
+  if(hr>=17){
+    if(pct>=0.75) return "Nearly there. "+remaining+" more this evening.";
+    if(pct>=0.5) return "Halfway through the day, halfway to the goal. Keep it moving.";
+    return "Only "+count+" by the evening. Pick up the pace.";
+  }
+
+  if(hr>=14){
+    if(pct>=0.6) return "Solid afternoon pace. "+remaining+" left.";
+    if(pct>=0.4) return "Decent start. "+remaining+" to go with plenty of day left.";
+    return count+" by mid-afternoon. You'll need to be more consistent.";
+  }
+
+  if(hr>=11){
+    if(pct>=0.5) return "Ahead of schedule for the morning. Nice.";
+    if(pct>=0.25) return "Reasonable morning start. "+remaining+" more to go.";
+    return "Only "+count+" so far. The morning's half gone.";
+  }
+
+  // Early morning with some progress
+  if(count===1) return "First one down. Good start to the day.";
+  if(count===2) return "Two in already. Strong morning.";
+  return count+" before midday. You're on track.";
+}
+
+function getLogReaction(){
+  const count=log.length;
+  const goal=S.goal;
+  const remaining=goal-count;
+
+  if(count===1) return "First of the day. Here we go.";
+  if(count===goal) return "That's the goal. Done.";
+  if(count>goal) return "Bonus glass. Show-off.";
+  if(remaining===1) return "One more and you're done.";
+  if(count===2) return "Two down. Steady.";
+  if(count===3) return "Three. Building momentum.";
+  if(count===Math.ceil(goal/2)) return "Halfway there.";
+
+  const lastTwo=log.slice(-2);
+  if(lastTwo.length===2){
+    const gap=(lastTwo[1].ts-lastTwo[0].ts)/60000;
+    if(gap<2) return "Back to back. Thirsty?";
+    if(gap<5) return "Quick succession. Good.";
+  }
+
+  const pool=[
+    "Noted.",
+    "Logged.",
+    "Good.",
+    "Keep going.",
+    remaining+" to go.",
+    "Ticking along.",
+  ];
+  return pool[count%pool.length];
+}
+
+// ===== Render =====
 function render(){
   const count=log.length;
   const done=count>=S.goal;
 
-  // Masthead
   const d=new Date();
   document.getElementById('mDate').textContent=
     d.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'}).toUpperCase();
 
   const allKeys=Object.keys(allD());
-  document.getElementById('mEd').textContent='NO. '+(allKeys.length);
+  document.getElementById('mEd').textContent='NO. '+allKeys.length;
   const s=streak();
   document.getElementById('mStr').textContent='STREAK: '+s+' DAY'+(s!==1?'S':'');
 
-  // Hero — just update text, no DOM rebuild
   document.getElementById('hNum').textContent=count;
   document.getElementById('hOf').textContent=done?'goal reached':'of '+S.goal+' glasses';
 
-  // Checks — only rebuild if count changed from what's rendered
+  // Commentary
+  document.getElementById('comment').textContent=getComment();
+
+  // Checks
   const checksEl=document.getElementById('checks');
-  const currentChecks=checksEl.children.length;
-  const currentFilled=checksEl.querySelectorAll('.on').length;
-  if(currentChecks!==S.goal||currentFilled!==Math.min(count,S.goal)){
+  const curChecks=checksEl.children.length;
+  const curFilled=checksEl.querySelectorAll('.on').length;
+  if(curChecks!==S.goal||curFilled!==Math.min(count,S.goal)){
     let ch='';
-    for(let i=0;i<S.goal;i++){
-      ch+=`<div class="check ${i<count?'on':''}" data-ci="${i}"></div>`;
-    }
+    for(let i=0;i<S.goal;i++)ch+=`<div class="check ${i<count?'on':''}" data-ci="${i}"></div>`;
     checksEl.innerHTML=ch;
   }
 
-  // Week — only rebuild once per page load (days don't change mid-session)
+  // Week
   if(!document.getElementById('week').dataset.built){
-    const today=new Date();
-    const dow=today.getDay();
-    const mon=new Date(today);
-    mon.setDate(today.getDate()-(dow===0?6:dow-1));
+    const today=new Date();const dow=today.getDay();
+    const mon=new Date(today);mon.setDate(today.getDate()-(dow===0?6:dow-1));
     const names=['M','T','W','T','F','S','S'];
     let w='';
-    for(let i=0;i<7;i++){
-      const dd=new Date(mon);dd.setDate(mon.getDate()+i);
-      const key=dk(dd);
-      const isToday=key===dk();
-      w+=`<div class="wday"><div class="wdot ${isToday?'today':''}" data-wk="${key}"></div><div class="wlabel">${names[i]}</div></div>`;
-    }
+    for(let i=0;i<7;i++){const dd=new Date(mon);dd.setDate(mon.getDate()+i);const key=dk(dd);
+      w+=`<div class="wday"><div class="wdot ${key===dk()?'today':''}" data-wk="${key}"></div><div class="wlabel">${names[i]}</div></div>`;}
     document.getElementById('week').innerHTML=w;
     document.getElementById('week').dataset.built='1';
   }
-  // Update week dots state
-  document.querySelectorAll('[data-wk]').forEach(dot=>{
-    const key=dot.dataset.wk;
-    const hit=dayCount(key)>=S.goal;
-    dot.classList.toggle('hit',hit);
-  });
+  document.querySelectorAll('[data-wk]').forEach(dot=>{dot.classList.toggle('hit',dayCount(dot.dataset.wk)>=S.goal);});
 
   // Entries
   const el=document.getElementById('entList');
-  if(!log.length){
-    el.innerHTML='<div class="empty-ent">no entries yet</div>';
-  }else{
-    el.innerHTML=[...log].reverse().map((e,ri)=>{
-      const i=log.length-1-ri;
-      return`<div class="entry"><span class="entry-time">${e.time}</span><button class="entry-del" data-i="${i}">x</button></div>`;
-    }).join('');
-  }
+  if(!log.length){el.innerHTML='<div class="empty-ent">no entries yet</div>';}
+  else{el.innerHTML=[...log].reverse().map((e,ri)=>{const i=log.length-1-ri;return`<div class="entry"><span class="entry-time">${e.time}</span><button class="entry-del" data-i="${i}">x</button></div>`;}).join('');}
 
   document.getElementById('footInfo').textContent=count+' glass'+(count!==1?'es':'');
 }
 
+let reactionTimeout;
 function addGlass(src){
   const now=new Date();
   log.push({time:now.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}),src:src||'tap',ts:now.getTime()});
-  saveL();render();
+  saveL();
+
+  // Show reaction first, then revert to status comment
+  const reaction=getLogReaction();
+  document.getElementById('comment').textContent=reaction;
+  clearTimeout(reactionTimeout);
+  reactionTimeout=setTimeout(()=>{
+    document.getElementById('comment').textContent=getComment();
+  },3000);
+
+  render();
   if(navigator.vibrate)navigator.vibrate(25);
 }
 
-function toast(m){
-  const e=document.getElementById('toast');
-  e.textContent=m;e.classList.add('show');
-  setTimeout(()=>e.classList.remove('show'),1800);
-}
+function toast(m){const e=document.getElementById('toast');e.textContent=m;e.classList.add('show');setTimeout(()=>e.classList.remove('show'),1800);}
 
-// === URL auto-log ===
-// Supports both ?log=1 and ?log=250 (ignores value, always logs 1 glass)
 function checkUrl(){
   const p=new URLSearchParams(location.search);
-  if(p.has('log')){
-    addGlass('auto');
-    toast('+1 GLASS');
-    history.replaceState({},'',location.origin+location.pathname);
-  }
+  if(p.has('log')){addGlass('auto');toast('+1 GLASS');history.replaceState({},'',location.origin+location.pathname);}
 }
 
-// === Export — saves current log first, then exports all days ===
 async function exportData(){
-  saveL(); // Ensure current session is persisted
-  const data={settings:S,logs:allD()};
-  const dayCount=Object.keys(data.logs).length;
-  if(dayCount===0){toast('EMPTY');return;}
-  const json=JSON.stringify(data,null,2);
-  const blob=new Blob([json],{type:'application/json'});
-  if('CompressionStream' in window){
-    try{
-      const cs=new CompressionStream('gzip');
-      const compressed=await new Response(blob.stream().pipeThrough(cs)).blob();
-      dl(compressed,`sip-${dk()}.json.gz`);
-      toast('EXPORTED '+dayCount+' DAYS');
-      return;
-    }catch(e){console.warn('Compression failed',e);}
-  }
-  // Fallback uncompressed
-  dl(blob,`sip-${dk()}.json`);
-  toast('EXPORTED '+dayCount+' DAYS');
+  saveL();
+  const data={settings:S,logs:allD()};const days=Object.keys(data.logs).length;
+  if(!days){toast('EMPTY');return;}
+  const json=JSON.stringify(data,null,2),blob=new Blob([json],{type:'application/json'});
+  if('CompressionStream' in window){try{const c=await new Response(blob.stream().pipeThrough(new CompressionStream('gzip'))).blob();dl(c,`sip-${dk()}.json.gz`);toast('EXPORTED '+days+' DAYS');return;}catch{}}
+  dl(blob,`sip-${dk()}.json`);toast('EXPORTED '+days+' DAYS');
 }
 
-function dl(b,n){
-  const u=URL.createObjectURL(b);
-  const a=document.createElement('a');
-  a.href=u;a.download=n;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(u);
-}
+function dl(b,n){const u=URL.createObjectURL(b),a=document.createElement('a');a.href=u;a.download=n;document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(u);}
 
-// === Import — handles .gz and .json, deduplicates by timestamp ===
 async function importData(f){
   try{
     let text;
-    if(f.name.endsWith('.gz')){
-      if(!('DecompressionStream' in window)){
-        toast('BROWSER CANNOT DECOMPRESS');return;
-      }
-      const ds=new DecompressionStream('gzip');
-      text=await new Response(f.stream().pipeThrough(ds)).text();
-    }else{
-      text=await f.text();
-    }
-
-    const data=JSON.parse(text);
-    let imported=0;
-
-    // Import settings if present
-    if(data.settings&&typeof data.settings==='object'){
-      S={...S,...data.settings};
-      saveS();
-    }
-
-    // Import logs — support both {logs:{...}} and flat {date:[...]} format
+    if(f.name.endsWith('.gz')){if(!('DecompressionStream' in window)){toast('CANNOT DECOMPRESS');return;}text=await new Response(f.stream().pipeThrough(new DecompressionStream('gzip'))).text();}
+    else{text=await f.text();}
+    const data=JSON.parse(text);let imported=0;
+    if(data.settings&&typeof data.settings==='object'){S={...S,...data.settings};saveS();}
     const logs=data.logs||data;
-    for(const[date,entries] of Object.entries(logs)){
-      if(date==='settings')continue; // skip if flat format includes settings key
-      if(!Array.isArray(entries))continue;
-      // Validate entries have required fields
-      const valid=entries.filter(e=>typeof e.ts==='number');
-      if(!valid.length)continue;
-
-      const existing=loadL(date);
-      const existingTs=new Set(existing.map(e=>e.ts));
-      const newEntries=valid.filter(e=>!existingTs.has(e.ts));
-      if(newEntries.length){
-        localStorage.setItem(PFX+'l-'+date,JSON.stringify([...existing,...newEntries]));
-        imported+=newEntries.length;
-      }
+    for(const[date,value] of Object.entries(logs)){
+      if(date==='settings'||!/^\d{4}-\d{2}-\d{2}$/.test(date))continue;
+      let entries;
+      if(typeof value==='number'){entries=[];for(let i=0;i<value;i++)entries.push({time:String(8+i).padStart(2,'0')+':00',src:'import',ts:new Date(date+'T08:00:00').getTime()+i});}
+      else if(Array.isArray(value)){entries=value.filter(e=>typeof e.ts==='number');}
+      else continue;
+      if(!entries.length)continue;
+      const ex=loadL(date),ts=new Set(ex.map(e=>e.ts)),nw=entries.filter(e=>!ts.has(e.ts));
+      if(nw.length){localStorage.setItem(PFX+'l-'+date,JSON.stringify([...ex,...nw]));imported+=nw.length;}
     }
-
-    // Reload current day in case it was affected
-    log=loadL();
-    // Reset week cache so it re-renders
-    document.getElementById('week').dataset.built='';
-    render();
-    toast(imported+' ENTRIES IMPORTED');
-  }catch(e){
-    console.error('Import error:',e);
-    toast('IMPORT FAILED');
-  }
+    log=loadL();document.getElementById('week').dataset.built='';render();
+    toast(imported+' IMPORTED');
+  }catch(e){console.error(e);toast('FAILED');}
 }
 
 function openSh(){
-  document.getElementById('sGoal').value=S.goal;
-  document.getElementById('sGlass').value=S.glass;
+  document.getElementById('sGoal').value=S.goal;document.getElementById('sGlass').value=S.glass;
   document.getElementById('urlH').textContent=location.origin+location.pathname+'?log=1';
-  document.getElementById('ov').classList.add('open');
-  document.getElementById('sh').classList.add('open');
+  document.getElementById('ov').classList.add('open');document.getElementById('sh').classList.add('open');
 }
 
-function closeSh(){
-  document.getElementById('ov').classList.remove('open');
-  document.getElementById('sh').classList.remove('open');
-}
+function closeSh(){document.getElementById('ov').classList.remove('open');document.getElementById('sh').classList.remove('open');}
 
-// === Events ===
 document.getElementById('logBtn').addEventListener('click',()=>addGlass('tap'));
-
-document.getElementById('checks').addEventListener('click',e=>{
-  const c=e.target.closest('.check');
-  if(c&&!c.classList.contains('on'))addGlass('tap');
-});
-
-document.getElementById('entList').addEventListener('click',e=>{
-  const b=e.target.closest('[data-i]');
-  if(b){log.splice(parseInt(b.dataset.i),1);saveL();render();}
-});
-
-document.getElementById('entClr').addEventListener('click',()=>{
-  if(log.length&&confirm('Clear today?')){log=[];saveL();render();}
-});
-
+document.getElementById('checks').addEventListener('click',e=>{const c=e.target.closest('.check');if(c&&!c.classList.contains('on'))addGlass('tap');});
+document.getElementById('entList').addEventListener('click',e=>{const b=e.target.closest('[data-i]');if(b){log.splice(parseInt(b.dataset.i),1);saveL();render();}});
+document.getElementById('entClr').addEventListener('click',()=>{if(log.length&&confirm('Clear today?')){log=[];saveL();render();}});
 document.getElementById('btnCfg').addEventListener('click',openSh);
 document.getElementById('ov').addEventListener('click',closeSh);
-
-document.getElementById('btnSave').addEventListener('click',()=>{
-  S.goal=parseInt(document.getElementById('sGoal').value)||8;
-  S.glass=parseInt(document.getElementById('sGlass').value)||250;
-  saveS();closeSh();
-  // Reset checks and week since goal may have changed
-  document.getElementById('week').dataset.built='';
-  render();
-});
-
+document.getElementById('btnSave').addEventListener('click',()=>{S.goal=parseInt(document.getElementById('sGoal').value)||8;S.glass=parseInt(document.getElementById('sGlass').value)||250;saveS();closeSh();document.getElementById('week').dataset.built='';render();});
 document.getElementById('btnExp').addEventListener('click',()=>{closeSh();exportData();});
 document.getElementById('btnImp').addEventListener('click',()=>document.getElementById('importInput').click());
-document.getElementById('importInput').addEventListener('change',e=>{
-  if(e.target.files[0]){closeSh();importData(e.target.files[0]);}
-  e.target.value='';
-});
+document.getElementById('importInput').addEventListener('change',e=>{if(e.target.files[0]){closeSh();importData(e.target.files[0]);}e.target.value='';});
+document.getElementById('btnRst').addEventListener('click',()=>{if(confirm('Delete all data?')){const k=[];for(let i=0;i<localStorage.length;i++){const x=localStorage.key(i);if(x.startsWith(PFX))k.push(x);}k.forEach(x=>localStorage.removeItem(x));log=[];S={goal:8,glass:250};saveS();closeSh();document.getElementById('week').dataset.built='';render();toast('RESET');}});
 
-document.getElementById('btnRst').addEventListener('click',()=>{
-  if(confirm('Delete all data?')){
-    const keys=[];
-    for(let i=0;i<localStorage.length;i++){
-      const k=localStorage.key(i);
-      if(k.startsWith(PFX))keys.push(k);
-    }
-    keys.forEach(k=>localStorage.removeItem(k));
-    log=[];
-    S={goal:8,glass:250};
-    saveS();closeSh();
-    document.getElementById('week').dataset.built='';
-    render();
-    toast('RESET');
-  }
-});
-
-// === Init ===
-loadS();
-log=loadL();
-render();
-checkUrl();
+loadS();log=loadL();render();checkUrl();
 </script>
 </body>
 </html>
